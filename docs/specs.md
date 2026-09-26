@@ -1,0 +1,184 @@
+# Specs — climbing partner app, v1
+
+IDs are stable: never renumbered, never reused. Retired IDs stay in the file, marked.
+Rationale lives in decisions.md, not here.
+
+## Glossary
+
+- **Candidate**: a climber who appears in another climber's suggestion list.
+- **Invite**: a request from one climber to one candidate to connect.
+- **Connection**: created by an accepted invite. States: active, paused, ended. Ended is final; paused is not.
+- **Discipline**: one of bouldering, top rope, lead, multipitch, ice.
+- **Discipline variant**: a pair (discipline, venue). Variants: bouldering-indoor, bouldering-outdoor, top rope-indoor, top rope-outdoor, lead-indoor, lead-outdoor, multipitch-outdoor, ice-outdoor.
+- **Hard criterion**: a predicate that must hold for a candidate to appear at all.
+- **Soft criterion**: a measure that only affects the order of the suggestion list.
+- **Availability window**: a weekday plus a start and end time (e.g. Tue 19:00–22:00).
+- **Window overlap**: for two climbers, the non-empty intersections of their availability windows on the same weekday (Tue 18–21 and Tue 19–22 → Tue 19–21).
+- **Deactivated**: the state of an account between a deletion request and erasure.
+- **Last activity**: the time of the account's most recent authenticated API request.
+- **Dormant**: an account whose last activity is more than 60 days ago.
+
+## Specs
+
+- S1. A climber can register with Google, Facebook or Apple SSO, or with an email address.
+- S2. An account whose email address is not confirmed cannot send or receive invites.
+- S3. A profile holds: display name; own sex; accepted partner sexes (default: any); per discipline variant: own grade range and acceptable partner grade range (grade ranges may be shared across the indoor and outdoor variants of one discipline); belay certification (none / Brattkort topptau / Brattkort led); own gear (yes/no); home area (postcode, S15); maximum travel distance in km; optional list of home gyms; one or more availability windows; optional profile photo (S55).
+- S4. Climber B appears in climber A's suggestion list if and only if all of the following hold:
+  - S4.1 The distance between their home areas is at most the smaller of A's and B's maximum travel distances.
+  - S4.2 B's sex is in A's accepted set, and A's sex is in B's accepted set.
+  - S4.3 There exists a discipline variant that both have in their profile and for which both meet the certification requirement in S12.
+- S5. A climber can send an invite to one or more candidates from their suggestion list.
+- S6. (retired, replaced by S69 and S70)
+- S7. Every invite is in exactly one state: pending, accepted, declined, expired. Accepted, declined and expired are final.
+- S8. A pending invite expires 7 days after it was sent.
+- S9. A chat message can be sent only within an active connection; otherwise it is rejected. When a connection ends, its message history is kept unchanged and stays readable to both participants, but no new messages can be sent. The history is kept while both participants' accounts exist; erasure follows S38.
+- S10. Matching is symmetric: B is in A's suggestion list if and only if A is in B's suggestion list.
+- S11. (retired, replaced by S60)
+- S12. Certification requirement per discipline variant: top rope-indoor: Brattkort topptau or Brattkort led; lead-indoor: Brattkort led; all other variants: none.
+- S13. Grade scales:
+  - S13.1 For rope disciplines (top rope, lead, multipitch), each climber chooses Norwegian or French as their grade scale.
+  - S13.2 Bouldering grades use the Font scale; ice grades use the WI scale.
+  - S13.3 Every grade is stored both as entered and as a position on one internal ordinal scale per discipline family. Rope grades are converted to that position through a single fixed conversion table.
+  - S13.4 A grade is always shown to its owner exactly as they entered it.
+  - S13.5 Other climbers see a rope grade in their own chosen scale.
+- S14. Grade never affects whether a candidate appears in a suggestion list; it affects only the order (see S4, S60.2).
+- S15. Home area is a four-digit Norwegian postcode. When a profile is created or its postcode is changed, a postcode that is not in the reference table, or is retired (S102), is rejected.
+- S16. The distance in S4.1 is the straight-line distance between the reference points (S99) of the two climbers' postcodes.
+- S17. A gym has a name, an address and a postcode. Only the admin can create, edit or deactivate a gym.
+- S18. A climber can select home gyms only from the list of active gyms.
+- S19. A climber can submit a missing-gym report as free text. The report is delivered to the admin and does not create a gym.
+- S20. The admin role is an app role in Microsoft Entra ID and is assigned only in Entra. The app never grants it.
+- S21. A deactivated gym disappears from the selectable list and no longer counts toward S60.3. Profiles that listed it keep it, marked as inactive.
+- S22. A climber's belay certification is shown to other climbers with the label "self-declared".
+- S23. An invite request is rejected until the climber has acknowledged the safety notice through the API. The acknowledgement is stored with a timestamp; after it, invites are no longer subject to this check. The API returns the notice text, which states that each climber is responsible for checking their partner's belay competence, indoor and outdoor.
+- S24. A climber can block any other climber. The block takes effect immediately and is mutual:
+  - S24.1 Neither appears in the other's suggestion list.
+  - S24.2 Pending invites between them become expired.
+  - S24.3 An active or paused connection between them becomes ended (S9).
+  - S24.4 The blocked climber receives no message or notification about the block. The only visible effects are that the chat becomes read-only and the blocker disappears from their suggestion list.
+- S25. A climber can report a profile or a single chat message, including a message in an ended connection. A report has a category (harassment, fake profile, unsafe behaviour, other) and optional free text, and is delivered to the admin. A reported message is attached to the report as a copy, not a reference.
+- S26. The admin can suspend an account. A suspended account cannot use the app (see S95) and appears in no suggestion list. Its pending invites become expired and its active or paused connections become ended.
+- S27. Date of birth is required at registration, for SSO and email accounts alike. It is a date only; time of birth is not collected.
+- S28. Registration is rejected if the climber is under 18 on the registration date.
+- S29. After registration, date of birth can be changed only by the admin. If an admin correction makes the climber under 18, the account is suspended (S26).
+- S30. Date of birth is used only for the age check in S28–S29. It is not shown to other climbers and is not used in matching.
+- S31. A climber can have at most 10 pending outgoing invites. An invite beyond that limit is rejected.
+- S32. While an invite from A to B is pending, A cannot send B another invite.
+- S33. After an invite from A to B is declined or expires, A cannot invite B for 30 days. B is not restricted by this. An invite that expires because of S37 does not start this period, in either direction.
+- S34. If A invites B while an invite from B to A is pending, A's action accepts B's invite: one connection is created and no new invite exists. S34 is evaluated before S31–S33, so it is never rejected by them.
+- S35. The sender sees a declined invite and an expired invite identically, as "not accepted".
+- S36. A climber can request deletion of their account in the app at any time.
+- S37. Deletion request, immediate effect: the account becomes deactivated and appears in no suggestion list. It cannot log in except as in S39. Its active connections become paused (S42). Its pending invites, incoming and outgoing, become expired. No data is erased at this point.
+- S38. 30 days after the request, the account is erased: profile, preferences, availability windows, date of birth, login identity, and all messages the climber wrote. In the other party's history, each erased message is replaced by a placeholder without content, and the climber is shown as "deleted climber". The climber's paused connections become ended.
+- S39. Cancelling a deletion:
+  - S39.1 Logging in to a deactivated account does not change its state. The login response states that deletion is pending and gives the erasure date.
+  - S39.2 A separate cancel call by the logged-in climber cancels the deletion: the account becomes active and its paused connections become active again.
+  - S39.3 While the account is deactivated, the only API calls accepted for it are the cancel call and logout. All other calls are rejected.
+- S40. Report attachments (S25, S57) are erased 12 months after the report's last outcome (S90 or S96), independent of account deletion.
+- S41. When a suspended account is erased, a hash of its login identifier (email, or SSO provider + subject) is kept for 12 months. Registration with a matching identifier is rejected during that period. No hash is kept for ordinary deletions.
+- S42. While a connection is paused, the other climber sees the deactivated climber as "inactive". Block and report (S24, S25) remain available to them.
+- S43. A suspended account is erased under S38 12 months after the suspension, unless the admin has lifted the suspension (S77). The S41 period starts at erasure.
+- S44. There is one support email address. It is the channel for erasure requests (S45) and export requests (S66) from climbers who cannot log in, and for contesting outcomes (S96).
+- S45. An erasure request received through support is confirmed by a link sent to the account's registered email address. On confirmation, the account is deactivated (S37) and erased per S38. S46 is the exception for suspended accounts.
+- S46. A confirmed erasure request from a suspended climber is executed immediately. S41 still applies.
+- S47. Every account has exactly one registered email address.
+- S48. If the SSO provider supplies an email address and marks it as verified, that address is registered and treated as confirmed. Apple private relay addresses are accepted as supplied.
+- S49. If the provider supplies no email address, or one it does not mark as verified, the climber enters an address during registration and confirms it via a link sent to it.
+- S50. The registered email address is never shown to other climbers.
+- S51. A climber card shows: display name; own sex; discipline variants with grades (displayed per S13.5); belay certification labelled per S22; own gear; home gyms (inactive ones marked per S21); the window overlap with the viewing climber; distance per S52; the profile photo, if any.
+- S52. The distance on a card is the S16 distance rounded to whole km. Distances under 2 km are shown as "< 2 km".
+- S53. A card never shows date of birth, postcode, or accepted partner sexes. Email: see S50.
+- S54. The same card is used wherever one climber sees another: suggestion list, received invites, connections.
+- S55. A profile has at most one photo. All image metadata is removed before storage; the stored file contains no metadata.
+- S56. The admin can remove a climber's profile photo without changing the rest of the profile.
+- S57. When a profile is reported, a copy of the reported climber's card (S51) as it appears to the reporting climber at that moment, including the photo, is attached to the report. Retention per S40.
+- S58. Removing a profile photo (S56) does not affect copies attached to reports.
+- S59. The admin can reset a display name to a generated neutral placeholder (e.g. "Climber 4821"). The climber can then choose a new display name; the rest of the profile is unchanged.
+- S60. Candidates in a suggestion list are ordered by the keys below. A key is compared only when all previous keys are equal.
+  - S60.1 Weekly window overlap: the total minutes of all window overlaps. Descending.
+  - S60.2 Grade fit, descending. Computed per shared discipline variant that satisfies S4.3, on the internal scale (S13.3). Direction 1: A's own grade range intersects B's acceptable partner range. Direction 2: the reverse. Grade fit for a variant is the number of directions that hold (0, 1 or 2). The candidate's value is the maximum over those variants.
+  - S60.3 Shared active home gym: yes before no.
+  - S60.4 Distance per S16, not rounded. Ascending.
+  - S60.5 Most recent last activity, descending; then account ID, ascending.
+- S61. A climber's availability windows on the same weekday may not overlap, and each window ends later on the same day than it starts. Saving a window that violates this is rejected.
+- S62. A climber can request a data export in the app. The export is generated as one JSON file and can be downloaded for 7 days after generation. The climber receives an in-app notification when it is ready.
+- S63. The export contains: profile including email and date of birth; preferences, availability windows and home gyms; invites sent and received, with the counterpart's display name, dates and states; connections; all messages the climber wrote, with timestamps; the safety-notice acknowledgement (S23); deletion requests.
+- S64. The export does not contain messages written by other climbers, reports about the climber, or report attachments.
+- S65. A climber can request at most one export per 24 hours. A further request within that period is rejected.
+- S66. Suspended and deactivated climbers request an export through support (S44), confirmed as in S45. The export is delivered as a download link to the registered email address.
+- S67. A download link can be used only by the account it belongs to (in-app), or is unguessable and valid for 7 days (email delivery, S66).
+- S68. An export file is erased when its download period ends, or at account erasure (S38), whichever comes first.
+- S69. Notification events:
+  - S69.1 Invite received: sent to the invited climber.
+  - S69.2 Invite accepted: sent to the invite's sender, including acceptance via S34.
+  - S69.3 New chat message: sent to the other participant of the connection, with the exceptions in S73–S74.
+- S70. For each notification event, the recipient gets an in-app notification; a web push, if the device supports it and the climber has allowed it; and an email to the registered address, unless switched off per S71.
+- S71. A climber can switch off email per notification event type.
+- S72. Every notification email contains a link that switches off email for that event type without logging in. The link is unguessable and works only for that account and event type.
+- S73. For S69.3, an email is sent only if the message is still unread 1 hour after it was sent, and at most one such email is sent per connection within any 24-hour period.
+- S74. No notification in any channel (in-app, push, email) contains message content. It states only that there is a new message, and the sender's display name.
+- S75. A message becomes read when its recipient opens that connection's chat.
+- S76. The one-hour check in S73 uses the clock in C4.
+- S77. The admin can lift a suspension. The account becomes active and appears in suggestion lists again. Invites that expired and connections that ended because of the suspension stay expired and ended.
+- S78. An account registered with email logs in with email and password.
+- S79. A password must have at least 10 characters. Passwords of up to 128 characters are accepted. There are no composition rules (digits, uppercase, symbols).
+- S80. A climber can request a password reset for an email address.
+  - S80.1 The response is identical whether or not an account with that address exists.
+  - S80.2 If one exists, an email is sent to it. If the account's login method is password, the email contains a reset link that is unguessable, can be used once, and expires 1 hour after it is sent. If the login method is SSO, the email names the provider and contains no reset link.
+  - S80.3 At most 5 reset requests per address per hour are processed; further requests get the same response as S80.1 but send nothing.
+  - S80.4 Setting a new password ends all of the account's sessions.
+- S81. After 5 consecutive failed login attempts, the account is locked for 15 minutes. A login attempt on a locked account gets the same response as a wrong password.
+- S82. A session expires 30 days after its last use. Logging out ends it.
+- S83. Suspension (S26) and erasure (S38) end all of the account's sessions immediately. A deletion request (S37) does not.
+- S84. An email address belongs to at most one account, from registration until that account is erased.
+- S85. A login or registration through an SSO provider whose email address belongs to an account with a different login method is rejected. The response names the account's login method.
+- S86. An account registered through SSO has no password.
+- S87. Registration with an address that already belongs to an account gets the same response as a successful registration. No account is created. An email is sent to the address saying that someone tried to register with it. For a password account, the email contains links to log in and to reset the password; for an SSO account, it names the provider and contains no reset link.
+- S88. Every account has exactly one login method, fixed at registration: password, or one SSO provider (Google, Facebook or Apple). It cannot be changed.
+- S89. A report is open or closed. The admin API returns open reports oldest first, each with its attachments (S25, S57) and the number of open reports against the same account.
+- S90. Closing a report requires an outcome: no action, warning, photo removed (S56), display name reset (S59) or suspension (S26). Any outcome other than "no action" applies that action. Outcome and closing time are stored.
+- S91. When a report is closed, the reporter receives an in-app notification that it has been handled. The notification does not state the outcome.
+- S92. The reported climber is not notified when a report is filed, or when it is closed with "no action".
+- S93. For any other outcome, the reported climber receives a notice with:
+  - S93.1 the action taken;
+  - S93.2 the report category;
+  - S93.3 where the action concerns their own content, a copy of that content (message, photo or display name).
+  A notice never contains the reporter's identity or the report's free text.
+- S94. Notices (S93) are delivered in-app. A suspension notice is also sent by email to the registered address.
+- S95. After successful authentication (correct password or valid SSO login), a suspended account gets a response stating that it is suspended and giving the support address (S44). With a wrong password, the response is that of a wrong password.
+- S96. An outcome can be contested through support (S44). The climber's response is attached to the report, and the admin records a second outcome: upheld or reversed. A reversed suspension is lifted per S77.
+- S97. Every admin action is recorded with the admin's Entra object ID, the affected account ID, the action and a timestamp. Records are kept for 12 months.
+- S98. The admin API accepts only Entra tokens carrying the admin role. The climber API accepts only climber sessions. Neither API accepts the other's credentials.
+- S99. Each postcode's reference point is a point inside its postcode area, not the area's centroid.
+- S100. The reference table contains only postcodes that have a postcode area. Postcodes that exist only for PO box facilities are not included.
+- S101. A scheduled job imports the postcode dataset (C2) monthly.
+  - S101.1 The import is idempotent.
+  - S101.2 It is applied atomically: a failed import leaves the table unchanged.
+  - S101.3 Its result (added, changed, retired, reactivated) is reported to the admin.
+- S102. A postcode missing from a new dataset version is marked retired.
+  - S102.1 It keeps its last reference point.
+  - S102.2 It cannot be chosen when a profile is created or its postcode is changed.
+  - S102.3 Existing profiles that use it keep it, and S16 uses its retained reference point.
+  - S102.4 A retired postcode that reappears in a later version is reactivated with the new reference point.
+- S103. Supported languages: Norwegian Bokmål and English.
+- S104. Each account stores a language. At registration it is set from the client's language setting: nb, nn or no gives Bokmål, anything else English. The climber can change it at any time.
+- S105. Every text the system sends to a climber is in that climber's stored language: error messages, notices (S93), notifications, emails and the safety notice text (S23). For emails triggered by another person's action (S87), this is the account owner's language.
+- S106. Content written by climbers (display names, chat messages, report free text) is never translated.
+- S107. A dormant account appears in no suggestion list. Its existing connections are unaffected. Any authenticated request makes it active again immediately.
+- S108. When an account becomes dormant, one email is sent stating that it is hidden and that logging in makes it visible again. At most one such email is sent per dormant period.
+- S109. Automatic deletion of dormant accounts:
+  - S109.1 When an account's last activity is 351 days ago, a warning email is sent stating that deletion will begin in 14 days unless the climber logs in.
+  - S109.2 When an account's last activity is 365 days ago, it gets a deletion request per S37. S38 and S39 apply unchanged.
+  - S109.3 Both periods are measured from last activity, so any authenticated request restarts them.
+  - S109.4 Accounts whose email address is not confirmed follow the same timeline, but the emails in S108 and S109.1 are not sent to them.
+- S110. Suspended accounts are exempt from S107–S109; S43 applies to them.
+- S111. Registration requires accepting the current terms of service and acknowledging the current privacy policy. For each, the account stores the document version and a timestamp.
+- S112. The terms and the privacy policy are published at public URLs, readable without an account. Every published version remains retrievable.
+- S113. When a new version of either document is published, the climber API rejects requests from an account that has not accepted or acknowledged it, with a stable error code (C45). Always allowed: reading the documents, accepting or acknowledging them, deletion request (S36), data export (S62), cancelling deletion (S39.2), logout.
+- S114. Publishing a new version of the terms or the privacy policy is an admin action recorded per S97.
+- S115. A chat message is stored and returned exactly as written, as plain text. The API never returns message content as HTML.
+
+## Open points (no ID yet)
+
+- [pending, found during assembly] Whether accounts with an unconfirmed email address (S2) appear in suggestion lists. As written they can appear, but every invite to them is rejected.
+- [pending, found during assembly] Whether two climbers who already have a pending invite (S32) or a connection between them still appear in each other's suggestion lists.
