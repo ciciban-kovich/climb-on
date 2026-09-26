@@ -177,8 +177,5 @@ Rationale lives in decisions.md, not here.
 - S113. When a new version of either document is published, the climber API rejects requests from an account that has not accepted or acknowledged it, with a stable error code (C45). Always allowed: reading the documents, accepting or acknowledging them, deletion request (S36), data export (S62), cancelling deletion (S39.2), logout.
 - S114. Publishing a new version of the terms or the privacy policy is an admin action recorded per S97.
 - S115. A chat message is stored and returned exactly as written, as plain text. The API never returns message content as HTML.
-
-## Open points (no ID yet)
-
-- [pending, found during assembly] Whether accounts with an unconfirmed email address (S2) appear in suggestion lists. As written they can appear, but every invite to them is rejected.
-- [pending, found during assembly] Whether two climbers who already have a pending invite (S32) or a connection between them still appear in each other's suggestion lists.
+- S116. An account whose email address is not confirmed appears in no suggestion list. Its own suggestion-list request is rejected with an error stating that the email address must be confirmed.
+- S117. B does not appear in A's suggestion list while an invite between them is pending, in either direction, or while a connection between them is active or paused.

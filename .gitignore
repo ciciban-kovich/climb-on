@@ -3,3 +3,8 @@ docs/decisions-private.md
 
 # Agent instructions are harness files (C57)
 CLAUDE.md
+
+# Pipeline output stays local (C57)
+.claude/
+docs/design.md
+docs/infrastructure_instructions.md

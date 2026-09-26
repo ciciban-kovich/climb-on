@@ -21,7 +21,7 @@ Rationale lives in decisions.md, not here.
 - C9. The backend is deployed as one unit (modular monolith).
 - C10. Database: PostgreSQL, accessed through EF Core.
 - C12. Hosting: Azure Container Apps.
-- C15. Monthly running-cost ceiling: [pending, budget check]. Behaviour at the ceiling: [pending, same question].
+- C15. Monthly running-cost ceiling: the Azure free services. The subscription is upgraded to pay-as-you-go when the free account's 30-day credit ends, which is required to keep the 12-month free services. Behaviour at the ceiling: a budget alert emails the admin when monthly Azure spend exceeds €5 (above the expected baseline of per-use charges such as email and availability tests); nothing is shut down automatically. Costs outside Azure (Apple Developer Program for S1, a custom domain) are decided before M2 starts. Before the 12-month free database offer ends, the admin decides between paying for it and tearing the environment down.
 - C47. Each API (climber, admin) publishes an OpenAPI description generated from its code. Each client's API code is generated from the corresponding description.
 - C48. CI regenerates both OpenAPI descriptions and both generated clients, and fails if any differs from the committed version.
 - C49. The service worker's push handling is hand-written JavaScript. It only receives and displays notifications and opens the app when one is clicked. It contains no business rules (C7).
@@ -31,6 +31,7 @@ Rationale lives in decisions.md, not here.
 - C11. Integration tests run against a real PostgreSQL instance in a container (Testcontainers). In-memory database substitutes are not used in tests.
 - C16. Every S-ID in specs.md, top-level points and sub-points alike, is referenced by at least one automated test through a machine-readable test attribute (e.g. [Trait("Spec", "S31")]). Lines marked "(retired" are excluded.
 - C17. CI computes the set difference between the S-IDs in /docs/specs.md and the S-IDs referenced by tests, and fails if it is non-empty.
+- C68. Until the first production launch, an S-ID listed in /docs/spec-pending.txt is excluded from the C17 difference. CI fails if the list contains an S-ID that is referenced by a test, or an S-ID that was not in the list on main unless it is newly added to specs.md in the same change. The list must be empty before the first production deploy.
 - C18. Mutation testing (Stryker.NET) runs on the domain module. CI fails if the mutation score is below 80%.
 - C19. The domain module has no dependency on the database, HTTP, email, push or the system clock. An architecture test in CI enforces this.
 - C20. S10 (including after blocks, S24.1), the total order of S60, and S13.4 are tested with property-based tests (FsCheck) over randomly generated profiles.
