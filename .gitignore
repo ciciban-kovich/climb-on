@@ -8,3 +8,8 @@ CLAUDE.md
 .claude/
 docs/design.md
 docs/infrastructure_instructions.md
+
+# Build output
+bin/
+obj/
+TestResults/
