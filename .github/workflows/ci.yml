@@ -59,7 +59,8 @@ jobs:
         run: |
           repo="$(mktemp -d)"
           git -C "$repo" init -q
-          printf 'api_key = "%s"\n' "$(openssl rand -hex 20)" > "$repo/settings.txt"
+          # A fixed fake GitHub token, split so the whole string never appears in this repository.
+          printf 'token = "%s%s"\n' "gh" "p_R7kQ2mXv9LwT4bZ8nPc3YhJ6sDf1GqA5eUo0" > "$repo/settings.txt"
           git -C "$repo" add settings.txt
           git -C "$repo" -c user.name=ci -c user.email=ci@example.invalid commit -q -m "planted fake credential"
           status=0
