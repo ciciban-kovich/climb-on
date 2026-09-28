@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ClimbOn.Api/ClimbOn.Api.csproj" />
+    <Project Path="src/ClimbOn.Application/ClimbOn.Application.csproj" />
+    <Project Path="src/ClimbOn.Domain/ClimbOn.Domain.csproj" />
+    <Project Path="src/ClimbOn.Infrastructure/ClimbOn.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ClimbOn.Api.Tests/ClimbOn.Api.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/SpecTrace.Tests/SpecTrace.Tests.csproj" />
+    <Project Path="tools/SpecTrace/SpecTrace.csproj" />
+  </Folder>
+</Solution>

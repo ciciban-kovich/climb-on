@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClimbOn.Infrastructure\ClimbOn.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
