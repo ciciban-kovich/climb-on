@@ -204,15 +204,6 @@
           "xunit.v3.runner.common": "[3.2.2]"
         }
       },
-      "climbon.application": {
-        "type": "Project",
-        "dependencies": {
-          "ClimbOn.Domain": "[1.0.0, )"
-        }
-      },
-      "climbon.architecture.violations": {
-        "type": "Project"
-      },
       "climbon.domain": {
         "type": "Project"
       }

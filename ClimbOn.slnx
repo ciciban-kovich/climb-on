@@ -8,7 +8,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/ClimbOn.Api.Tests/ClimbOn.Api.Tests.csproj" />
     <Project Path="tests/ClimbOn.Architecture.Tests/ClimbOn.Architecture.Tests.csproj" />
-    <Project Path="tests/ClimbOn.Architecture.Violations/ClimbOn.Architecture.Violations.csproj" />
     <Project Path="tests/ClimbOn.Integration.Tests/ClimbOn.Integration.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">
