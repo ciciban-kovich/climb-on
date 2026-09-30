@@ -4,8 +4,9 @@ using IType = ArchUnitNET.Domain.IType;
 
 namespace ClimbOn.Architecture.Tests;
 
-// A dependency the rules judge: the target type and, for a call, the called member.
-internal sealed record Target(string Type, string? Member);
+// A dependency the rules judge: the target type, the assembly it comes from and, for a call,
+// the called member.
+internal sealed record Target(string Type, string Assembly, string? Member);
 
 // ArchUnitNET does not load compiler-generated structs. In Release an async method's body
 // lives in one (its state machine), so the rules would never see it. This reads those
@@ -47,7 +48,7 @@ internal sealed class CompilerGeneratedStructs
         var types = type.Fields.Select(field => field.FieldType)
             .Concat(type.Methods.Where(method => method.HasBody)
                 .SelectMany(method => method.Body.Variables.Select(variable => variable.VariableType)));
-        var targets = types.SelectMany(Expand).Select(name => new Target(name, null)).ToList();
+        var targets = types.SelectMany(Expand).Select(type => Of(type, null)).ToList();
 
         foreach (var instruction in type.Methods.Where(method => method.HasBody)
                      .SelectMany(method => method.Body.Instructions))
@@ -55,16 +56,15 @@ internal sealed class CompilerGeneratedStructs
             switch (instruction.Operand)
             {
                 case MethodReference method:
-                    targets.AddRange(Expand(method.DeclaringType)
-                        .Select(name => new Target(name, method.FullName)));
-                    targets.AddRange(Signature(method).SelectMany(Expand).Select(name => new Target(name, null)));
+                    targets.AddRange(Expand(method.DeclaringType).Select(type => Of(type, method.FullName)));
+                    targets.AddRange(Signature(method).SelectMany(Expand).Select(type => Of(type, null)));
                     break;
                 case FieldReference field:
                     targets.AddRange(Expand(field.DeclaringType).Concat(Expand(field.FieldType))
-                        .Select(name => new Target(name, null)));
+                        .Select(type => Of(type, null)));
                     break;
                 case TypeReference reference:
-                    targets.AddRange(Expand(reference).Select(name => new Target(name, null)));
+                    targets.AddRange(Expand(reference).Select(type => Of(type, null)));
                     break;
             }
         }
@@ -78,14 +78,16 @@ internal sealed class CompilerGeneratedStructs
             .Concat(method is GenericInstanceMethod generic ? generic.GenericArguments : []);
 
     // Every named type a reference mentions: the type itself and its generic arguments.
-    private static IEnumerable<string> Expand(TypeReference type) => type switch
+    private static IEnumerable<TypeReference> Expand(TypeReference type) => type switch
     {
         GenericParameter => [],
-        GenericInstanceType generic => generic.GenericArguments.SelectMany(Expand)
-            .Prepend(Name(generic.ElementType)),
+        GenericInstanceType generic => generic.GenericArguments.SelectMany(Expand).Prepend(generic.ElementType),
         TypeSpecification specification => Expand(specification.ElementType),
-        _ => [Name(type)],
+        _ => [type],
     };
+
+    private static Target Of(TypeReference type, string? member) =>
+        new(Name(type), type.Scope is ModuleDefinition module ? module.Assembly.Name.Name : type.Scope.Name, member);
 
     // ArchUnitNET separates nested types with '+', Cecil with '/'.
     private static string Name(TypeReference type) => type.FullName.Replace('/', '+');

@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.RegularExpressions;
 using ArchUnitNET.Domain;
 using ArchUnitNET.Domain.Dependencies;
@@ -46,14 +47,22 @@ public sealed class DomainPurityTests
     private static readonly Regex ClockTypes =
         new(@"^System\.Diagnostics\.Stopwatch$|^System\.Threading\.(Periodic)?Timer$|^System\.Timers\.");
 
+    // The shared framework's own assemblies. A package may put types in System.* too.
+    private static readonly HashSet<string> BclAssemblies = Directory
+        .EnumerateFiles(Path.GetDirectoryName(typeof(object).Assembly.Location)!, "*.dll")
+        .Select(file => Path.GetFileNameWithoutExtension(file))
+        .ToHashSet(StringComparer.Ordinal);
+
     private static readonly Regex OuterLayers = new(@"^ClimbOn\.(Infrastructure|Api)\.");
 
     // ArchUnitNET's type-provider conditions only see types inside the loaded architecture,
     // so the rules inspect each dependency's target directly to cover referenced BCL types.
     private static IArchRule DependsOnlyOnBcl(GivenTypesConjunction types, string ownNamespace)
     {
-        var allowed = new Regex($@"{Bcl}|{CompilerGenerated}|^{Regex.Escape(ownNamespace)}\.");
-        return Forbid(types, target => !allowed.IsMatch(target.Type),
+        var bcl = new Regex(Bcl);
+        var own = new Regex($@"{CompilerGenerated}|^{Regex.Escape(ownNamespace)}\.");
+        return Forbid(types,
+            target => !(own.IsMatch(target.Type) || (bcl.IsMatch(target.Type) && BclAssemblies.Contains(target.Assembly))),
             "depend only on the BCL outside System.Net, System.Data and file-system System.IO");
     }
 
@@ -71,6 +80,7 @@ public sealed class DomainPurityTests
         type.Dependencies
             .Select(dependency => new Target(
                 dependency.Target.FullName,
+                new AssemblyName(dependency.Target.Assembly.FullName).Name!,
                 dependency is MethodCallDependency call ? call.TargetMember.FullName : null))
             .Concat(Structs.Of(type));
 
@@ -106,7 +116,7 @@ public sealed class DomainPurityTests
             "Dependencies",
             [
                 "UsesDatabase", "UsesFileSystem", "UsesHttp", "UsesHttpAsTypeArgument", "UsesHttpInAsyncMethod",
-                "UsesNonBclType",
+                "UsesNonBclType", "UsesPackageTypeInSystemNamespace",
             ]
         },
         {

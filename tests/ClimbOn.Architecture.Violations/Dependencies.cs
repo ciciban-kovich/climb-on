@@ -1,5 +1,6 @@
 using System.Data.Common;
 using System.Net.Http;
+using System.Reactive.Subjects;
 using Microsoft.Win32.SafeHandles;
 
 namespace ClimbOn.Architecture.Violations.Dependencies;
@@ -32,6 +33,11 @@ public static class UsesHttpInAsyncMethod
         using var client = new HttpClient();
         return client.DefaultRequestHeaders.Count();
     }
+}
+
+public static class UsesPackageTypeInSystemNamespace
+{
+    public static bool HasObservers(Subject<int> subject) => subject.HasObservers;
 }
 
 public static class UsesOnlyBcl
