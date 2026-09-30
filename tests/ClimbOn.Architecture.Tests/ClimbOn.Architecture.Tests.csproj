@@ -14,6 +14,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Canary\BannedUses.cs.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\ClimbOn.Application\ClimbOn.Application.csproj" />
     <ProjectReference Include="..\..\src\ClimbOn.Domain\ClimbOn.Domain.csproj" />
     <ProjectReference Include="..\ClimbOn.Architecture.Violations\ClimbOn.Architecture.Violations.csproj" />

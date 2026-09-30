@@ -1,0 +1,89 @@
+// Part 4 canary fixture (C19). Compiled only into the canary build of ClimbOn.Domain.
+// Each line marked with a ban comment naming its BannedSymbols.txt entry must raise RS0030; no other line may.
+namespace ClimbOn.Domain.Canary;
+
+internal static class BannedUses
+{
+    public static void Namespaces()
+    {
+        _ = typeof(System.Net.IPAddress); // ban: N:System.Net
+        _ = typeof(System.Net.Http.HttpClient); // ban: N:System.Net
+        _ = typeof(System.Data.DataTable); // ban: N:System.Data
+        _ = typeof(System.IO.Enumeration.FileSystemName); // ban: N:System.IO.Enumeration
+        _ = typeof(System.IO.MemoryMappedFiles.MemoryMappedFile); // ban: N:System.IO.MemoryMappedFiles
+        _ = typeof(System.IO.Pipes.PipeDirection); // ban: N:System.IO.Pipes
+        _ = typeof(System.IO.IsolatedStorage.IsolatedStorageException); // ban: N:System.IO.IsolatedStorage
+        _ = typeof(System.Timers.Timer); // ban: N:System.Timers
+    }
+
+    public static void FileSystemTypes()
+    {
+        _ = typeof(System.IO.Path); // ban: T:System.IO.Path
+        _ = typeof(System.IO.Directory); // ban: T:System.IO.Directory
+        _ = typeof(System.IO.DirectoryInfo); // ban: T:System.IO.DirectoryInfo
+        _ = typeof(System.IO.DirectoryNotFoundException); // ban: T:System.IO.DirectoryNotFoundException
+        _ = typeof(System.IO.DriveInfo); // ban: T:System.IO.DriveInfo
+        _ = typeof(System.IO.DriveNotFoundException); // ban: T:System.IO.DriveNotFoundException
+        _ = typeof(System.IO.DriveType); // ban: T:System.IO.DriveType
+        _ = typeof(System.IO.File); // ban: T:System.IO.File
+        _ = typeof(System.IO.FileAccess); // ban: T:System.IO.FileAccess
+        _ = typeof(System.IO.FileAttributes); // ban: T:System.IO.FileAttributes
+        _ = typeof(System.IO.FileInfo); // ban: T:System.IO.FileInfo
+        _ = typeof(System.IO.FileLoadException); // ban: T:System.IO.FileLoadException
+        _ = typeof(System.IO.FileMode); // ban: T:System.IO.FileMode
+        _ = typeof(System.IO.FileNotFoundException); // ban: T:System.IO.FileNotFoundException
+        _ = typeof(System.IO.FileOptions); // ban: T:System.IO.FileOptions
+        _ = typeof(System.IO.FileShare); // ban: T:System.IO.FileShare
+        _ = typeof(System.IO.FileStream); // ban: T:System.IO.FileStream
+        _ = typeof(System.IO.FileStreamOptions); // ban: T:System.IO.FileStreamOptions
+        _ = typeof(System.IO.FileSystemAclExtensions); // ban: T:System.IO.FileSystemAclExtensions
+        _ = typeof(System.IO.FileSystemEventArgs); // ban: T:System.IO.FileSystemEventArgs
+        _ = typeof(System.IO.FileSystemEventHandler); // ban: T:System.IO.FileSystemEventHandler
+        _ = typeof(System.IO.FileSystemInfo); // ban: T:System.IO.FileSystemInfo
+        _ = typeof(System.IO.FileSystemWatcher); // ban: T:System.IO.FileSystemWatcher
+    }
+
+    public static void Clock()
+    {
+        _ = System.DateTime.Now; // ban: P:System.DateTime.Now
+        _ = System.DateTime.UtcNow; // ban: P:System.DateTime.UtcNow
+        _ = System.DateTime.Today; // ban: P:System.DateTime.Today
+        _ = System.DateTimeOffset.Now; // ban: P:System.DateTimeOffset.Now
+        _ = System.DateTimeOffset.UtcNow; // ban: P:System.DateTimeOffset.UtcNow
+        _ = System.Environment.TickCount; // ban: P:System.Environment.TickCount
+        _ = System.Environment.TickCount64; // ban: P:System.Environment.TickCount64
+        _ = System.Guid.CreateVersion7(); // ban: M:System.Guid.CreateVersion7
+        _ = typeof(System.TimeProvider); // ban: T:System.TimeProvider
+        _ = typeof(System.Diagnostics.Stopwatch); // ban: T:System.Diagnostics.Stopwatch
+        _ = typeof(System.Threading.Timer); // ban: T:System.Threading.Timer
+        _ = typeof(System.Threading.PeriodicTimer); // ban: T:System.Threading.PeriodicTimer
+    }
+
+    public static void Waits(System.TimeProvider? provider)
+    {
+        _ = System.Threading.Tasks.Task.Delay(1); // ban: M:System.Threading.Tasks.Task.Delay(System.Int32)
+        _ = System.Threading.Tasks.Task.Delay(1, default); // ban: M:System.Threading.Tasks.Task.Delay(System.Int32,System.Threading.CancellationToken)
+        _ = System.Threading.Tasks.Task.Delay(System.TimeSpan.Zero); // ban: M:System.Threading.Tasks.Task.Delay(System.TimeSpan)
+        _ = System.Threading.Tasks.Task.Delay(System.TimeSpan.Zero, default(System.Threading.CancellationToken)); // ban: M:System.Threading.Tasks.Task.Delay(System.TimeSpan,System.Threading.CancellationToken)
+        _ = System.Threading.Tasks.Task.Delay(System.TimeSpan.Zero, provider!); // ban: M:System.Threading.Tasks.Task.Delay(System.TimeSpan,System.TimeProvider)
+        _ = System.Threading.Tasks.Task.Delay(System.TimeSpan.Zero, provider!, default); // ban: M:System.Threading.Tasks.Task.Delay(System.TimeSpan,System.TimeProvider,System.Threading.CancellationToken)
+        System.Threading.Thread.Sleep(0); // ban: M:System.Threading.Thread.Sleep(System.Int32)
+        System.Threading.Thread.Sleep(System.TimeSpan.Zero); // ban: M:System.Threading.Thread.Sleep(System.TimeSpan)
+    }
+
+    public static async System.Threading.Tasks.Task<System.DateTime> InAsyncMethod()
+    {
+        await System.Threading.Tasks.Task.Yield();
+        return System.DateTime.UtcNow; // ban: P:System.DateTime.UtcNow
+    }
+
+    public static System.Func<System.DateTime> InLambda() =>
+        () => System.DateTime.UtcNow; // ban: P:System.DateTime.UtcNow
+
+    public static System.DateTime InLocalFunction()
+    {
+        return Now();
+
+        static System.DateTime Now() => System.DateTime.UtcNow; // ban: P:System.DateTime.UtcNow
+    }
+}

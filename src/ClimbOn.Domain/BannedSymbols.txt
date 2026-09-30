@@ -1,0 +1,50 @@
+N:System.Net;C19: no HTTP or email
+N:System.Data;C19: no database
+T:System.IO.Directory;C19: no file system
+T:System.IO.DirectoryInfo;C19: no file system
+T:System.IO.DirectoryNotFoundException;C19: no file system
+T:System.IO.DriveInfo;C19: no file system
+T:System.IO.DriveNotFoundException;C19: no file system
+T:System.IO.DriveType;C19: no file system
+T:System.IO.File;C19: no file system
+T:System.IO.FileAccess;C19: no file system
+T:System.IO.FileAttributes;C19: no file system
+T:System.IO.FileInfo;C19: no file system
+T:System.IO.FileLoadException;C19: no file system
+T:System.IO.FileMode;C19: no file system
+T:System.IO.FileNotFoundException;C19: no file system
+T:System.IO.FileOptions;C19: no file system
+T:System.IO.FileShare;C19: no file system
+T:System.IO.FileStream;C19: no file system
+T:System.IO.FileStreamOptions;C19: no file system
+T:System.IO.FileSystemAclExtensions;C19: no file system
+T:System.IO.FileSystemEventArgs;C19: no file system
+T:System.IO.FileSystemEventHandler;C19: no file system
+T:System.IO.FileSystemInfo;C19: no file system
+T:System.IO.FileSystemWatcher;C19: no file system
+T:System.IO.Path;C19: no file system
+N:System.IO.Enumeration;C19: no file system
+N:System.IO.MemoryMappedFiles;C19: no file system
+N:System.IO.Pipes;C19: no file system
+N:System.IO.IsolatedStorage;C19: no file system
+P:System.DateTime.Now;C19: take now as a parameter
+P:System.DateTime.UtcNow;C19: take now as a parameter
+P:System.DateTime.Today;C19: take now as a parameter
+P:System.DateTimeOffset.Now;C19: take now as a parameter
+P:System.DateTimeOffset.UtcNow;C19: take now as a parameter
+P:System.Environment.TickCount;C19: take now as a parameter
+P:System.Environment.TickCount64;C19: take now as a parameter
+M:System.Guid.CreateVersion7;C19: reads the clock; pass now to CreateVersion7(DateTimeOffset)
+M:System.Threading.Tasks.Task.Delay(System.Int32);C19: no real-time waits
+M:System.Threading.Tasks.Task.Delay(System.Int32,System.Threading.CancellationToken);C19: no real-time waits
+M:System.Threading.Tasks.Task.Delay(System.TimeSpan);C19: no real-time waits
+M:System.Threading.Tasks.Task.Delay(System.TimeSpan,System.Threading.CancellationToken);C19: no real-time waits
+M:System.Threading.Tasks.Task.Delay(System.TimeSpan,System.TimeProvider);C19: no real-time waits
+M:System.Threading.Tasks.Task.Delay(System.TimeSpan,System.TimeProvider,System.Threading.CancellationToken);C19: no real-time waits
+M:System.Threading.Thread.Sleep(System.Int32);C19: no real-time waits
+M:System.Threading.Thread.Sleep(System.TimeSpan);C19: no real-time waits
+T:System.TimeProvider;C19: take now as a parameter
+T:System.Diagnostics.Stopwatch;C19: take now as a parameter
+T:System.Threading.Timer;C19: no timers
+T:System.Threading.PeriodicTimer;C19: no timers
+N:System.Timers;C19: no timers
