@@ -32,6 +32,35 @@ namespace ClimbOn.Architecture.Violations.Layers
         }
     }
 
+    public static class UsesApiInAsyncLambda
+    {
+        public static Func<Task<string>> Create() => async () =>
+        {
+            await Task.Yield();
+            return new OuterLayerEndpoint().ToString()!;
+        };
+    }
+
+    public static class UsesApiInAsyncIterator
+    {
+        public static async IAsyncEnumerable<string> Create()
+        {
+            await Task.Yield();
+            yield return new OuterLayerEndpoint().ToString()!;
+        }
+    }
+
+    public static class UsesApiInLocalFunctionOfAsyncMethod
+    {
+        public static async Task<string> Create()
+        {
+            await Task.Yield();
+            return Name();
+
+            static string Name() => new OuterLayerEndpoint().ToString()!;
+        }
+    }
+
     public static class UsesNoOuterLayer
     {
         public static string Name() => nameof(UsesNoOuterLayer);

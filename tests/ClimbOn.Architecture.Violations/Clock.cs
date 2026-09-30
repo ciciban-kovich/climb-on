@@ -85,3 +85,32 @@ public static class TakesTimeAsParameter
 {
     public static DateTimeOffset Later(DateTimeOffset now) => now + TimeSpan.FromDays(1);
 }
+
+public static class ReadsDateTimeUtcNowInAsyncLambda
+{
+    public static Func<Task<DateTime>> Read() => async () =>
+    {
+        await Task.Yield();
+        return DateTime.UtcNow;
+    };
+}
+
+public static class ReadsDateTimeUtcNowInAsyncIterator
+{
+    public static async IAsyncEnumerable<DateTime> Read()
+    {
+        await Task.Yield();
+        yield return DateTime.UtcNow;
+    }
+}
+
+public static class ReadsDateTimeUtcNowInLocalFunctionOfAsyncMethod
+{
+    public static async Task<DateTime> Read()
+    {
+        await Task.Yield();
+        return Now();
+
+        static DateTime Now() => DateTime.UtcNow;
+    }
+}

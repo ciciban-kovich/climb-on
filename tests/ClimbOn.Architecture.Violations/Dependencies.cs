@@ -60,3 +60,38 @@ public static class UsesHttpAsTypeArgument
 {
     public static List<HttpClient> Create() => [];
 }
+
+public static class UsesHttpInAsyncLambda
+{
+    public static Func<Task<int>> Read() => async () =>
+    {
+        await Task.Yield();
+        using var client = new HttpClient();
+        return client.DefaultRequestHeaders.Count();
+    };
+}
+
+public static class UsesHttpInAsyncIterator
+{
+    public static async IAsyncEnumerable<int> Read()
+    {
+        await Task.Yield();
+        using var client = new HttpClient();
+        yield return client.DefaultRequestHeaders.Count();
+    }
+}
+
+public static class UsesHttpInLocalFunctionOfAsyncMethod
+{
+    public static async Task<int> Read()
+    {
+        await Task.Yield();
+        return Count();
+
+        static int Count()
+        {
+            using var client = new HttpClient();
+            return client.DefaultRequestHeaders.Count();
+        }
+    }
+}

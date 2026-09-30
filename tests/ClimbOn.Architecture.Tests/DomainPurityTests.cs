@@ -27,7 +27,7 @@ public sealed class DomainPurityTests
         .LoadAssemblies(DomainAssembly, ApplicationAssembly, ViolationsAssembly)
         .Build();
 
-    private static readonly CompilerGeneratedStructs Structs =
+    private static readonly CompilerGeneratedCode Generated =
         new(DomainAssembly, ApplicationAssembly, ViolationsAssembly);
 
     // Types the compiler emits into every assembly (nullable attributes and their marker).
@@ -84,7 +84,7 @@ public sealed class DomainPurityTests
                 dependency.Target.FullName,
                 new AssemblyName(dependency.Target.Assembly.FullName).Name!,
                 dependency is MethodCallDependency call ? call.TargetMember.FullName : null))
-            .Concat(Structs.Of(type));
+            .Concat(Generated.Of(type));
 
     private static IArchRule Forbid(GivenTypesConjunction types, Func<Target, bool> isForbidden, string rule) =>
         types.Should()
@@ -117,7 +117,8 @@ public sealed class DomainPurityTests
         {
             "Dependencies",
             [
-                "UsesDatabase", "UsesFileSystem", "UsesHttp", "UsesHttpAsTypeArgument", "UsesHttpInAsyncMethod",
+                "UsesDatabase", "UsesFileSystem", "UsesHttp", "UsesHttpAsTypeArgument", "UsesHttpInAsyncIterator",
+                "UsesHttpInAsyncLambda", "UsesHttpInAsyncMethod", "UsesHttpInLocalFunctionOfAsyncMethod",
                 "UsesNonBclType", "UsesPackageTypeInSystemNamespace",
             ]
         },
@@ -125,14 +126,19 @@ public sealed class DomainPurityTests
             "Clock",
             [
                 "CallsTaskDelay", "CallsThreadSleep", "ReadsDateTimeNow", "ReadsDateTimeOffsetNow",
-                "ReadsDateTimeOffsetUtcNow", "ReadsDateTimeToday", "ReadsDateTimeUtcNow", "ReadsDateTimeUtcNowInAsyncMethod", "ReadsTickCount",
+                "ReadsDateTimeOffsetUtcNow", "ReadsDateTimeToday", "ReadsDateTimeUtcNow",
+                "ReadsDateTimeUtcNowInAsyncIterator", "ReadsDateTimeUtcNowInAsyncLambda",
+                "ReadsDateTimeUtcNowInAsyncMethod", "ReadsDateTimeUtcNowInLocalFunctionOfAsyncMethod", "ReadsTickCount",
                 "ReadsTickCount64", "ReadsTimeProviderSystem", "UsesPeriodicTimer", "UsesStopwatch",
                 "UsesThreadingTimer", "UsesTimersTimer",
             ]
         },
         {
             "Layers",
-            ["UsesApi", "UsesApiInAsyncMethod", "UsesInfrastructure"]
+            [
+                "UsesApi", "UsesApiInAsyncIterator", "UsesApiInAsyncLambda", "UsesApiInAsyncMethod",
+                "UsesApiInLocalFunctionOfAsyncMethod", "UsesInfrastructure",
+            ]
         },
     };
 
