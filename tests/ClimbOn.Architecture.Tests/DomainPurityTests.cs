@@ -63,7 +63,7 @@ public sealed class DomainPurityTests
         var own = new Regex($@"{CompilerGenerated}|^{Regex.Escape(ownNamespace)}\.");
         return Forbid(types,
             target => !(own.IsMatch(target.Type) || (bcl.IsMatch(target.Type) && BclAssemblies.Contains(target.Assembly))),
-            "depend only on the BCL outside System.Net, System.Data and file-system System.IO");
+            "depend only on the BCL outside System.Net, System.Data and the System.IO file and directory types");
     }
 
     private static IArchRule NeverReadsSystemClock(GivenTypesConjunction types) =>
