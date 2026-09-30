@@ -45,6 +45,15 @@ public static class UsesOnlyBcl
     public static int Sum(IEnumerable<int> values) => values.Sum();
 
     public static long Length(Stream stream) => new MemoryStream().Length + stream.Length;
+
+    // Both compile to <PrivateImplementationDetails> inline-array helpers.
+    public static string Join(string system, string grade, string suffix) => string.Join(" ", system, grade, suffix);
+
+    public static int First(int a, int b)
+    {
+        ReadOnlySpan<int> values = [a, b];
+        return values[0];
+    }
 }
 
 public static class UsesHttpAsTypeArgument

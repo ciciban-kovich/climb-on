@@ -76,8 +76,10 @@ public sealed class DomainPurityTests
         Forbid(types, target => OuterLayers.IsMatch(target.Type),
             "not depend on Infrastructure or Api");
 
+    // A generic parameter has no assembly and names no type of its own.
     private static IEnumerable<Target> Targets(IType type) =>
         type.Dependencies
+            .Where(dependency => dependency.Target is not GenericParameter)
             .Select(dependency => new Target(
                 dependency.Target.FullName,
                 new AssemblyName(dependency.Target.Assembly.FullName).Name!,
