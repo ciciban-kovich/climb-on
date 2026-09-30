@@ -23,6 +23,15 @@ namespace ClimbOn.Architecture.Violations.Layers
         public static OuterLayerEndpoint Create() => new();
     }
 
+    public static class UsesApiInAsyncMethod
+    {
+        public static async Task<string> Create()
+        {
+            await Task.Yield();
+            return new OuterLayerEndpoint().ToString()!;
+        }
+    }
+
     public static class UsesNoOuterLayer
     {
         public static string Name() => nameof(UsesNoOuterLayer);

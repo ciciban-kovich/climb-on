@@ -72,6 +72,15 @@ public static class UsesTimersTimer
     public static void Stop(System.Timers.Timer timer) => timer.Dispose();
 }
 
+public static class ReadsDateTimeUtcNowInAsyncMethod
+{
+    public static async Task<DateTime> Read()
+    {
+        await Task.Yield();
+        return DateTime.UtcNow;
+    }
+}
+
 public static class TakesTimeAsParameter
 {
     public static DateTimeOffset Later(DateTimeOffset now) => now + TimeSpan.FromDays(1);

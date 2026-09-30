@@ -24,6 +24,16 @@ public static class UsesNonBclType
     public static bool IsInvalid(SafeFileHandle handle) => handle.IsInvalid;
 }
 
+public static class UsesHttpInAsyncMethod
+{
+    public static async Task<int> Read()
+    {
+        await Task.Yield();
+        using var client = new HttpClient();
+        return client.DefaultRequestHeaders.Count();
+    }
+}
+
 public static class UsesOnlyBcl
 {
     public static int Sum(IEnumerable<int> values) => values.Sum();

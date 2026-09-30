@@ -26,6 +26,9 @@ public sealed class DomainPurityTests
         .LoadAssemblies(DomainAssembly, ApplicationAssembly, ViolationsAssembly)
         .Build();
 
+    private static readonly CompilerGeneratedStructs Structs =
+        new(DomainAssembly, ApplicationAssembly, ViolationsAssembly);
+
     // Types the compiler emits into every assembly (nullable attributes and their marker).
     private const string CompilerGenerated = @"^Microsoft\.CodeAnalysis\.EmbeddedAttribute$|^<PrivateImplementationDetails>";
 
@@ -50,29 +53,34 @@ public sealed class DomainPurityTests
     private static IArchRule DependsOnlyOnBcl(GivenTypesConjunction types, string ownNamespace)
     {
         var allowed = new Regex($@"{Bcl}|{CompilerGenerated}|^{Regex.Escape(ownNamespace)}\.");
-        return Forbid(types, dependency => !allowed.IsMatch(dependency.Target.FullName),
+        return Forbid(types, target => !allowed.IsMatch(target.Type),
             "depend only on the BCL outside System.Net, System.Data and file-system System.IO");
     }
 
     private static IArchRule NeverReadsSystemClock(GivenTypesConjunction types) =>
         Forbid(types,
-            dependency => ClockTypes.IsMatch(dependency.Target.FullName)
-                || (dependency is MethodCallDependency call && ClockMethods.IsMatch(call.TargetMember.FullName)),
+            target => ClockTypes.IsMatch(target.Type)
+                || (target.Member is { } member && ClockMethods.IsMatch(member)),
             "never read the system clock or wait on real time");
 
     private static IArchRule DoesNotReferenceOuterLayers(GivenTypesConjunction types) =>
-        Forbid(types, dependency => OuterLayers.IsMatch(dependency.Target.FullName),
+        Forbid(types, target => OuterLayers.IsMatch(target.Type),
             "not depend on Infrastructure or Api");
 
-    private static IArchRule Forbid(GivenTypesConjunction types, Func<ITypeDependency, bool> isForbidden, string rule) =>
+    private static IEnumerable<Target> Targets(IType type) =>
+        type.Dependencies
+            .Select(dependency => new Target(
+                dependency.Target.FullName,
+                dependency is MethodCallDependency call ? call.TargetMember.FullName : null))
+            .Concat(Structs.Of(type));
+
+    private static IArchRule Forbid(GivenTypesConjunction types, Func<Target, bool> isForbidden, string rule) =>
         types.Should()
             .FollowCustomCondition(
                 type =>
                 {
-                    var offending = type.Dependencies.Where(isForbidden)
-                        .Select(dependency => dependency is MethodCallDependency call
-                            ? call.TargetMember.FullName
-                            : dependency.Target.FullName)
+                    var offending = Targets(type).Where(isForbidden)
+                        .Select(target => target.Member ?? target.Type)
                         .Distinct()
                         .ToList();
                     return new ConditionResult(type, offending.Count == 0, "uses " + string.Join(", ", offending));
@@ -96,20 +104,23 @@ public sealed class DomainPurityTests
     {
         {
             "Dependencies",
-            ["UsesDatabase", "UsesFileSystem", "UsesHttp", "UsesHttpAsTypeArgument", "UsesNonBclType"]
+            [
+                "UsesDatabase", "UsesFileSystem", "UsesHttp", "UsesHttpAsTypeArgument", "UsesHttpInAsyncMethod",
+                "UsesNonBclType",
+            ]
         },
         {
             "Clock",
             [
                 "CallsTaskDelay", "CallsThreadSleep", "ReadsDateTimeNow", "ReadsDateTimeOffsetNow",
-                "ReadsDateTimeOffsetUtcNow", "ReadsDateTimeToday", "ReadsDateTimeUtcNow", "ReadsTickCount",
+                "ReadsDateTimeOffsetUtcNow", "ReadsDateTimeToday", "ReadsDateTimeUtcNow", "ReadsDateTimeUtcNowInAsyncMethod", "ReadsTickCount",
                 "ReadsTickCount64", "ReadsTimeProviderSystem", "UsesPeriodicTimer", "UsesStopwatch",
                 "UsesThreadingTimer", "UsesTimersTimer",
             ]
         },
         {
             "Layers",
-            ["UsesApi", "UsesInfrastructure"]
+            ["UsesApi", "UsesApiInAsyncMethod", "UsesInfrastructure"]
         },
     };
 
@@ -134,6 +145,6 @@ public sealed class DomainPurityTests
         Assert.Equal(expected, offenders);
     }
 
-    // A call inside a lambda or async method belongs to a nested compiler-generated type.
+    // A call inside a lambda or a Debug-built async method belongs to a nested compiler-generated type.
     private static string TopLevelName(IType type) => type.Name.Split('+')[0];
 }
