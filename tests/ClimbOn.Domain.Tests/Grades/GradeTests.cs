@@ -29,6 +29,21 @@ public sealed class GradeTests
     public void Each_scale_lists_its_grades_easiest_first(GradeScale scale) =>
         Assert.Equal(ExpectedGrades.For(scale), scale.Grades());
 
+    [Fact]
+    [Trait("SpecPartial", "S13.3")]
+    public void Rope_conversion_table_has_every_row_at_its_position()
+    {
+        var expected = ExpectedConversionTable.Rows;
+        var actual = Enumerable.Range(0, expected.Count)
+            .Select(position => (
+                RopeConversionTable.GradeAt(GradeScale.Norwegian, position),
+                RopeConversionTable.GradeAt(GradeScale.French, position)))
+            .ToList();
+
+        Assert.Equal(expected, actual);
+        Assert.Throws<ArgumentOutOfRangeException>(() => RopeConversionTable.GradeAt(GradeScale.Norwegian, expected.Count));
+    }
+
     [Theory]
     [Trait("SpecPartial", "S13.3")]
     [InlineData(GradeScale.Norwegian)]
