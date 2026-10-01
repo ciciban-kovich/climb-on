@@ -26,7 +26,7 @@ public sealed record Grade
     public static bool TryCreate(GradeScale scale, string? entered, [NotNullWhen(true)] out Grade? grade)
     {
         grade = null;
-        if (entered is null || GradeScales.PositionOf(scale, entered) is not { } position)
+        if (entered is null || !Enum.IsDefined(scale) || GradeScales.PositionOf(scale, entered) is not { } position)
         {
             return false;
         }

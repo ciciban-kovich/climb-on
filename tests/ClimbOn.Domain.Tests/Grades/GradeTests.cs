@@ -66,6 +66,14 @@ public sealed class GradeTests
         Assert.Null(grade);
     }
 
+    [Fact]
+    [Trait("SpecPartial", "S13.3")]
+    public void Grade_in_an_undefined_scale_is_rejected()
+    {
+        Assert.False(Grade.TryCreate((GradeScale)99, "3", out var grade));
+        Assert.Null(grade);
+    }
+
     [Theory]
     [Trait("SpecPartial", "S13.5")]
     [InlineData(GradeScale.Norwegian, "8", GradeScale.French, "7a+")]
