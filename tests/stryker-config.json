@@ -1,0 +1,21 @@
+{
+  "stryker-config": {
+    "project": "ClimbOn.Domain.csproj",
+    "test-projects": [
+      "tests/ClimbOn.Domain.Tests/ClimbOn.Domain.Tests.csproj"
+    ],
+    "test-runner": "mtp",
+    "coverage-analysis": "off",
+    "reporters": [
+      "progress",
+      "cleartext",
+      "json",
+      "html"
+    ],
+    "thresholds": {
+      "high": 90,
+      "low": 85,
+      "break": 80
+    }
+  }
+}

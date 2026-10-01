@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <!-- Duplicates Directory.Build.props: Stryker's project analysis reads TargetFramework from this file only. -->
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
   </ItemGroup>
