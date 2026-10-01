@@ -29,6 +29,10 @@ public static class GradeScales
     private static readonly string[] WaterIce =
         ["WI1", "WI2", "WI3", "WI3+", "WI4", "WI4+", "WI5", "WI5+", "WI6", "WI6+", "WI7"];
 
+    private static readonly IReadOnlyList<string> FontGrades = Array.AsReadOnly(Font);
+
+    private static readonly IReadOnlyList<string> WaterIceGrades = Array.AsReadOnly(WaterIce);
+
     public static GradeFamily Family(this GradeScale scale) => scale switch
     {
         GradeScale.Norwegian or GradeScale.French => GradeFamily.Rope,
@@ -51,8 +55,8 @@ public static class GradeScales
     {
         GradeScale.Norwegian => RopeConversionTable.NorwegianGrades,
         GradeScale.French => RopeConversionTable.FrenchGrades,
-        GradeScale.Font => Font,
-        GradeScale.WaterIce => WaterIce,
+        GradeScale.Font => FontGrades,
+        GradeScale.WaterIce => WaterIceGrades,
         _ => throw new ArgumentOutOfRangeException(nameof(scale), scale, null),
     };
 

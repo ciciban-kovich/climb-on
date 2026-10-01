@@ -20,6 +20,29 @@ public sealed class GradeTests
     }
 
     [Theory]
+    [Trait("SpecPartial", "S13.2")]
+    [Trait("SpecPartial", "S13.3")]
+    [InlineData(GradeScale.Norwegian)]
+    [InlineData(GradeScale.French)]
+    [InlineData(GradeScale.Font)]
+    [InlineData(GradeScale.WaterIce)]
+    public void Each_scale_lists_its_grades_easiest_first(GradeScale scale) =>
+        Assert.Equal(ExpectedGrades.For(scale), scale.Grades());
+
+    [Theory]
+    [Trait("SpecPartial", "S13.3")]
+    [InlineData(GradeScale.Norwegian)]
+    [InlineData(GradeScale.French)]
+    [InlineData(GradeScale.Font)]
+    [InlineData(GradeScale.WaterIce)]
+    public void Grade_lists_cannot_be_modified(GradeScale scale)
+    {
+        var grades = Assert.IsAssignableFrom<IList<string>>(scale.Grades());
+        Assert.Throws<NotSupportedException>(() => grades[0] = "X");
+        Assert.True(Grade.TryCreate(scale, ExpectedGrades.For(scale)[0], out _));
+    }
+
+    [Theory]
     [Trait("SpecPartial", "S13.3")]
     [InlineData(GradeScale.Norwegian, "3", GradeFamily.Rope, 0)]
     [InlineData(GradeScale.Norwegian, "7-", GradeFamily.Rope, 10)]
@@ -98,11 +121,21 @@ public sealed class GradeTests
 
     [Theory]
     [Trait("SpecPartial", "S13.5")]
-    [InlineData(GradeScale.Font)]
-    [InlineData(GradeScale.WaterIce)]
-    public void Viewer_scale_must_be_a_rope_scale(GradeScale viewerScale)
+    [InlineData(GradeScale.Norwegian, "7", GradeScale.Font)]
+    [InlineData(GradeScale.Norwegian, "7", GradeScale.WaterIce)]
+    [InlineData(GradeScale.Font, "7A", GradeScale.Font)]
+    [InlineData(GradeScale.WaterIce, "WI5", GradeScale.WaterIce)]
+    [InlineData(GradeScale.Font, "7A", GradeScale.WaterIce)]
+    public void Viewer_scale_must_be_a_rope_scale(GradeScale scale, string entered, GradeScale viewerScale)
     {
-        Assert.True(Grade.TryCreate(GradeScale.Norwegian, "7", out var grade));
+        Assert.True(Grade.TryCreate(scale, entered, out var grade));
         Assert.Throws<ArgumentOutOfRangeException>(() => grade.ShownTo(viewerScale));
     }
+
+    [Theory]
+    [Trait("SpecPartial", "S13.3")]
+    [InlineData(GradeScale.Norwegian, -1)]
+    [InlineData(GradeScale.French, 31)]
+    public void Position_outside_the_table_is_rejected(GradeScale scale, int position) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() => RopeConversionTable.GradeAt(scale, position));
 }

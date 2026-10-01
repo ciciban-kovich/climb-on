@@ -39,9 +39,9 @@ public static class RopeConversionTable
         ("11+", "9c"),
     ];
 
-    public static IReadOnlyList<string> NorwegianGrades { get; } = Rows.Select(r => r.Norwegian).Distinct().ToArray();
+    public static IReadOnlyList<string> NorwegianGrades { get; } = Array.AsReadOnly(Rows.Select(r => r.Norwegian).Distinct().ToArray());
 
-    public static IReadOnlyList<string> FrenchGrades { get; } = Rows.Select(r => r.French).Distinct().ToArray();
+    public static IReadOnlyList<string> FrenchGrades { get; } = Array.AsReadOnly(Rows.Select(r => r.French).Distinct().ToArray());
 
     public static int? PositionOf(GradeScale scale, string grade)
     {
@@ -56,7 +56,12 @@ public static class RopeConversionTable
         return null;
     }
 
-    public static string GradeAt(GradeScale scale, int position) => Cell(scale, position);
+    public static string GradeAt(GradeScale scale, int position)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(position);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(position, Rows.Length);
+        return Cell(scale, position);
+    }
 
     private static string Cell(GradeScale scale, int position) => scale switch
     {
