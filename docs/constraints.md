@@ -32,7 +32,7 @@ Rationale lives in decisions.md, not here.
 - C16. Every S-ID in specs.md, top-level points and sub-points alike, is referenced by at least one automated test through a machine-readable test attribute (e.g. [Trait("Spec", "S31")]). Lines marked "(retired" are excluded.
 - C17. CI computes the set difference between the S-IDs in /docs/specs.md and the S-IDs referenced by tests, and fails if it is non-empty.
 - C68. Until the first production launch, an S-ID listed in /docs/spec-pending.txt is excluded from the C17 difference. CI fails if the list contains an S-ID that is referenced by a test, or an S-ID that was not in the list on main unless it is newly added to specs.md in the same change. The list must be empty before the first production deploy.
-- C18. Mutation testing (Stryker.NET) runs on the domain module. CI fails if the mutation score is below 80%.
+- C18. Mutation testing (Stryker.NET) runs on the domain module. CI fails if the mutation score is below 80%. (C18 suspended 2026-10-01, see task 15.)
 - C19. The domain module has no dependency on the database, HTTP, email, push or the system clock. An architecture test in CI enforces this.
 - C20. S10 (including after blocks, S24.1), the total order of S60, and S13.4 are tested with property-based tests (FsCheck) over randomly generated profiles.
 - C21. Integration tests call the HTTP API (C7), run against PostgreSQL per C11, and fix time through the clock in C4.

@@ -13,3 +13,6 @@ docs/infrastructure_instructions.md
 bin/
 obj/
 TestResults/
+
+# Mutation testing output
+StrykerOutput/
