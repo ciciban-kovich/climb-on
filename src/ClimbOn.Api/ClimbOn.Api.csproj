@@ -1,5 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
+  <PropertyGroup>
+    <!-- Texts.resx is English; Texts.nb.resx builds the nb satellite assembly. -->
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\ClimbOn.Infrastructure\ClimbOn.Infrastructure.csproj" />
   </ItemGroup>
