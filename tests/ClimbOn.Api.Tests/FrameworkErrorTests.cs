@@ -75,6 +75,30 @@ public sealed class FrameworkErrorTests(FrameworkErrorTests.Hosts hosts) : IClas
     }
 
     [Theory]
+    [MemberData(nameof(Environments))]
+    public async Task Database_failure_has_code(string environment)
+    {
+        var (response, body) = await SendAsync(environment, HttpMethod.Get, "/database");
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        Assert.Equal(ErrorCodes.DatabaseUnavailable, body?.Code);
+    }
+
+    // Host filtering runs in a startup filter the host registers before Program.
+    [Fact]
+    public async Task Rejected_host_has_code()
+    {
+        using var factory = new ErrorTestHost("Production", allowedHosts: "climbon.example");
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/health");
+
+        var (response, body) = await ErrorTestHost.SendAsync(client, request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(ErrorCodes.ValidationFailed, body?.Code);
+    }
+
+    [Theory]
     [MemberData(nameof(ErrorStatuses))]
     public async Task Any_bodyless_error_status_gets_code(int status)
     {
