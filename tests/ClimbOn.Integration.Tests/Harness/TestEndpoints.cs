@@ -1,9 +1,11 @@
 using System.Collections.Concurrent;
 using ClimbOn.Api.Jobs;
 using ClimbOn.Application.Abstractions;
+using ClimbOn.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 
 namespace ClimbOn.Integration.Tests.Harness;
 
@@ -17,7 +19,16 @@ public sealed class TestEndpoints : IStartupFilter
     {
         app.UseRouting();
         app.UseEndpoints(endpoints =>
-            endpoints.MapGet($"{Prefix}/clock", (IClock clock) => Results.Ok(new ClockProbe(clock.UtcNow))));
+        {
+            endpoints.MapGet($"{Prefix}/clock", (IClock clock) => Results.Ok(new ClockProbe(clock.UtcNow)));
+
+            // An ordinary endpoint that needs the database, for the 503 database_unavailable path.
+            endpoints.MapGet($"{Prefix}/database", async (ClimbOnDbContext db, CancellationToken cancellationToken) =>
+            {
+                await db.Database.ExecuteSqlRawAsync("SELECT 1", cancellationToken);
+                return Results.NoContent();
+            });
+        });
         next(app);
     };
 }
