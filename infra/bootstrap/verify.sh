@@ -102,10 +102,13 @@ for identity in ci-plan ci-staging ci-production; do
     "$(az identity federated-credential list -g "$tfstate_rg" --identity-name "$identity" \
          --query "[].join('|', [issuer, subject, join(',', audiences)])" -o tsv)"
 
-  directory_roles="$(az rest --method get \
-    --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?\$filter=principalId%20eq%20'${principal[$identity]}'" \
-    --query "value[].roleDefinitionId" -o tsv)"
-  [[ -z "$directory_roles" ]] || fail "$identity has Entra directory role(s): $directory_roles"
+  if ! directory_roles="$(az rest --method get \
+      --url "https://graph.microsoft.com/v1.0/roleManagement/directory/roleAssignments?\$filter=principalId%20eq%20'${principal[$identity]}'" \
+      --query "value[].roleDefinitionId" -o tsv)"; then
+    fail "$identity: could not read its Entra directory role assignments"
+  elif [[ -n "$directory_roles" ]]; then
+    fail "$identity has Entra directory role(s): $directory_roles"
+  fi
 done
 
 # --- Role assignments (exact set per principal) ----------------------------------------------
@@ -159,15 +162,17 @@ check_assignments owner "$owner_id" "$(printf '%s\n' \
 # --- climbon-plan grants no blob reads -------------------------------------------------------
 definitions="$(az role definition list --custom-role-only true --name climbon-plan --query "length(@)" -o tsv)"
 [[ "$definitions" == "1" ]] || fail "expected one climbon-plan role definition, found ${definitions:-0}"
+data_actions="$(az role definition list --custom-role-only true --name climbon-plan \
+                  --query "[].permissions[].dataActions[]" -o tsv)" ||
+  fail "climbon-plan: could not read its data actions"
 while IFS= read -r action; do
   [[ -n "$action" ]] || continue
   lower="$(tr 'A-Z' 'a-z' <<<"$action")"
-  if [[ "$lower" == "*" || "$lower" == *blobs/read* || "$lower" == *blobs/\** ||
+  if [[ "$lower" == \** || "$lower" == *blobs/read* || "$lower" == *blobs/\** ||
         ( "$lower" == microsoft.storage/* && "$lower" == *\** ) ]]; then
     fail "climbon-plan data action grants blob reads: $action"
   fi
-done <<<"$(az role definition list --custom-role-only true --name climbon-plan \
-             --query "[].permissions[].dataActions[]" -o tsv)"
+done <<<"$data_actions"
 
 # --- GitHub environments ---------------------------------------------------------------------
 for env in staging production drift; do

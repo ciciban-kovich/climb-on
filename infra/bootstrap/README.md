@@ -52,7 +52,10 @@ terraform apply bootstrap.tfplan
 ```
 
 The plan imports the providers that were already registered (`providers.tf`) and creates
-everything else. If `stclimbontfstate` is taken, choose another name and change it in both
+everything else. Azure accepts a past budget start date only within the current month, so if the
+first apply is not in October 2026, set `start_date` in `budget.tf` to the first day of the
+current month before planning; once the budget exists, leave it alone (changing it replaces the
+budget). If `stclimbontfstate` is taken, choose another name and change it in both
 `state.tf` and the backend block in `versions.tf`.
 
 ## Move the state into `tfstate-bootstrap`
