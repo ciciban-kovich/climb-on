@@ -21,7 +21,7 @@ Rationale lives in decisions.md, not here.
 - C9. The backend is deployed as one unit (modular monolith).
 - C10. Database: PostgreSQL, accessed through EF Core.
 - C12. Hosting: Azure Container Apps.
-- C15. Monthly running-cost ceiling: the Azure free services. The subscription is upgraded to pay-as-you-go when the free account's 30-day credit ends, which is required to keep the 12-month free services. Behaviour at the ceiling: a budget alert emails the admin when monthly Azure spend exceeds €5 (above the expected baseline of per-use charges such as email and availability tests); nothing is shut down automatically. Costs outside Azure (Apple Developer Program for S1, a custom domain) are decided before M2 starts. Before the 12-month free database offer ends, the admin decides between paying for it and tearing the environment down.
+- C15. Monthly running-cost ceiling: the Azure free services. The subscription is upgraded to pay-as-you-go when the free account's 30-day credit ends, which is required to keep the 12-month free services. Behaviour at the ceiling: a budget alert emails the admin when monthly Azure spend exceeds €5 (above the expected baseline of per-use charges such as availability tests); nothing is shut down automatically. Email is sent by a provider outside Azure: its usage beyond the provider's free amount and the sending domain are accepted costs, and a billing alert at that provider emails the admin when its monthly spend exceeds €1. Other costs outside Azure (Apple Developer Program for S1, a custom domain for the site's hostnames) are decided before M2 starts. Before the 12-month free database offer ends, the admin decides between paying for it and tearing the environment down.
 - C47. Each API (climber, admin) publishes an OpenAPI description generated from its code. Each client's API code is generated from the corresponding description.
 - C48. CI regenerates both OpenAPI descriptions and both generated clients, and fails if any differs from the committed version.
 - C49. The service worker's push handling is hand-written JavaScript. It only receives and displays notifications and opens the app when one is clicked. It contains no business rules (C7).
@@ -46,7 +46,7 @@ Rationale lives in decisions.md, not here.
 ## Infrastructure and operations
 
 - C25. All Azure resources are defined in Terraform in the repository. No resource is created or changed manually. Exception: secret values. Terraform defines the Key Vault and its access rules, but never secret values, so no secret ever enters Terraform state. Secret values are set with a documented script run by the admin.
-- C26. A scheduled CI job runs terraform plan against production and alerts the admin if the plan is not empty (drift).
+- C26. A scheduled CI job runs terraform plan against production and alerts the admin if the plan is not empty (drift). Exception: the email provider's Terraform, outside Azure, which is applied by hand outside CI and checked with its own verify script.
 - C27. Terraform state is stored in Azure Storage within the EEA.
 - C28. Environments: staging and production. A merge to main deploys to staging automatically. Production deploys the same build artifact after manual approval (GitHub environment protection). Deployments run only from CI.
 - C29. EF Core migrations run as a separate step before the new app version starts. Every migration is compatible with the previous app version.
