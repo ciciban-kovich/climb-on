@@ -16,3 +16,10 @@ TestResults/
 
 # Mutation testing output
 StrykerOutput/
+
+# Terraform working files and local state
+.terraform/
+*.tfstate*
+*.tfplan
+crash.log
+*_override.tf
