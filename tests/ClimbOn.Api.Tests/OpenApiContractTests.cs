@@ -18,7 +18,7 @@ public sealed class OpenApiContractTests(OpenApiContractTests.DevelopmentFactory
 
         var served = await client.GetStringAsync($"/openapi/{ApiDocuments.Climber}.json", TestContext.Current.CancellationToken);
         var committed = await File.ReadAllTextAsync(
-            Path.Combine(RepoRoot(), "openapi", $"{ApiDocuments.Climber}.json"), TestContext.Current.CancellationToken);
+            Path.Combine(Repo.Root, "openapi", $"{ApiDocuments.Climber}.json"), TestContext.Current.CancellationToken);
 
         Assert.True(
             JsonNode.DeepEquals(JsonNode.Parse(committed), JsonNode.Parse(served)),
@@ -29,18 +29,5 @@ public sealed class OpenApiContractTests(OpenApiContractTests.DevelopmentFactory
     public sealed class DevelopmentFactory : WebApplicationFactory<Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder) => builder.UseEnvironment("Development");
-    }
-
-    private static string RepoRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "ClimbOn.slnx")))
-            {
-                return directory.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("ClimbOn.slnx not found above " + AppContext.BaseDirectory);
     }
 }
