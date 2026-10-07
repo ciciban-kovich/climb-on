@@ -5,6 +5,23 @@
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 
+  <!-- The OpenAPI documents are written to openapi/ only by tools/regenerate-api.sh (C47). -->
+  <PropertyGroup>
+    <OpenApiGenerateDocuments>false</OpenApiGenerateDocuments>
+    <OpenApiGenerateDocuments Condition="'$(RegenerateApiClients)' == 'true'">true</OpenApiGenerateDocuments>
+    <OpenApiDocumentsDirectory>$(MSBuildThisFileDirectory)..\..\openapi</OpenApiDocumentsDirectory>
+  </PropertyGroup>
+
+  <!-- The generator names every document but v1 <project>_<document>.json. -->
+  <Target Name="NameOpenApiDocuments" AfterTargets="GenerateOpenApiDocuments" Condition="'$(OpenApiGenerateDocuments)' == 'true'">
+    <Move Condition="Exists('$(OpenApiDocumentsDirectory)\$(MSBuildProjectName)_climber.json')" SourceFiles="$(OpenApiDocumentsDirectory)\$(MSBuildProjectName)_climber.json" DestinationFiles="$(OpenApiDocumentsDirectory)\climber.json" />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.Extensions.ApiDescription.Server" PrivateAssets="all" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\ClimbOn.Infrastructure\ClimbOn.Infrastructure.csproj" />
   </ItemGroup>

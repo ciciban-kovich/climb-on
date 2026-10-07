@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/ClimbOn.Api/ClimbOn.Api.csproj" />
     <Project Path="src/ClimbOn.Application/ClimbOn.Application.csproj" />
+    <Project Path="src/ClimbOn.Client.Api/ClimbOn.Client.Api.csproj" />
     <Project Path="src/ClimbOn.Domain/ClimbOn.Domain.csproj" />
     <Project Path="src/ClimbOn.Infrastructure/ClimbOn.Infrastructure.csproj" />
   </Folder>

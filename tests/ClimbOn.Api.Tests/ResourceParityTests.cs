@@ -7,7 +7,7 @@ namespace ClimbOn.Api.Tests;
 public sealed class ResourceParityTests
 {
     private static readonly string ResourcesDirectory =
-        Path.Combine(RepoRoot(), "src", "ClimbOn.Api", "Resources");
+        Path.Combine(Repo.Root, "src", "ClimbOn.Api", "Resources");
 
     [Fact]
     public void Both_languages_have_the_same_keys()
@@ -39,17 +39,4 @@ public sealed class ResourceParityTests
 
     private static IEnumerable<XElement> Data(string file) =>
         XDocument.Load(Path.Combine(ResourcesDirectory, file)).Root!.Elements("data");
-
-    private static string RepoRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "ClimbOn.slnx")))
-            {
-                return directory.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("ClimbOn.slnx not found above " + AppContext.BaseDirectory);
-    }
 }
