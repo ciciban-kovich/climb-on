@@ -48,6 +48,9 @@ jobs:
       - name: api-diff
         run: bash tools/check-api-fresh.sh
 
+      - name: api-diff-selftest
+        run: bash tools/check-api-fresh.sh --self-test
+
       - name: install-gitleaks
         run: |
           archive="$RUNNER_TEMP/gitleaks.tar.gz"
