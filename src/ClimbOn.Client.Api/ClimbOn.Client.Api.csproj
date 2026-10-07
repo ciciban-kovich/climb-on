@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Generated/ is Kiota output from openapi/climber.json (C47); regenerate with tools/regenerate-api.sh. -->
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Kiota.Bundle" />
+  </ItemGroup>
+
+</Project>

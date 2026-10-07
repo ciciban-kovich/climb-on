@@ -45,6 +45,9 @@ jobs:
       - name: spec-trace
         run: dotnet run --project tools/SpecTrace -c Release -- check
 
+      - name: api-diff
+        run: bash tools/check-api-fresh.sh
+
       - name: install-gitleaks
         run: |
           archive="$RUNNER_TEMP/gitleaks.tar.gz"
