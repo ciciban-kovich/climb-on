@@ -6,7 +6,11 @@ using ClimbOn.Infrastructure.Persistence;
 using ClimbOn.Infrastructure.Time;
 using Microsoft.EntityFrameworkCore;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    EnvironmentName = DocumentGeneration.IsRunning ? DocumentGeneration.EnvironmentName : null,
+});
 
 builder.Services.AddErrorResponses();
 builder.Services.AddSingleton<IClock, SystemClock>();
