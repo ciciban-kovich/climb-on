@@ -1,0 +1,3 @@
+README.md
+infra/email/README.md
+infra/email/verify.sh

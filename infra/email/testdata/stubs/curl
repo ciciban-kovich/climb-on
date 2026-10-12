@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Self-test stand-in for curl: serves $STUB_API_DIR/<name>.json by request path, with
+# @DAYS:<n>@ replaced by now + n days. <name>.status overrides the HTTP status.
+out="" url=""
+while (($#)); do
+  case "$1" in
+    -o) out="$2"; shift 2 ;;
+    -w | -H) shift 2 ;;
+    https://*) url="$1"; shift ;;
+    *) shift ;;
+  esac
+done
+path="${url#https://api.scaleway.com}"
+base="${path%%\?*}"
+query="${path#"$base"}"
+param() { sed -nE "s/^\??(.*&)?$1=([^&]*).*/\2/p" <<<"$query"; }
+case "$base" in
+  /iam/v1alpha1/api-keys/*) name=owner-key ;;
+  /iam/v1alpha1/api-keys) name="keys-$(param application_id)" ;;
+  /iam/v1alpha1/applications) name=applications ;;
+  /iam/v1alpha1/policies) name="policies-$(param application_ids)" ;;
+  /iam/v1alpha1/rules) name="rules-$(param policy_id)" ;;
+  /account/v3/projects) name=projects ;;
+  /transactional-email/v1alpha1/regions/fr-par/domains) name=tem-domains ;;
+  /transactional-email/v1alpha1/regions/fr-par/emails) name=emails ;;
+  /domain/v2beta1/domains/*) name=registrar-domain ;;
+  *) name=unknown ;;
+esac
+status=200
+[[ -f "$STUB_API_DIR/$name.status" ]] && status="$(<"$STUB_API_DIR/$name.status")"
+if [[ -f "$STUB_API_DIR/$name.json" ]]; then
+  "$(command -v python3 || command -v python)" -c '
+import re, sys, datetime as dt
+now = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+text = sys.stdin.read()
+sys.stdout.write(re.sub(r"@DAYS:(-?\d+)@",
+    lambda m: (now + dt.timedelta(days=int(m.group(1)))).strftime("%Y-%m-%dT%H:%M:%SZ"), text))
+' <"$STUB_API_DIR/$name.json" >"$out"
+else
+  status=404
+  echo '{"message": "not found"}' >"$out"
+fi
+printf '%s' "$status"

@@ -3,3 +3,4 @@
 *.tf text eol=lf
 openapi/** text eol=lf
 src/ClimbOn.Client.Api/** text eol=lf
+infra/email/testdata/** text eol=lf

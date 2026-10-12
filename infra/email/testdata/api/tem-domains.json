@@ -1,0 +1,4 @@
+{"total_count": 2, "domains": [
+  {"id": "50000000-0000-4000-8000-000000000001", "name": "mail-staging.example.net", "project_id": "10000000-0000-4000-8000-000000000001", "status": "checked"},
+  {"id": "50000000-0000-4000-8000-000000000002", "name": "mail.example.net", "project_id": "10000000-0000-4000-8000-000000000002", "status": "checked"}
+]}

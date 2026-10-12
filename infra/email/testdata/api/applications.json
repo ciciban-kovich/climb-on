@@ -1,0 +1,5 @@
+{"total_count": 3, "applications": [
+  {"id": "20000000-0000-4000-8000-000000000001", "name": "climbon-staging-sender", "organization_id": "00000000-0000-4000-8000-000000000001"},
+  {"id": "20000000-0000-4000-8000-000000000002", "name": "climbon-production-sender", "organization_id": "00000000-0000-4000-8000-000000000001"},
+  {"id": "20000000-0000-4000-8000-000000000003", "name": "climbon-owner", "organization_id": "00000000-0000-4000-8000-000000000001"}
+]}
