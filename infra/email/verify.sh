@@ -15,6 +15,8 @@ set -uo pipefail
 export LC_ALL=C PYTHONUTF8=1 PYTHONIOENCODING=utf-8
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Before the temporary directory below: exec would skip its EXIT trap.
+[[ "${1:-}" == --self-test ]] && exec bash "$here/testdata/self-test.sh" "$here"
 api_base="https://api.scaleway.com"
 region="fr-par"
 envs=(staging production)
@@ -431,6 +433,5 @@ case "${1:-}" in
     [[ $# -eq 5 && "$4" == --since ]] || { echo "FAIL: usage: verify.sh --delivered <env> <n> --since <RFC 3339>"; exit 1; }
     delivered "$2" "$3" "$5" ;;
   --readme) readme ;;
-  --self-test) exec bash "$here/testdata/self-test.sh" "$here" ;;
   *) echo "usage: verify.sh [--env <env> | --delivered <env> <n> --since <t> | --readme | --self-test]"; exit 1 ;;
 esac
