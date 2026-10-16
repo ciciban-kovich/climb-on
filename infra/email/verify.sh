@@ -20,7 +20,7 @@ region="fr-par"
 envs=(staging production)
 
 # Step 1 `owner-permission-sets`: the owner IAM application's permission sets, exactly.
-owner_permission_sets=(DomainsDNSFullAccess IAMApplicationManager IAMPolicyManager ProjectManager TransactionalEmailFullAccess)
+owner_permission_sets=(DomainsDNSFullAccess IAMApplicationManager IAMGroupReadOnly IAMPolicyManager ProjectManager TransactionalEmailFullAccess)
 sender_permission_set="TransactionalEmailEmailSmtpCreate"
 # Step 1 `billing-alert`: the owner key has no billing permission.
 CHECK_BILLING_ALERT=no
