@@ -44,17 +44,17 @@ it is. **This row is re-recorded whenever Scaleway publishes a new DPA version.*
 
 | Check | Result | Date | Source |
 |---|---|---|---|
-| eea-processing | TODO | | |
-| dpa-accepted | TODO | | |
-| subprocessors-eea | TODO | | |
-| smtp-587-starttls | TODO | | |
-| iam-project-scope | TODO | | |
-| free-tier-scope | TODO | | |
-| billing-alert | TODO | | |
-| owner-permission-sets | TODO | | |
-| provider-no-secret-in-state | TODO | | |
-| sending-quota | TODO | | |
-| outbound-587 | TODO | | |
+| eea-processing | PASS | 2026-10-16 | Scaleway DPA (version of June 1st, 2024) art. 11.1 and 11.2.2; TEM FAQ, Privacy and security: "All data is hosted and processed entirely within the European Union" |
+| dpa-accepted | PASS | 2026-10-08 | version June 1st, 2024 (accepted online by scrolling to the end, Scaleway offers no signed copy); evidence owner's machine, Downloads/Scaleway_Data Processing Agreement_Thu Oct 24 2024.pdf |
+| subprocessors-eea | PASS | 2026-10-16 | TEM FAQ, Privacy and security: no non-EU sub-processors, "the entire TEM technical stack is fully managed by Scaleway, within the EU"; scaleway.com/en/subprocessorlist (last reviewed July 2025) lists no TEM sub-processor |
+| smtp-587-starttls | PASS | 2026-10-16 | Scaleway docs, TEM Setting up SMTP (validated 2025-11-18): smtp.tem.scaleway.com, port 587 with STARTTLS, encryption mandatory, user name = Project ID, password = IAM API secret key; TEM capabilities and limits lists STARTTLS |
+| iam-project-scope | PASS | 2026-10-16 | Scaleway docs, IAM Permission sets: TransactionalEmailEmailSmtpCreate ("Permission to create emails via SMTP") is listed under Scoped by Project |
+| free-tier-scope | PASS | 2026-10-16 | per organisation: Scaleway pricing (scaleway.com/en/pricing/managed-services), TEM Essential "300 per organization (Free tier)" |
+| billing-alert | PASS | 2026-10-08 | Scaleway console, Billing alerts: €1/month alert emailing the C66 admin address, set by the owner; not read through the API (the owner key has no billing permission, CHECK_BILLING_ALERT=no) |
+| owner-permission-sets | PASS | 2026-10-16 | Scaleway console, IAM overview, policy climbon-owner: DomainsDNSFullAccess, IAMApplicationManager, IAMPolicyManager, ProjectManager, TransactionalEmailFullAccess (equals owner_permission_sets in verify.sh) |
+| provider-no-secret-in-state | PASS | 2026-10-16 | terraform providers schema -json for scaleway/scaleway 2.84.0: no sensitive or secret attribute on scaleway_account_project, scaleway_domain_record, scaleway_iam_application, scaleway_iam_policy, scaleway_tem_domain, scaleway_tem_domain_validation; no API-key resource in this root |
+| sending-quota | PASS | 2026-10-16 | Scaleway docs, TEM capabilities and limits (validated 2025-10-29): default 10,000 emails/month, stricter initial limits possible for new users; M1 sends a handful of S49 and S87 emails on staging |
+| outbound-587 | PASS | 2026-10-16 | Microsoft Learn, Troubleshoot outbound SMTP connectivity in Azure (updated 2026-07-16): authenticated SMTP relay on port 587 "isn't restricted in Azure, regardless of the subscription type"; only port 25 is blocked |
 | tem-validation-stable | TODO | | |
 | smtp-send-scoped-key | TODO | | |
 
@@ -66,8 +66,9 @@ What each check establishes:
 - `smtp-587-starttls`: TEM accepts SMTP on port 587 with STARTTLS, the project ID as user name
   and an IAM key as password.
 - `iam-project-scope`: an IAM policy can be limited to TEM sending in one project.
-- `free-tier-scope`: the free 300 emails/month apply per project (if per organisation, stop:
-  design §6 'Cost' is restated).
+- `free-tier-scope`: whether the free 300 emails/month apply per project or per organisation.
+  Either passes; record which in the source (design §6 'Cost', restated 2026-10-16, says per
+  organisation, shared across both environments).
 - `billing-alert`: a Scaleway billing alert can email the C66 admin address at €1, and whether
   the API exposes it. The owner key has no billing permission, so `verify.sh` commits
   `CHECK_BILLING_ALERT=no`.
