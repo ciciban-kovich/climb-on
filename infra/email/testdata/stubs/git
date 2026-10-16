@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Self-test stand-in for git: the top level is $STUB_GIT_TOP and `ls-files -z` serves
+# $STUB_GIT_LS (one path per line). STUB_GIT_FAIL=rev-parse|ls-files makes that command fail.
+case "$*" in
+    "rev-parse --show-toplevel")
+        [[ "${STUB_GIT_FAIL:-}" == rev-parse ]] && { echo "fatal: not a git repository" >&2; exit 128; }
+        printf '%s\n' "$STUB_GIT_TOP" ;;
+    "-C "*" ls-files -z")
+        [[ "${STUB_GIT_FAIL:-}" == ls-files ]] && { echo "fatal: index file corrupt" >&2; exit 128; }
+        tr '\n' '\0' <"$STUB_GIT_LS" ;;
+    *)
+        echo "stub git: unexpected arguments: $*" >&2
+        exit 2 ;;
+esac

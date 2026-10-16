@@ -1,0 +1,16 @@
+{
+  "production": {
+    "email_sender_address": "noreply@mail.example.net",
+    "email_smtp_host": "smtp.tem.scaleway.com",
+    "email_smtp_port": 587,
+    "email_smtp_username": "10000000-0000-4000-8000-000000000002",
+    "sender_application_id": "20000000-0000-4000-8000-000000000002"
+  },
+  "staging": {
+    "email_sender_address": "noreply@mail-staging.example.net",
+    "email_smtp_host": "smtp.tem.scaleway.com",
+    "email_smtp_port": 587,
+    "email_smtp_username": "10000000-0000-4000-8000-000000000001",
+    "sender_application_id": "20000000-0000-4000-8000-000000000001"
+  }
+}

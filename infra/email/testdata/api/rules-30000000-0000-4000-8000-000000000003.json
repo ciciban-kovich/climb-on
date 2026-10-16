@@ -1,0 +1,4 @@
+{"total_count": 2, "rules": [
+  {"id": "40000000-0000-4000-8000-000000000003", "organization_id": "00000000-0000-4000-8000-000000000001", "permission_set_names": ["IAMApplicationManager", "IAMGroupReadOnly", "IAMPolicyManager", "ProjectManager"]},
+  {"id": "40000000-0000-4000-8000-000000000004", "organization_id": "00000000-0000-4000-8000-000000000001", "permission_sets_scope_type": "projects", "permission_set_names": ["DomainsDNSFullAccess", "TransactionalEmailFullAccess"]}
+]}

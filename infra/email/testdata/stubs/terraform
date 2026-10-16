@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Self-test stand-in for terraform: serves `output -json email` from $STUB_TF_OUTPUT.
+if [[ " $* " == *" output -json email "* ]]; then
+    cat "$STUB_TF_OUTPUT"
+else
+    echo "stub terraform: unexpected arguments: $*" >&2
+    exit 1
+fi

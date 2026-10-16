@@ -1,0 +1,6 @@
+{"total_count": 4, "emails": [
+  {"id": "60000000-0000-4000-8000-000000000001", "project_id": "10000000-0000-4000-8000-000000000001", "mail_from": "noreply@mail-staging.example.net", "subject": "fixture", "status": "sent", "created_at": "@DAYS:-1@"},
+  {"id": "60000000-0000-4000-8000-000000000002", "project_id": "10000000-0000-4000-8000-000000000001", "mail_from": "noreply@mail-staging.example.net", "subject": "fixture", "status": "sent", "created_at": "@DAYS:0@"},
+  {"id": "60000000-0000-4000-8000-000000000003", "project_id": "10000000-0000-4000-8000-000000000001", "mail_from": "noreply@mail-staging.example.net", "subject": "fixture", "status": "failed", "created_at": "@DAYS:0@"},
+  {"id": "60000000-0000-4000-8000-000000000004", "project_id": "10000000-0000-4000-8000-000000000002", "mail_from": "noreply@mail.example.net", "subject": "fixture", "status": "sent", "created_at": "@DAYS:0@"}
+]}

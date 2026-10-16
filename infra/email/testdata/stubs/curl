@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Self-test stand-in for curl: serves $STUB_API_DIR/<name>.json by request path, with
+# @DAYS:<n>@ replaced by now + n days. <name>.status overrides the HTTP status; <name>.hang
+# answers as a curl timeout (exit 28). Refuses the secret key on the command line and a call
+# without both timeouts; answers 401 unless `-K -` passes the key's X-Auth-Token header on stdin.
+for arg in "$@"; do
+    if [[ -n "${SCW_SECRET_KEY:-}" && "$arg" == *"$SCW_SECRET_KEY"* ]]; then
+        echo "stub curl: the secret key is on the command line" >&2
+        exit 2
+    fi
+done
+out="" url="" config="" max_time="" connect_timeout=""
+while (($#)); do
+    case "$1" in
+        -o) out="$2"; shift 2 ;;
+        -K | --config) config="$2"; shift 2 ;;
+        --max-time) max_time="$2"; shift 2 ;;
+        --connect-timeout) connect_timeout="$2"; shift 2 ;;
+        -w | -H) shift 2 ;;
+        https://*) url="$1"; shift ;;
+        *) shift ;;
+    esac
+done
+if [[ -z "$max_time" || -z "$connect_timeout" ]]; then
+    echo "stub curl: --max-time and --connect-timeout are required" >&2
+    exit 2
+fi
+token=""
+[[ "$config" == - ]] && token="$(sed -nE 's/^header = "X-Auth-Token: (.*)"$/\1/p')"
+path="${url#https://api.scaleway.com}"
+base="${path%%\?*}"
+query="${path#"$base"}"
+param() { sed -nE "s/^\??(.*&)?$1=([^&]*).*/\2/p" <<<"$query"; }
+case "$base" in
+    /iam/v1alpha1/api-keys/*) name=owner-key ;;
+    /iam/v1alpha1/api-keys) name="keys-$(param application_id)" ;;
+    /iam/v1alpha1/applications) name=applications ;;
+    /iam/v1alpha1/groups) name="groups-$(param application_ids)" ;;
+    /iam/v1alpha1/policies) name="policies-$(param application_ids)" ;;
+    /iam/v1alpha1/rules) name="rules-$(param policy_id)" ;;
+    /account/v3/projects) name=projects ;;
+    /transactional-email/v1alpha1/regions/fr-par/domains) name=tem-domains ;;
+    /transactional-email/v1alpha1/regions/fr-par/emails) name=emails ;;
+    /domain/v2beta1/domains/*) name=registrar-domain ;;
+    *) name=unknown ;;
+esac
+if [[ -f "$STUB_API_DIR/$name.hang" ]]; then
+    echo "curl: (28) Operation timed out after 60000 milliseconds" >&2
+    printf '000'
+    exit 28
+fi
+status=200
+[[ -f "$STUB_API_DIR/$name.status" ]] && status="$(<"$STUB_API_DIR/$name.status")"
+if [[ -z "$token" || "$token" != "${SCW_SECRET_KEY:-}" ]]; then
+    status=401
+    echo '{"message": "authentication is denied"}' >"$out"
+elif [[ -f "$STUB_API_DIR/$name.json" ]]; then
+    "$(command -v python3 || command -v python)" -c '
+import re, sys, datetime as dt
+now = dt.datetime.now(dt.timezone.utc).replace(microsecond=0)
+text = sys.stdin.read()
+sys.stdout.write(re.sub(r"@DAYS:(-?\d+)@",
+    lambda m: (now + dt.timedelta(days=int(m.group(1)))).strftime("%Y-%m-%dT%H:%M:%SZ"), text))
+' <"$STUB_API_DIR/$name.json" >"$out"
+else
+    status=404
+    echo '{"message": "not found"}' >"$out"
+fi
+printf '%s' "$status"
