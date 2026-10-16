@@ -24,7 +24,8 @@ public sealed class TestData(FixtureValues fixtures)
         fixtures.Register("email", account.Email);
         fixtures.Register("password", account.Password);
         fixtures.Register("display-name", account.DisplayName);
-        foreach (var format in new[] { "yyyy-MM-dd", "dd.MM.yyyy" })
+        // MM/dd/yyyy is how a DateOnly or DateTime renders when logged as a value (invariant culture).
+        foreach (var format in new[] { "yyyy-MM-dd", "dd.MM.yyyy", "MM/dd/yyyy" })
         {
             fixtures.Register("date-of-birth", account.DateOfBirth.ToString(format, CultureInfo.InvariantCulture));
         }

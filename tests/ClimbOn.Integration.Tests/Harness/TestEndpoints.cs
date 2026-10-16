@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using ClimbOn.Api.Jobs;
 using ClimbOn.Application.Abstractions;
 using ClimbOn.Infrastructure.Persistence;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace ClimbOn.Integration.Tests.Harness;
 
@@ -28,12 +30,38 @@ public sealed class TestEndpoints : IStartupFilter
                 await db.Database.ExecuteSqlRawAsync("SELECT 1", cancellationToken);
                 return Results.NoContent();
             });
+
+            // C33 probes: each puts a value where telemetry would carry it.
+            endpoints.MapPost($"{Prefix}/telemetry/log", (ProbeValue probe, ILogger<TestEndpoints> logger) =>
+            {
+                logger.LogInformation("Telemetry probe {Value}", probe.Value);
+                return Results.NoContent();
+            });
+            endpoints.MapPost($"{Prefix}/telemetry/tag", (ProbeValue probe) =>
+            {
+                Activity.Current?.SetTag("probe.value", probe.Value);
+                return Results.NoContent();
+            });
+            // Tags its span only after the client has the response, while the span is still open.
+            endpoints.MapPost($"{Prefix}/telemetry/late-tag", (ProbeValue probe, HttpContext context) =>
+            {
+                var span = Activity.Current;
+                context.Response.OnCompleted(async () =>
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(300));
+                    span?.SetTag("probe.value", probe.Value);
+                });
+                return Results.NoContent();
+            });
+            endpoints.MapGet($"{Prefix}/telemetry/query/{{value}}", () => Results.NoContent());
         });
         next(app);
     };
 }
 
 public sealed record ClockProbe(DateTimeOffset UtcNow);
+
+public sealed record ProbeValue(string Value);
 
 // Records each run so the harness can prove RunJobAsync dispatches through JobRunner on the test host.
 public sealed class ProbeJob(IClock clock, ProbeJob.Runs runs) : IJob

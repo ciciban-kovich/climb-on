@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
 using ClimbOn.Api.Jobs;
 using ClimbOn.Application.Abstractions;
 using ClimbOn.Infrastructure.Persistence;
@@ -7,12 +8,16 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace ClimbOn.Integration.Tests.Harness;
 
-// The api host on real PostgreSQL (C11) with a fixed clock (C4) and recording fakes (C22).
+// The api host on real PostgreSQL (C11) with a fixed clock (C4), recording fakes (C22) and the
+// C33 telemetry scan at the end of every test.
 // Default: one container per test collection. With CLIMBON_TEST_DB set: that database, shared by
 // every collection, so tests on it run one at a time (C30, task 32).
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
@@ -22,23 +27,27 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> SharedDatabaseGates = new();
 
     private readonly TestDatabaseSettings settings;
+    private readonly IReadOnlyDictionary<string, string?> hostSettings;
     private PostgreSqlContainer? container;
     private string? connectionString;
 
     public ApiFactory()
-        : this(TestDatabaseSettings.FromEnvironment())
+        : this(TestDatabaseSettings.FromEnvironment(), new Dictionary<string, string?>())
     {
     }
 
-    private ApiFactory(TestDatabaseSettings settings)
+    private ApiFactory(TestDatabaseSettings settings, IReadOnlyDictionary<string, string?> hostSettings)
     {
         this.settings = settings;
+        this.hostSettings = hostSettings;
         Email = new RecordingEmailSender(Fixtures);
         Data = new TestData(Fixtures);
     }
 
     // A factory a test owns and initialises itself; such a test carries Compat=exclude.
-    public static ApiFactory For(TestDatabaseSettings settings) => new(settings);
+    // Host settings are added to the api's configuration.
+    public static ApiFactory For(TestDatabaseSettings settings, IReadOnlyDictionary<string, string?>? hostSettings = null) =>
+        new(settings, hostSettings ?? new Dictionary<string, string?>());
 
     public FixedClock Clock { get; } = new();
 
@@ -47,6 +56,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public RecordingEmailSender Email { get; }
 
     public TestData Data { get; }
+
+    public TelemetryCapture Telemetry { get; } = new();
 
     public bool UsesContainer => container is not null;
 
@@ -75,8 +86,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     }
 
     // Called at the start of every test: waits for the shared database when there is one,
-    // then resets data, clock and recorded email. Dispose the lease when the test ends.
-    public async Task<IDisposable> BeginTestAsync(CancellationToken cancellationToken)
+    // then resets data, clock and recorded email. Dispose the lease when the test ends: it fails
+    // the test with TelemetryLeakException if a fixture value reached telemetry (C33).
+    public async Task<IAsyncDisposable> BeginTestAsync(CancellationToken cancellationToken)
     {
         SemaphoreSlim? gate = null;
         if (!UsesContainer)
@@ -90,7 +102,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             await DatabaseReset.ResetAsync(ConnectionString, cancellationToken);
             Clock.Reset();
             Email.Clear();
-            return new Lease(gate);
+            return new Lease(this, gate);
         }
         catch
         {
@@ -103,12 +115,29 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     public Task<int> RunJobAsync(string name) =>
         JobRunner.RunAsync(Services, name, TestContext.Current.CancellationToken);
 
+    // The final C33 scan: what arrived after the last lease's scan, what the host emits while it
+    // stops, and everything from a factory a test owns without taking a lease.
     public override async ValueTask DisposeAsync()
     {
-        await base.DisposeAsync();
-        if (container is not null)
+        var captured = new List<TelemetryItem>();
+        try
         {
-            await container.DisposeAsync();
+            captured.AddRange(await Telemetry.TakeAsync());
+            await base.DisposeAsync();
+            captured.AddRange(await Telemetry.TakeAsync());
+        }
+        finally
+        {
+            if (container is not null)
+            {
+                await container.DisposeAsync();
+            }
+        }
+
+        var leaks = TelemetryCapture.FindLeaks(captured, Fixtures);
+        if (leaks.Count > 0)
+        {
+            throw new TelemetryLeakException(leaks);
         }
     }
 
@@ -116,18 +145,70 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         builder.UseEnvironment(Environment);
         builder.UseSetting($"ConnectionStrings:{ClimbOnDbContext.ConnectionStringName}", ConnectionString);
+
+        // The instrumentation masks query values itself by default; off here, so that SpanRedaction
+        // is what the tests prove keeps the query string out (C32).
+        builder.UseSetting("OTEL_DOTNET_EXPERIMENTAL_ASPNETCORE_DISABLE_URL_QUERY_REDACTION", "true");
+        foreach (var (key, value) in hostSettings)
+        {
+            builder.UseSetting(key, value);
+        }
+
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<IClock>(Clock);
             services.AddSingleton<IEmailSender>(Email);
             services.AddSingleton<IStartupFilter, TestEndpoints>();
+            services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddProcessor(Telemetry.SpanProcessor));
+            services.ConfigureOpenTelemetryLoggerProvider(logging => logging.AddProcessor(Telemetry.LogProcessor));
+            services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddReader(Telemetry.MetricReader));
+            services.AddSingleton<IMeterFactory>(_ => new HostMeterFactory());
             services.AddSingleton<ProbeJob.Runs>();
             services.AddScoped<IJob, ProbeJob>();
         });
     }
 
-    private sealed class Lease(SemaphoreSlim? gate) : IDisposable
+    // Every meter listener in the process sees every host's meters, and OpenTelemetry merges
+    // instruments of the same name and meter tags into one stream, which ends when either host stops.
+    // A tag per host keeps this host's metrics collected after another host is disposed.
+    private sealed class HostMeterFactory : IMeterFactory
     {
-        public void Dispose() => gate?.Release();
+        private readonly string host = Guid.NewGuid().ToString("N");
+        private readonly ConcurrentDictionary<(string Name, string? Version), Meter> meters = new();
+
+        public Meter Create(MeterOptions options) => meters.GetOrAdd((options.Name, options.Version), _ => new Meter(
+            new MeterOptions(options.Name)
+            {
+                Version = options.Version,
+                Tags = [.. options.Tags ?? [], new("test.host", host)],
+                Scope = this,
+            }));
+
+        public void Dispose()
+        {
+            foreach (var meter in meters.Values)
+            {
+                meter.Dispose();
+            }
+        }
+    }
+
+    private sealed class Lease(ApiFactory factory, SemaphoreSlim? gate) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                var leaks = await factory.Telemetry.TakeLeaksAsync(factory.Fixtures);
+                if (leaks.Count > 0)
+                {
+                    throw new TelemetryLeakException(leaks);
+                }
+            }
+            finally
+            {
+                gate?.Release();
+            }
+        }
     }
 }

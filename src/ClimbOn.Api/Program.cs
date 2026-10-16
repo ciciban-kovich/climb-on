@@ -1,6 +1,7 @@
 using ClimbOn.Api.Errors;
 using ClimbOn.Api.Health;
 using ClimbOn.Api.OpenApi;
+using ClimbOn.Api.Telemetry;
 using ClimbOn.Application.Abstractions;
 using ClimbOn.Infrastructure.Persistence;
 using ClimbOn.Infrastructure.Time;
@@ -12,6 +13,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
     EnvironmentName = DocumentGeneration.IsRunning ? DocumentGeneration.EnvironmentName : null,
 });
 
+builder.AddTelemetry();
 builder.Services.AddErrorResponses();
 builder.Services.AddSingleton<IClock, SystemClock>();
 builder.Services.AddDbContext<ClimbOnDbContext>((services, options) =>
