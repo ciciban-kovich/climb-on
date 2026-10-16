@@ -55,8 +55,8 @@ it is. **This row is re-recorded whenever Scaleway publishes a new DPA version.*
 | provider-no-secret-in-state | PASS | 2026-10-16 | terraform providers schema -json for scaleway/scaleway 2.84.0: no sensitive or secret attribute on scaleway_account_project, scaleway_domain_record, scaleway_iam_application, scaleway_iam_policy, scaleway_tem_domain, scaleway_tem_domain_validation; no API-key resource in this root |
 | sending-quota | PASS | 2026-10-16 | Scaleway docs, TEM capabilities and limits (validated 2025-10-29): default 10,000 emails/month, stricter initial limits possible for new users; M1 sends a handful of S49 and S87 emails on staging |
 | outbound-587 | PASS | 2026-10-16 | Microsoft Learn, Troubleshoot outbound SMTP connectivity in Azure (updated 2026-07-16): authenticated SMTP relay on port 587 "isn't restricted in Azure, regardless of the subscription type"; only port 25 is blocked |
-| tem-validation-stable | TODO | | |
-| smtp-send-scoped-key | TODO | | |
+| tem-validation-stable | PASS | 2026-10-16 | terraform plan -detailed-exitcode right after the first apply: exit 0, no changes |
+| smtp-send-scoped-key | PASS | 2026-10-16 | one SMTP send on 587/STARTTLS with a temporary climbon-staging-sender key (expiry 7 days); TEM status sent (verify.sh --delivered staging 1), received in the owner's personal mailbox (junk folder; the admin address has no mailbox, see ADMIN_EMAIL fix); key deleted 2026-10-16 |
 
 What each check establishes:
 
