@@ -94,7 +94,7 @@ public sealed class TelemetryCapture
         if (kind == FixtureValues.PostcodeKind)
         {
             return Texts(field, numbers: false).Any(text => Regex.IsMatch(
-                text, $"(?<![0-9A-Za-z])(?<![0-9][.,]){Regex.Escape(value)}(?![0-9A-Za-z])(?![.,][0-9])", RegexOptions.CultureInvariant));
+                text, $@"(?<![0-9A-Za-z])(?<![0-9]\.){Regex.Escape(value)}(?![0-9A-Za-z])(?!\.[0-9])", RegexOptions.CultureInvariant));
         }
 
         return Texts(field, numbers: true).Any(text => text.Contains(value, StringComparison.OrdinalIgnoreCase));

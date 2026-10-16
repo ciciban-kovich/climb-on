@@ -104,7 +104,7 @@ public sealed class TelemetryPrivacyTests(ApiFactory factory) : IClassFixture<Ap
         [
             new("log", "address", [new("message", "Postnummer 0150 Oslo")]),
             new("log", "sentence", [new("message", "Flyttet til 0150.")]),
-            new("log", "numbers", [new("message", "Took 101501 ms on port 30150, then 1.0150 s and 0150,5 ms")]),
+            new("log", "numbers", [new("message", "Took 101501 ms on port 30150, then 1.0150 s and 0150.5 ms")]),
             new("span", "numeric", [new("tag:server.port", 150), new("tag:duration", 0150L)]),
         ];
 
@@ -116,6 +116,26 @@ public sealed class TelemetryPrivacyTests(ApiFactory factory) : IClassFixture<Ap
                 new TelemetryLeak(FixtureValues.PostcodeKind, "log", "sentence", "message"),
             ],
             leaks);
+    }
+
+    // A comma separates tokens; only a dot next to a digit makes the value part of a decimal.
+    [Theory]
+    [InlineData("0150,0151", true)]
+    [InlineData("[0150,0151]", true)]
+    [InlineData("Postnumre 0151,0150", true)]
+    [InlineData("Storgata 1,0150 Oslo", true)]
+    [InlineData("0150 Oslo", true)]
+    [InlineData("1.0150 ms", false)]
+    [InlineData("0150.5", false)]
+    public void Postcode_next_to_a_comma_matches_and_inside_a_decimal_does_not(string message, bool leaks)
+    {
+        var fixtures = new FixtureValues();
+        fixtures.Register(FixtureValues.PostcodeKind, "0150");
+        TelemetryItem[] captured = [new("log", "probe", [new("message", message)])];
+
+        var found = TelemetryCapture.FindLeaks(captured, fixtures);
+
+        Assert.Equal(leaks, found.Contains(new TelemetryLeak(FixtureValues.PostcodeKind, "log", "probe", "message")));
     }
 
     [Fact]
