@@ -15,13 +15,25 @@ public static class TelemetrySetup
     // Set per environment by infra/env; without it nothing leaves the process.
     public const string AzureMonitorConnectionString = "APPLICATIONINSIGHTS_CONNECTION_STRING";
 
+    private const string HostingDiagnostics = "Microsoft.AspNetCore.Hosting.Diagnostics";
+
     public static WebApplicationBuilder AddTelemetry(this WebApplicationBuilder builder)
     {
         var azureMonitor = builder.Configuration[AzureMonitorConnectionString];
         var exportToAzureMonitor = !string.IsNullOrWhiteSpace(azureMonitor);
 
-        // The hosting request lines carry the raw path and query string.
-        builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
+        // The hosting request lines carry the raw path and query string. A rule that names a provider
+        // beats one that names none, so the cap is repeated for every provider a configured rule names;
+        // a stricter configured level stays.
+        builder.Services.PostConfigure<LoggerFilterOptions>(options =>
+        {
+            foreach (var provider in options.Rules.Select(rule => rule.ProviderName).Append(null).Distinct().ToList())
+            {
+                var configured = HostingDiagnosticsLevel(options, provider);
+                var level = configured > LogLevel.Warning ? configured : LogLevel.Warning;
+                options.Rules.Add(new LoggerFilterRule(provider, HostingDiagnostics, level, filter: null));
+            }
+        });
         builder.Logging.AddOpenTelemetry(logging =>
         {
             logging.IncludeFormattedMessage = true;
@@ -55,5 +67,19 @@ public static class TelemetrySetup
             });
 
         return builder;
+    }
+
+    // The level the rules so far give the hosting category for this provider, picked the way the
+    // logging rule selector does: a provider's own rules first, then the longest category, then the last.
+    private static LogLevel HostingDiagnosticsLevel(LoggerFilterOptions options, string? provider)
+    {
+        var rule = options.Rules
+            .Where(rule => rule.ProviderName == provider || rule.ProviderName is null)
+            .Where(rule => rule.CategoryName is null
+                || HostingDiagnostics.StartsWith(rule.CategoryName, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(rule => rule.ProviderName is null ? 0 : 1)
+            .ThenBy(rule => rule.CategoryName?.Length ?? 0)
+            .LastOrDefault();
+        return rule?.LogLevel ?? options.MinLevel;
     }
 }

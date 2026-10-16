@@ -42,6 +42,17 @@ public sealed class TestEndpoints : IStartupFilter
                 Activity.Current?.SetTag("probe.value", probe.Value);
                 return Results.NoContent();
             });
+            // Tags its span only after the client has the response, while the span is still open.
+            endpoints.MapPost($"{Prefix}/telemetry/late-tag", (ProbeValue probe, HttpContext context) =>
+            {
+                var span = Activity.Current;
+                context.Response.OnCompleted(async () =>
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(300));
+                    span?.SetTag("probe.value", probe.Value);
+                });
+                return Results.NoContent();
+            });
             endpoints.MapGet($"{Prefix}/telemetry/query/{{value}}", () => Results.NoContent());
         });
         next(app);

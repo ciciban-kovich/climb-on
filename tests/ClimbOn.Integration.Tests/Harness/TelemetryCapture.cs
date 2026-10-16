@@ -59,6 +59,7 @@ public sealed class TelemetryCapture
 
     // Everything captured so far, leaving the capture empty. Server spans end after the client
     // has its response, so this first waits for those running now to end, then collects metrics.
+    // Whatever arrives later is taken by the next call; ApiFactory makes a final one when it stops.
     public async Task<IReadOnlyList<TelemetryItem>> TakeAsync()
     {
         var running = serverSpansInFlight.Keys.ToArray();
@@ -93,12 +94,16 @@ public sealed class TelemetryCapture
     {
         if (kind == FixtureValues.PostcodeKind)
         {
-            return Texts(field, numbers: false).Any(text => Regex.IsMatch(
+            return Texts(field, numbers: false).SelectMany(Decoded).Any(text => Regex.IsMatch(
                 text, $@"(?<![0-9A-Za-z])(?<![0-9]\.){Regex.Escape(value)}(?![0-9A-Za-z])(?!\.[0-9])", RegexOptions.CultureInvariant));
         }
 
-        return Texts(field, numbers: true).Any(text => text.Contains(value, StringComparison.OrdinalIgnoreCase));
+        return Texts(field, numbers: true).SelectMany(Decoded).Any(text => text.Contains(value, StringComparison.OrdinalIgnoreCase));
     }
+
+    // A value in a path or query string arrives URL-encoded: %40 for @, %20 or + for a space.
+    private static IEnumerable<string> Decoded(string text) =>
+        [text, Uri.UnescapeDataString(text), Uri.UnescapeDataString(text.Replace('+', ' '))];
 
     private static IEnumerable<string> Texts(object? field, bool numbers) => field switch
     {
