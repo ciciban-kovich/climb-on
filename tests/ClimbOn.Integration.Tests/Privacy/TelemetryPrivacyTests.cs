@@ -1,6 +1,11 @@
+using System.Diagnostics.Metrics;
 using System.Net;
 using System.Net.Http.Json;
 using ClimbOn.Integration.Tests.Harness;
+using Microsoft.Extensions.Logging;
+using OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
 using Xunit;
 
 namespace ClimbOn.Integration.Tests.Privacy;
@@ -97,14 +102,58 @@ public sealed class TelemetryPrivacyTests(ApiFactory factory) : IClassFixture<Ap
         fixtures.Register(FixtureValues.PostcodeKind, "0150");
         TelemetryItem[] captured =
         [
-            new("log", "probe", [new("message", "Postnummer 0150 Oslo")]),
-            new("log", "probe", [new("message", "Took 101501 ms on port 30150")]),
-            new("span", "probe", [new("tag:server.port", 150), new("tag:duration", 0150L)]),
+            new("log", "address", [new("message", "Postnummer 0150 Oslo")]),
+            new("log", "sentence", [new("message", "Flyttet til 0150.")]),
+            new("log", "numbers", [new("message", "Took 101501 ms on port 30150, then 1.0150 s and 0150,5 ms")]),
+            new("span", "numeric", [new("tag:server.port", 150), new("tag:duration", 0150L)]),
         ];
 
         var leaks = TelemetryCapture.FindLeaks(captured, fixtures);
 
-        Assert.Equal([new TelemetryLeak(FixtureValues.PostcodeKind, "log", "probe", "message")], leaks);
+        Assert.Equal(
+            [
+                new TelemetryLeak(FixtureValues.PostcodeKind, "log", "address", "message"),
+                new TelemetryLeak(FixtureValues.PostcodeKind, "log", "sentence", "message"),
+            ],
+            leaks);
+    }
+
+    [Fact]
+    public async Task Date_of_birth_logged_as_a_date_is_detected()
+    {
+        var fixtures = new FixtureValues();
+        var account = new TestData(fixtures).Account();
+        var capture = new TelemetryCapture();
+        using (var loggers = LoggerFactory.Create(logging => logging.AddOpenTelemetry(options =>
+        {
+            options.IncludeFormattedMessage = true;
+            options.AddProcessor(capture.LogProcessor);
+        })))
+        {
+            loggers.CreateLogger("probe").LogInformation("Born {DateOfBirth}", account.DateOfBirth);
+        }
+
+        var leaks = await capture.TakeLeaksAsync(fixtures);
+
+        Assert.Contains(new TelemetryLeak("date-of-birth", "log", "probe", "message"), leaks);
+        Assert.Contains(new TelemetryLeak("date-of-birth", "log", "probe", "attribute:DateOfBirth"), leaks);
+    }
+
+    [Fact]
+    public async Task Metric_leak_is_reported_once()
+    {
+        var fixtures = new FixtureValues();
+        var account = new TestData(fixtures).Account();
+        var capture = new TelemetryCapture();
+        using var meter = new Meter("ClimbOn.Probe");
+        using var meters = Sdk.CreateMeterProviderBuilder().AddMeter(meter.Name).AddReader(capture.MetricReader).Build();
+
+        meter.CreateCounter<long>("probe_total").Add(1, new KeyValuePair<string, object?>("who", account.Email));
+        var first = await capture.TakeLeaksAsync(fixtures);
+        var second = await capture.TakeLeaksAsync(fixtures);
+
+        Assert.Contains(new TelemetryLeak("email", "metric", "probe_total", "tag:who"), first);
+        Assert.Empty(second);
     }
 
     private async Task PostProbeAsync(string probe, string value, CancellationToken ct)

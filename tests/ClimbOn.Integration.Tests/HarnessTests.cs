@@ -161,7 +161,7 @@ public sealed class HarnessTests(ApiFactory factory) : IntegrationTest(factory)
         var account = Factory.Data.Account(new DateOnly(1991, 2, 3));
 
         Assert.All(
-            [account.Email, account.Password, account.DisplayName, "1991-02-03", "03.02.1991"],
+            [account.Email, account.Password, account.DisplayName, "1991-02-03", "03.02.1991", "02/03/1991"],
             value => Assert.True(Factory.Fixtures.Contains(value), value));
     }
 

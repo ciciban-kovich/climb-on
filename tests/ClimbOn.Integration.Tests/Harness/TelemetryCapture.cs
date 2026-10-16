@@ -40,7 +40,12 @@ public sealed class TelemetryCapture
     {
         SpanProcessor = new SpanCapture(this);
         LogProcessor = new SimpleLogRecordExportProcessor(new LogCapture(this));
-        MetricReader = new BaseExportingMetricReader(new MetricCapture(this));
+        // Delta: each collection holds only what was measured since the last, so a leak in a
+        // metric fails the test that caused it and is gone after the scan.
+        MetricReader = new BaseExportingMetricReader(new MetricCapture(this))
+        {
+            TemporalityPreference = MetricReaderTemporalityPreference.Delta,
+        };
     }
 
     public BaseProcessor<Activity> SpanProcessor { get; }
@@ -89,7 +94,7 @@ public sealed class TelemetryCapture
         if (kind == FixtureValues.PostcodeKind)
         {
             return Texts(field, numbers: false).Any(text => Regex.IsMatch(
-                text, $"(?<![0-9A-Za-z]){Regex.Escape(value)}(?![0-9A-Za-z])", RegexOptions.CultureInvariant));
+                text, $"(?<![0-9A-Za-z])(?<![0-9][.,]){Regex.Escape(value)}(?![0-9A-Za-z])(?![.,][0-9])", RegexOptions.CultureInvariant));
         }
 
         return Texts(field, numbers: true).Any(text => text.Contains(value, StringComparison.OrdinalIgnoreCase));
