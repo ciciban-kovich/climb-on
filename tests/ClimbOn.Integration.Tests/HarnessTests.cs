@@ -94,7 +94,7 @@ public sealed class HarnessTests(ApiFactory factory) : IntegrationTest(factory)
             INSERT INTO later_child (parent) VALUES (1);
             """, ct);
 
-        using (await own.BeginTestAsync(ct))
+        await using (await own.BeginTestAsync(ct))
         {
             Assert.Equal("0", await ScalarAsync(own.ConnectionString, "SELECT count(*) FROM later_parent"));
             Assert.Equal("0", await ScalarAsync(own.ConnectionString, "SELECT count(*) FROM later_child"));
@@ -183,7 +183,7 @@ public sealed class HarnessTests(ApiFactory factory) : IntegrationTest(factory)
     {
         var ct = TestContext.Current.CancellationToken;
         await Task.Delay(startAfter, ct);
-        using (await factory.BeginTestAsync(ct))
+        await using (await factory.BeginTestAsync(ct))
         {
             await using var connection = new NpgsqlConnection(factory.ConnectionString);
             await connection.OpenAsync(ct);

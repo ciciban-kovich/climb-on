@@ -7,12 +7,16 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace ClimbOn.Integration.Tests.Harness;
 
-// The api host on real PostgreSQL (C11) with a fixed clock (C4) and recording fakes (C22).
+// The api host on real PostgreSQL (C11) with a fixed clock (C4), recording fakes (C22) and the
+// C33 telemetry scan at the end of every test.
 // Default: one container per test collection. With CLIMBON_TEST_DB set: that database, shared by
 // every collection, so tests on it run one at a time (C30, task 32).
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
@@ -48,6 +52,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public TestData Data { get; }
 
+    public TelemetryCapture Telemetry { get; } = new();
+
     public bool UsesContainer => container is not null;
 
     public string ConnectionString =>
@@ -75,8 +81,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     }
 
     // Called at the start of every test: waits for the shared database when there is one,
-    // then resets data, clock and recorded email. Dispose the lease when the test ends.
-    public async Task<IDisposable> BeginTestAsync(CancellationToken cancellationToken)
+    // then resets data, clock and recorded email. Dispose the lease when the test ends: it fails
+    // the test with TelemetryLeakException if a fixture value reached telemetry (C33).
+    public async Task<IAsyncDisposable> BeginTestAsync(CancellationToken cancellationToken)
     {
         SemaphoreSlim? gate = null;
         if (!UsesContainer)
@@ -90,7 +97,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             await DatabaseReset.ResetAsync(ConnectionString, cancellationToken);
             Clock.Reset();
             Email.Clear();
-            return new Lease(gate);
+            return new Lease(this, gate);
         }
         catch
         {
@@ -121,13 +128,30 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddSingleton<IClock>(Clock);
             services.AddSingleton<IEmailSender>(Email);
             services.AddSingleton<IStartupFilter, TestEndpoints>();
+            services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddProcessor(Telemetry.SpanProcessor));
+            services.ConfigureOpenTelemetryLoggerProvider(logging => logging.AddProcessor(Telemetry.LogProcessor));
+            services.ConfigureOpenTelemetryMeterProvider(metrics => metrics.AddReader(Telemetry.MetricReader));
             services.AddSingleton<ProbeJob.Runs>();
             services.AddScoped<IJob, ProbeJob>();
         });
     }
 
-    private sealed class Lease(SemaphoreSlim? gate) : IDisposable
+    private sealed class Lease(ApiFactory factory, SemaphoreSlim? gate) : IAsyncDisposable
     {
-        public void Dispose() => gate?.Release();
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                var leaks = await factory.Telemetry.TakeLeaksAsync(factory.Fixtures);
+                if (leaks.Count > 0)
+                {
+                    throw new TelemetryLeakException(leaks);
+                }
+            }
+            finally
+            {
+                gate?.Release();
+            }
+        }
     }
 }
