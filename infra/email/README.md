@@ -151,10 +151,11 @@ bash verify.sh               # full check against the Scaleway API
 ```
 
 Full mode needs the owner key. It checks: both TEM domains verified and in their own project; the
-projects named `climbon-*` are exactly the two; each sender application has exactly one policy
-with exactly one rule, its own project only, permission sets exactly
+projects named `climbon-*` are exactly the two; each sender application belongs to no IAM group
+and has exactly one policy with exactly one rule, its own project only, permission sets exactly
 `TransactionalEmailEmailSmtpCreate`; the owner key expires at most 90 days after creation and its
-application's permission sets equal `owner_permission_sets`; auto-renewal is on; every API key on
+application belongs to no IAM group, with permission sets equal to `owner_permission_sets`;
+auto-renewal is on; every API key on
 both sender applications has an expiry at most a year after creation and more than 30 days away
 (no key is fine here); and each `infra/env/<env>.tfvars` that exists carries this root's outputs.
 
