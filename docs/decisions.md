@@ -27,6 +27,7 @@ Rationale behind specs and constraints. Not input to the critic: only specs.md, 
 - D23. Dormant accounts are deleted through the ordinary deletion path (S37–S39) rather than a separate one: one erasure path to test, and the other party keeps the 30-day reporting window (D5). Periods are counted in days, not calendar months, so the rules are exact under the injectable clock (C4).
 - D24. The legal basis for core processing (profile, matching, invites, chat, notifications) is performance of a contract, not consent: consent can be withdrawn, and the service cannot run without this data. The privacy policy is therefore acknowledged, not accepted.
 - D25. Email moved from Azure Communication Services to Scaleway Transactional Email (2026-10-06): Microsoft is retiring ACS Email (2028-09-30) and closes it to new customers from 2026-10-23, before this subscription would have created a resource. Scaleway is EU-owned with processing in France (C13, C14) and is free at v1 volumes. Its cost sits outside Azure, so C15 names it and gives it its own alert. Unlike ACS there is no shared sender domain, so a domain is bought in M1 rather than before M2. The adapter speaks plain SMTP so that a further provider change touches configuration and Key Vault, not code. No CI credential for Scaleway exists, because it has no OIDC federation; the cost is that the Scaleway Terraform is applied by the owner and is outside the drift check.
+- D26. C14 no longer requires a signed DPA (2026-10-12): Scaleway confirmed in writing that it does not provide one; its DPA is accepted online with its terms. The owner accepts that, provided the acceptance date and DPA version are recorded so it can be shown which terms were agreed and when. Whether online acceptance is sufficient stays on the legal review list below.
 
 ## Legal review before launch
 
@@ -34,7 +35,7 @@ Rationale behind specs and constraints. Not input to the critic: only specs.md, 
 - Hash retention overriding an erasure request from a suspended climber (D7, S46).
 - Withholding reports about the climber from an access request (S64).
 - Web push delivery metadata passing through non-EEA push services (C13 exception).
-- Scaleway's DPA and EEA-only processing for Transactional Email (C13, C14).
+- Scaleway's DPA, accepted online rather than signed (D26), and EEA-only processing for Transactional Email (C13, C14).
 - Digital Services Act: statement of reasons to affected users (S93), and whether and how it applies in Norway at this scale.
 - Whether Norwegian universal-design rules apply to a private, non-commercial app (C59).
 - The terms and privacy policy texts, and confirmation that no special-category data is processed (D24).

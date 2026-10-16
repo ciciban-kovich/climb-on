@@ -11,7 +11,7 @@ Rationale lives in decisions.md, not here.
 - C4. Application code reads the current time only through a single injectable clock, so tests can fix time. Applies to every time-dependent rule.
 - C5. The privacy policy states: the retention periods in S38, S40 and S41; that erased data can remain in database backups for up to 7 days after erasure; the dormancy period and the automatic deletion timeline (S107, S109).
 - C13. All personal data is stored and processed within the EEA, including backups, logs and third-party processors. Exception: delivery metadata of web push notifications, which pass through the browser vendors' push services. Payloads are end-to-end encrypted.
-- C14. The email provider processes data within the EEA and has a signed data processing agreement.
+- C14. The email provider processes data within the EEA and has a data processing agreement in effect for this account, accepted online, with the acceptance date and the agreement's version recorded.
 
 ## Architecture and stack
 
