@@ -17,7 +17,7 @@ using Xunit;
 namespace ClimbOn.Integration.Tests.Harness;
 
 // The api host on real PostgreSQL (C11) with a fixed clock (C4), recording fakes (C22) and the
-// C33 telemetry scan at the end of every test.
+// C33 telemetry scan at the end of every test. Migrating also seeds the fixture postcodes (C44).
 // Default: one container per test collection. With CLIMBON_TEST_DB set: that database, shared by
 // every collection, so tests on it run one at a time (C30, task 32).
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
@@ -82,6 +82,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             await using var scope = Services.CreateAsyncScope();
             await scope.ServiceProvider.GetRequiredService<ClimbOnDbContext>().Database
                 .MigrateAsync(TestContext.Current.CancellationToken);
+            await FixturePostcodes.SeedAsync(connectionString, TestContext.Current.CancellationToken);
         }
     }
 

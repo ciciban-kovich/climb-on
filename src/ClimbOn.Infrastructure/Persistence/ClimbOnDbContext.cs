@@ -7,6 +7,26 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
 {
     public const string ConnectionStringName = "ClimbOn";
 
+    public DbSet<Postcode> Postcodes => Set<Postcode>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Postcode>(postcode =>
+        {
+            postcode.ToTable("postcodes", table =>
+            {
+                table.HasCheckConstraint("ck_postcodes_code", "code ~ '^[0-9]{4}$'");
+                table.HasCheckConstraint("ck_postcodes_lat", "lat BETWEEN -90 AND 90");
+                table.HasCheckConstraint("ck_postcodes_lon", "lon BETWEEN -180 AND 180");
+            });
+            postcode.HasKey(row => row.Code);
+            postcode.Property(row => row.Code).HasColumnName("code").HasMaxLength(4);
+            postcode.Property(row => row.Latitude).HasColumnName("lat");
+            postcode.Property(row => row.Longitude).HasColumnName("lon");
+            postcode.Property(row => row.Retired).HasColumnName("retired");
+        });
+    }
+
     // C3: every timestamp is stored as timestamptz; Npgsql rejects DateTime values whose Kind is not Utc.
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
