@@ -6,6 +6,10 @@ public sealed record TestDatabaseSettings(string? ExternalConnectionString, bool
     public const string DatabaseVariable = "CLIMBON_TEST_DB";
     public const string SkipMigrationsVariable = "CLIMBON_TEST_SKIP_MIGRATIONS";
 
+    // For a host that never reaches a database.
+    public static TestDatabaseSettings Unreachable { get; } =
+        new("Host=127.0.0.1;Port=1;Database=none;Username=none", SkipMigrations: true);
+
     public static TestDatabaseSettings FromEnvironment() => FromEnvironment(Environment.GetEnvironmentVariable);
 
     public static TestDatabaseSettings FromEnvironment(Func<string, string?> variable)

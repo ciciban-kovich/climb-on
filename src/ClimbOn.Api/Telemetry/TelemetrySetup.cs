@@ -17,6 +17,10 @@ public static class TelemetrySetup
 
     private const string HostingDiagnostics = "Microsoft.AspNetCore.Hosting.Diagnostics";
 
+    // A wildcard rule matches when the category starts with the part before '*' and ends with the part
+    // after it, so no rule for the category can be longer than this one; of equally long rules the last wins.
+    private const string HostingDiagnosticsCap = HostingDiagnostics + "*" + HostingDiagnostics;
+
     public static WebApplicationBuilder AddTelemetry(this WebApplicationBuilder builder)
     {
         var azureMonitor = builder.Configuration[AzureMonitorConnectionString];
@@ -29,9 +33,10 @@ public static class TelemetrySetup
         {
             foreach (var provider in options.Rules.Select(rule => rule.ProviderName).Append(null).Distinct().ToList())
             {
-                var configured = HostingDiagnosticsLevel(options, provider);
-                var level = configured > LogLevel.Warning ? configured : LogLevel.Warning;
-                options.Rules.Add(new LoggerFilterRule(provider, HostingDiagnostics, level, filter: null));
+                var configured = HostingDiagnosticsRule(options, provider);
+                var level = configured?.LogLevel ?? options.MinLevel;
+                options.Rules.Add(new LoggerFilterRule(
+                    provider, HostingDiagnosticsCap, level > LogLevel.Warning ? level : LogLevel.Warning, configured?.Filter));
             }
         });
         builder.Logging.AddOpenTelemetry(logging =>
@@ -69,17 +74,22 @@ public static class TelemetrySetup
         return builder;
     }
 
-    // The level the rules so far give the hosting category for this provider, picked the way the
-    // logging rule selector does: a provider's own rules first, then the longest category, then the last.
-    private static LogLevel HostingDiagnosticsLevel(LoggerFilterOptions options, string? provider)
-    {
-        var rule = options.Rules
+    // The rule the logging rule selector picks for the hosting category and this provider: a provider's
+    // own rules first, then the longest category, then the last.
+    private static LoggerFilterRule? HostingDiagnosticsRule(LoggerFilterOptions options, string? provider) =>
+        options.Rules
             .Where(rule => rule.ProviderName == provider || rule.ProviderName is null)
-            .Where(rule => rule.CategoryName is null
-                || HostingDiagnostics.StartsWith(rule.CategoryName, StringComparison.OrdinalIgnoreCase))
+            .Where(rule => rule.CategoryName is null || MatchesHostingDiagnostics(rule.CategoryName))
             .OrderBy(rule => rule.ProviderName is null ? 0 : 1)
             .ThenBy(rule => rule.CategoryName?.Length ?? 0)
             .LastOrDefault();
-        return rule?.LogLevel ?? options.MinLevel;
+
+    private static bool MatchesHostingDiagnostics(string category)
+    {
+        var wildcard = category.IndexOf('*');
+        var prefix = wildcard < 0 ? category : category[..wildcard];
+        var suffix = wildcard < 0 ? string.Empty : category[(wildcard + 1)..];
+        return HostingDiagnostics.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+            && HostingDiagnostics.EndsWith(suffix, StringComparison.OrdinalIgnoreCase);
     }
 }

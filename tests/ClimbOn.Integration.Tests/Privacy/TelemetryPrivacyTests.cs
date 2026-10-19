@@ -71,17 +71,20 @@ public sealed class TelemetryPrivacyTests(ApiFactory factory) : IClassFixture<Ap
         }
     }
 
-    [Fact]
+    [Theory]
     [Trait("Compat", "exclude")]
-    public async Task Configured_log_levels_do_not_bring_back_request_lines()
+    [InlineData("Microsoft.AspNetCore.Hosting.Diagnostics")]
+    [InlineData("Microsoft.AspNetCore.Hosting.Diagnostics*")]
+    [InlineData("Microsoft.AspNetCore.Hosting.*Diagnostics")]
+    [InlineData("Microsoft.AspNetCore.Hosting.Diagnostics*Microsoft.AspNetCore.Hosting.Diagnostics")]
+    public async Task Configured_log_levels_do_not_bring_back_request_lines(string category)
     {
         var ct = TestContext.Current.CancellationToken;
-        var noDatabase = new TestDatabaseSettings("Host=127.0.0.1;Port=1;Database=none;Username=none", SkipMigrations: true);
-        await using var tuned = ApiFactory.For(noDatabase, new Dictionary<string, string?>
+        await using var tuned = ApiFactory.For(TestDatabaseSettings.Unreachable, new Dictionary<string, string?>
         {
-            ["Logging:LogLevel:Microsoft.AspNetCore.Hosting.Diagnostics"] = "Debug",
+            [$"Logging:LogLevel:{category}"] = "Debug",
             ["Logging:OpenTelemetry:LogLevel:Default"] = "Information",
-            ["Logging:OpenTelemetry:LogLevel:Microsoft.AspNetCore.Hosting.Diagnostics"] = "Information",
+            [$"Logging:OpenTelemetry:LogLevel:{category}"] = "Information",
         });
         await tuned.InitializeAsync();
         var account = tuned.Data.Account();
@@ -128,15 +131,12 @@ public sealed class TelemetryPrivacyTests(ApiFactory factory) : IClassFixture<Ap
             (await client.GetAsync($"{TestEndpoints.Prefix}/telemetry/query/before", ct)).Dispose();
             var before = await factory.Telemetry.TakeAsync();
 
-            var noDatabase = new TestDatabaseSettings("Host=127.0.0.1;Port=1;Database=none;Username=none", SkipMigrations: true);
-            var other = ApiFactory.For(noDatabase);
-            await other.InitializeAsync();
-            using (var otherClient = other.CreateClient())
+            await using (var other = ApiFactory.For(TestDatabaseSettings.Unreachable))
             {
+                await other.InitializeAsync();
+                using var otherClient = other.CreateClient();
                 (await otherClient.GetAsync($"{TestEndpoints.Prefix}/telemetry/query/other", ct)).Dispose();
             }
-
-            await other.DisposeAsync();
 
             // The first collection after the other host stops still held the old stream; the second did not.
             (await client.GetAsync($"{TestEndpoints.Prefix}/telemetry/query/during", ct)).Dispose();
@@ -149,14 +149,16 @@ public sealed class TelemetryPrivacyTests(ApiFactory factory) : IClassFixture<Ap
         }
     }
 
-    [Fact]
+    [Theory]
     [Trait("Compat", "exclude")]
-    public async Task Stricter_configured_level_for_request_lines_is_kept()
+    [InlineData("Microsoft.AspNetCore.Hosting.Diagnostics")]
+    [InlineData("Microsoft.AspNetCore.*")]
+    [InlineData("*.Hosting.Diagnostics")]
+    public async Task Stricter_configured_level_for_request_lines_is_kept(string category)
     {
-        var noDatabase = new TestDatabaseSettings("Host=127.0.0.1;Port=1;Database=none;Username=none", SkipMigrations: true);
-        await using var silenced = ApiFactory.For(noDatabase, new Dictionary<string, string?>
+        await using var silenced = ApiFactory.For(TestDatabaseSettings.Unreachable, new Dictionary<string, string?>
         {
-            ["Logging:OpenTelemetry:LogLevel:Microsoft.AspNetCore.Hosting.Diagnostics"] = "None",
+            [$"Logging:OpenTelemetry:LogLevel:{category}"] = "None",
         });
         await silenced.InitializeAsync();
 
@@ -202,8 +204,7 @@ public sealed class TelemetryPrivacyTests(ApiFactory factory) : IClassFixture<Ap
     public async Task Own_factory_is_scanned_when_it_stops()
     {
         var ct = TestContext.Current.CancellationToken;
-        var noDatabase = new TestDatabaseSettings("Host=127.0.0.1;Port=1;Database=none;Username=none", SkipMigrations: true);
-        var own = ApiFactory.For(noDatabase);
+        var own = ApiFactory.For(TestDatabaseSettings.Unreachable);
         TelemetryLeakException? leak = null;
         try
         {
