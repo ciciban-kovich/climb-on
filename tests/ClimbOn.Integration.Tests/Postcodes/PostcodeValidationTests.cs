@@ -2,8 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using ClimbOn.Api.Errors;
 using ClimbOn.Api.Resources;
-using ClimbOn.Application.Postcodes;
 using ClimbOn.Domain.Accounts;
+using ClimbOn.Domain.Postcodes;
 using ClimbOn.Integration.Tests.Harness;
 using Xunit;
 
@@ -32,7 +32,7 @@ public sealed class PostcodeValidationTests(ApiFactory factory) : IntegrationTes
 
         using var response = await ValidateAsync(Factory.Data.Postcode(FixturePostcodes.Retired));
 
-        await AssertRejectedAsync(response, PostcodeValidator.RetiredCode);
+        await AssertRejectedAsync(response, PostcodeRules.RetiredCode);
     }
 
     [Fact]
@@ -42,7 +42,7 @@ public sealed class PostcodeValidationTests(ApiFactory factory) : IntegrationTes
 
         using var response = await ValidateAsync(Factory.Data.Postcode(FixturePostcodes.Unknown));
 
-        await AssertRejectedAsync(response, PostcodeValidator.UnknownCode);
+        await AssertRejectedAsync(response, PostcodeRules.UnknownCode);
     }
 
     [Theory]
@@ -60,13 +60,13 @@ public sealed class PostcodeValidationTests(ApiFactory factory) : IntegrationTes
     {
         using var response = await ValidateAsync(value);
 
-        await AssertRejectedAsync(response, PostcodeValidator.MalformedCode);
+        await AssertRejectedAsync(response, PostcodeRules.MalformedCode);
     }
 
     // C46 checks the two files agree; this checks the codes are among their keys.
     [Fact]
     public void Every_postcode_error_code_has_a_text_in_both_languages() =>
-        Assert.Empty(PostcodeValidator.Codes.SelectMany(code => new[] { Language.English, Language.Bokmal }
+        Assert.Empty(PostcodeRules.Codes.SelectMany(code => new[] { Language.English, Language.Bokmal }
             .Where(language => Texts.Get(code, language) == code)
             .Select(language => $"{code} ({language})")));
 

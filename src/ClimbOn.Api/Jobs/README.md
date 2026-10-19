@@ -37,8 +37,12 @@ against the live URL (download, unzip, parse, interior points):
 
 The diff and apply on top of this is about 3,400 rows in one transaction.
 
+`KartverketSource` refuses an archive over 32 MiB, a GeoJSON file over 192 MiB and a download
+(body included) that takes over 5 minutes, so the job fails with the table unchanged (S101.2).
+
 ### Fixtures
 
 `tests/ClimbOn.Integration.Tests/Fixtures/kartverket/postnummeromrader-v1.geojson` is an excerpt of
 the 2026-09-29 file: 10 features (8 postcodes, among them two with two parts and one with a hole)
 and 3 boundary lines, with values unchanged. `-v2` is the same excerpt edited to act as a later version.
+`tests/ClimbOn.Infrastructure.Tests` reads the same files for the parsing tests.

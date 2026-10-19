@@ -43,7 +43,8 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("retired");
 
-                    b.HasKey("Code");
+                    b.HasKey("Code")
+                        .HasName("pk_postcodes");
 
                     b.ToTable("postcodes", null, t =>
                         {

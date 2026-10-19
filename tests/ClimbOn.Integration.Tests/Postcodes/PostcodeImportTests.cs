@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using ClimbOn.Api.Errors;
 using ClimbOn.Api.Jobs;
-using ClimbOn.Application.Postcodes;
+using ClimbOn.Domain.Postcodes;
 using ClimbOn.Infrastructure.Postcodes;
 using ClimbOn.Integration.Tests.Harness;
 using Npgsql;
@@ -110,7 +110,7 @@ public sealed class PostcodeImportTests(ApiFactory factory) : IntegrationTest(fa
         using var point = await client.PostAsJsonAsync($"{TestEndpoints.Prefix}/postcodes/point", new ProbeValue(code), ct);
 
         Assert.Equal(HttpStatusCode.BadRequest, validation.StatusCode);
-        Assert.Equal(PostcodeValidator.RetiredCode, (await validation.Content.ReadFromJsonAsync<ErrorBody>(ct))?.Code);
+        Assert.Equal(PostcodeRules.RetiredCode, (await validation.Content.ReadFromJsonAsync<ErrorBody>(ct))?.Code);
         Assert.Equal(new PointProbe(last.Latitude, last.Longitude), await point.Content.ReadFromJsonAsync<PointProbe>(ct));
     }
 

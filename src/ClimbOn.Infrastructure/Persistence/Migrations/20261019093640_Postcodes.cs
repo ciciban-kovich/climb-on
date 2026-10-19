@@ -21,7 +21,7 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_postcodes", x => x.code);
+                    table.PrimaryKey("pk_postcodes", x => x.code);
                     table.CheckConstraint("ck_postcodes_code", "code ~ '^[0-9]{4}$'");
                     table.CheckConstraint("ck_postcodes_lat", "lat BETWEEN -90 AND 90");
                     table.CheckConstraint("ck_postcodes_lon", "lon BETWEEN -180 AND 180");

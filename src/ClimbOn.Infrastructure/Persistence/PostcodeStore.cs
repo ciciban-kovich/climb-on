@@ -1,5 +1,6 @@
 using ClimbOn.Application.Postcodes;
 using ClimbOn.Domain.Geo;
+using ClimbOn.Domain.Postcodes;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClimbOn.Infrastructure.Persistence;

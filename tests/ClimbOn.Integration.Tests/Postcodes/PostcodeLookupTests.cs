@@ -6,10 +6,10 @@ using Xunit;
 
 namespace ClimbOn.Integration.Tests.Postcodes;
 
-[Trait("Spec", "S99")]
 public sealed class PostcodeLookupTests(ApiFactory factory) : IntegrationTest(factory)
 {
     [Fact]
+    [Trait("SpecPartial", "S16")]
     public async Task Active_postcode_resolves_to_its_stored_point()
     {
         var stored = FixturePostcodes.Get("5003");
@@ -32,6 +32,7 @@ public sealed class PostcodeLookupTests(ApiFactory factory) : IntegrationTest(fa
     }
 
     [Fact]
+    [Trait("SpecPartial", "S16")]
     public async Task Postcode_not_in_the_table_has_no_point()
     {
         using var response = await PostAsync(Factory.Data.Postcode(FixturePostcodes.Unknown));

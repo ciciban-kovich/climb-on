@@ -19,7 +19,7 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
                 table.HasCheckConstraint("ck_postcodes_lat", "lat BETWEEN -90 AND 90");
                 table.HasCheckConstraint("ck_postcodes_lon", "lon BETWEEN -180 AND 180");
             });
-            postcode.HasKey(row => row.Code);
+            postcode.HasKey(row => row.Code).HasName("pk_postcodes");
             postcode.Property(row => row.Code).HasColumnName("code").HasMaxLength(4);
             postcode.Property(row => row.Latitude).HasColumnName("lat");
             postcode.Property(row => row.Longitude).HasColumnName("lon");

@@ -1,59 +1,14 @@
 using System.Net.Http.Json;
 using ClimbOn.Api.Jobs;
 using ClimbOn.Domain.Geo;
-using ClimbOn.Infrastructure.Postcodes;
 using ClimbOn.Integration.Tests.Harness;
-using NetTopologySuite.Geometries;
 using Xunit;
 
 namespace ClimbOn.Integration.Tests.Postcodes;
 
-// The real Kartverket format (C2), read from an unmodified excerpt of the dataset.
+// The real Kartverket format (C2), imported from an unmodified excerpt of the dataset and read back.
 public sealed class KartverketSourceTests(ApiFactory factory) : IntegrationTest(factory)
 {
-    // Its centroid lies outside its area.
-    private const string Concave = "5003";
-
-    [Fact]
-    [Trait("SpecPartial", "S101")]
-    public async Task Parses_real_dataset_excerpt()
-    {
-        var areas = await ReadAsync(KartverketFixture.Excerpt);
-
-        Assert.Equal(
-            ["0010", "0159", "1063", "1354", "4006", "5003", "7010", "9008"],
-            areas.Select(area => area.Code).Order(StringComparer.Ordinal));
-
-        // Two features each in the file; 0159 also has a hole.
-        foreach (var code in new[] { "0159", "1063" })
-        {
-            var area = Assert.IsType<MultiPolygon>(areas.Single(area => area.Code == code).Area);
-            Assert.Equal(2, area.NumGeometries);
-        }
-
-        Assert.Contains(areas.Select(area => area.Area).OfType<MultiPolygon>().SelectMany(multi => multi.Geometries.Cast<Polygon>()), polygon => polygon.NumInteriorRings > 0);
-    }
-
-    [Fact]
-    [Trait("Spec", "S99")]
-    public async Task Reference_point_lies_inside_area()
-    {
-        var areas = await ReadAsync(KartverketFixture.Excerpt);
-
-        Assert.All(areas, area => Assert.True(area.Area.Contains(area.ReferencePoint), area.Code));
-        var concave = areas.Single(area => area.Code == Concave).Area;
-        Assert.False(concave.Contains(concave.Centroid));
-    }
-
-    [Fact]
-    [Trait("Spec", "S100")]
-    public async Task Feature_without_an_area_is_left_out()
-    {
-        var areas = await ReadAsync(KartverketFixture.NextVersion);
-
-        Assert.DoesNotContain(areas, area => area.Code == "0101");
-    }
-
     // The stored point, read back through the api, against coordinates from outside the dataset.
     [Theory]
     [Trait("Spec", "S99")]
@@ -86,12 +41,6 @@ public sealed class KartverketSourceTests(ApiFactory factory) : IntegrationTest(
             Assert.InRange(row.Latitude, 57, 72);
             Assert.InRange(row.Longitude, 4, 32);
         });
-    }
-
-    private static async Task<IReadOnlyList<KartverketArea>> ReadAsync(string file)
-    {
-        await using var geojson = File.OpenRead(KartverketFixture.PathOf(file));
-        return await KartverketSource.ReadAreasAsync(geojson, TestContext.Current.CancellationToken);
     }
 
     private async Task<IAsyncDisposable> ImportExcerptAsync()
