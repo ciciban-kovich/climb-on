@@ -37,6 +37,22 @@ public static class FixturePostcodes
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
+    // Empties the table for a test that imports a dataset (task 08); disposing puts the fixture
+    // table back exactly, so the tests after it, and every factory on a shared database, see C44 again.
+    public static async Task<IAsyncDisposable> ClearForImportAsync(string connectionString, CancellationToken cancellationToken)
+    {
+        await DeleteAllAsync(connectionString, cancellationToken);
+        return new Restore(connectionString);
+    }
+
+    private static async Task DeleteAllAsync(string connectionString, CancellationToken cancellationToken)
+    {
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var command = new NpgsqlCommand("DELETE FROM postcodes", connection);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
     private static List<FixturePostcode> Load() =>
         File.ReadLines(Path.Combine(AppContext.BaseDirectory, "Fixtures", "postcodes.csv"))
             .Skip(1)
@@ -48,4 +64,13 @@ public static class FixturePostcodes
                 double.Parse(fields[2], CultureInfo.InvariantCulture),
                 bool.Parse(fields[3])))
             .ToList();
+
+    private sealed class Restore(string connectionString) : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            await DeleteAllAsync(connectionString, CancellationToken.None);
+            await SeedAsync(connectionString, CancellationToken.None);
+        }
+    }
 }

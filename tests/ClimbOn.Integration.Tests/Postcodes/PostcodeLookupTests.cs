@@ -6,7 +6,7 @@ using Xunit;
 
 namespace ClimbOn.Integration.Tests.Postcodes;
 
-[Trait("SpecPartial", "S99")]
+[Trait("Spec", "S99")]
 public sealed class PostcodeLookupTests(ApiFactory factory) : IntegrationTest(factory)
 {
     [Fact]
