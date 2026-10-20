@@ -15,15 +15,20 @@ public sealed class AccountStoreTests(MigratedDatabase database) : IClassFixture
 {
     private static readonly DateTimeOffset Now = new(2026, 1, 15, 12, 0, 0, TimeSpan.Zero);
 
-    [Fact]
-    public async Task Registration_stores_the_account_and_its_acknowledgements()
+    // Each language, and terms and privacy at different versions, so neither can be stored as a constant.
+    [Theory]
+    [InlineData("nb")]
+    [InlineData("en")]
+    public async Task Registration_stores_the_account_and_its_acknowledgements(string language)
     {
         const string password = "Ikke-lagret-i-klartekst";
+        var email = $"climber-{language}@example.test";
         var dateOfBirth = new DateOnly(1990, 5, 17);
+        await PublishTermsVersion2Async();
         var account = Account.Register(
             Guid.CreateVersion7(Now),
-            new EmailRegistration("climber@example.test", password, dateOfBirth, "nb", TermsVersion: 1, PrivacyVersion: 1),
-            new LegalVersions(Terms: 1, Privacy: 1),
+            new EmailRegistration(email, password, dateOfBirth, language, TermsVersion: 2, PrivacyVersion: 1),
+            new LegalVersions(Terms: 2, Privacy: 1),
             Now,
             new IdentityPasswordHasher().Hash);
 
@@ -34,9 +39,9 @@ public sealed class AccountStoreTests(MigratedDatabase database) : IClassFixture
 
         await using var read = database.CreateContext();
         var row = await read.Accounts.SingleAsync(row => row.Id == account.Id, TestContext.Current.CancellationToken);
-        Assert.Equal("climber@example.test", row.Email);
+        Assert.Equal(email, row.Email);
         Assert.Equal(dateOfBirth, row.DateOfBirth);
-        Assert.Equal("nb", row.Language);
+        Assert.Equal(language, row.Language);
         Assert.Equal(Now, row.RegisteredAt);
 
         Assert.NotEqual(password, row.PasswordHash);
@@ -50,7 +55,27 @@ public sealed class AccountStoreTests(MigratedDatabase database) : IClassFixture
             .Select(acknowledgement => new { acknowledgement.Document, acknowledgement.Version, acknowledgement.AcknowledgedAt })
             .ToListAsync(TestContext.Current.CancellationToken);
         Assert.Equal(
-            [new { Document = "privacy", Version = 1, AcknowledgedAt = Now }, new { Document = "terms", Version = 1, AcknowledgedAt = Now }],
+            [new { Document = "privacy", Version = 1, AcknowledgedAt = Now }, new { Document = "terms", Version = 2, AcknowledgedAt = Now }],
             acknowledgements);
+    }
+
+    // The migration seeds version 1 of each; an acknowledgement must name a published version.
+    private async Task PublishTermsVersion2Async()
+    {
+        await using var db = database.CreateContext();
+        if (await db.LegalDocuments.AnyAsync(row => row.Document == "terms" && row.Version == 2, TestContext.Current.CancellationToken))
+        {
+            return;
+        }
+
+        db.LegalDocuments.Add(new LegalDocumentRow
+        {
+            Document = "terms",
+            Version = 2,
+            PublishedAt = Now.AddDays(-1),
+            TextEnglish = "Terms, version 2.",
+            TextBokmal = "Vilkår, versjon 2.",
+        });
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 }
