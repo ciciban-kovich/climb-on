@@ -39,6 +39,8 @@ The diff and apply on top of this is about 3,400 rows in one transaction.
 
 `KartverketSource` refuses an archive over 32 MiB, a GeoJSON file over 192 MiB and a download
 (body included) that takes over 5 minutes, so the job fails with the table unchanged (S101.2).
+These caps limit the bytes read, not the memory the parse uses: a GeoJSON file under the cap can
+still need more memory than the job has.
 
 ### Fixtures
 

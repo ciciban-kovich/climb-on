@@ -65,7 +65,7 @@ public sealed class KartverketSourceTests
 
     // Read as degrees, a projected easting/northing would put every point in the wrong place.
     [Theory]
-    [Trait("SpecPartial", "S99")]
+    [Trait("Spec", "S99")]
     [InlineData("\"EPSG:25833\"")]
     [InlineData("\"\"")]
     [InlineData("null")]

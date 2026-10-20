@@ -26,7 +26,8 @@ public sealed class KartverketSource(HttpClient http) : IPostcodeSource
     private static readonly JsonSerializerOptions JsonOptions = new() { Converters = { new GeoJsonConverterFactory() } };
 
     // Limits a few times the measured size (Api/Jobs/README.md), so a broken or hostile response
-    // fails the job instead of exhausting its memory or running until the platform stops it.
+    // fails the job instead of being read without end or running until the platform stops it.
+    // They limit the bytes read, not the memory the parse uses.
     public long MaxArchiveBytes { get; init; } = 32 * 1024 * 1024;
 
     public long MaxGeoJsonBytes { get; init; } = 192 * 1024 * 1024;
