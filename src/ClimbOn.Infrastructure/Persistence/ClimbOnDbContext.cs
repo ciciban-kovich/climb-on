@@ -1,3 +1,4 @@
+using ClimbOn.Infrastructure.Persistence.Accounts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -8,6 +9,12 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
     public const string ConnectionStringName = "ClimbOn";
 
     public DbSet<Postcode> Postcodes => Set<Postcode>();
+
+    public DbSet<AccountRow> Accounts => Set<AccountRow>();
+
+    public DbSet<LegalDocumentRow> LegalDocuments => Set<LegalDocumentRow>();
+
+    public DbSet<LegalAcknowledgementRow> LegalAcknowledgements => Set<LegalAcknowledgementRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,6 +31,50 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             postcode.Property(row => row.Latitude).HasColumnName("lat");
             postcode.Property(row => row.Longitude).HasColumnName("lon");
             postcode.Property(row => row.Retired).HasColumnName("retired");
+        });
+
+        modelBuilder.Entity<AccountRow>(account =>
+        {
+            account.ToTable("accounts", table =>
+                table.HasCheckConstraint("ck_accounts_language", "language IN ('en', 'nb')"));
+            account.HasKey(row => row.Id).HasName("pk_accounts");
+            account.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
+            account.Property(row => row.Email).HasColumnName("email").HasMaxLength(254);
+            account.Property(row => row.PasswordHash).HasColumnName("password_hash");
+            account.Property(row => row.DateOfBirth).HasColumnName("date_of_birth");
+            account.Property(row => row.Language).HasColumnName("language").HasMaxLength(2);
+            account.Property(row => row.RegisteredAt).HasColumnName("registered_at");
+        });
+
+        modelBuilder.Entity<LegalDocumentRow>(document =>
+        {
+            document.ToTable("legal_documents", table =>
+            {
+                table.HasCheckConstraint("ck_legal_documents_document", "document IN ('terms', 'privacy')");
+                table.HasCheckConstraint("ck_legal_documents_version", "version >= 1");
+            });
+            document.HasKey(row => new { row.Document, row.Version }).HasName("pk_legal_documents");
+            document.Property(row => row.Document).HasColumnName("document").HasMaxLength(16);
+            document.Property(row => row.Version).HasColumnName("version").ValueGeneratedNever();
+            document.Property(row => row.PublishedAt).HasColumnName("published_at");
+            document.Property(row => row.TextEnglish).HasColumnName("text_en");
+            document.Property(row => row.TextBokmal).HasColumnName("text_nb");
+            document.HasData(LegalDocumentSeed.Rows);
+        });
+
+        modelBuilder.Entity<LegalAcknowledgementRow>(acknowledgement =>
+        {
+            acknowledgement.ToTable("legal_acknowledgements");
+            acknowledgement.HasKey(row => new { row.AccountId, row.Document, row.Version }).HasName("pk_legal_acknowledgements");
+            acknowledgement.Property(row => row.AccountId).HasColumnName("account_id");
+            acknowledgement.Property(row => row.Document).HasColumnName("document").HasMaxLength(16);
+            acknowledgement.Property(row => row.Version).HasColumnName("version");
+            acknowledgement.Property(row => row.AcknowledgedAt).HasColumnName("acknowledged_at");
+            acknowledgement.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.AccountId)
+                .HasConstraintName("fk_legal_acknowledgements_accounts").OnDelete(DeleteBehavior.Cascade);
+            acknowledgement.HasOne<LegalDocumentRow>().WithMany().HasForeignKey(row => new { row.Document, row.Version })
+                .HasConstraintName("fk_legal_acknowledgements_legal_documents").OnDelete(DeleteBehavior.Restrict);
+            acknowledgement.HasIndex(row => new { row.Document, row.Version }).HasDatabaseName("ix_legal_acknowledgements_document_version");
         });
     }
 

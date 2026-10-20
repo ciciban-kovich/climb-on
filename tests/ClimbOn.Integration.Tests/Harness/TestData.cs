@@ -33,6 +33,23 @@ public sealed class TestData(FixtureValues fixtures)
         return account;
     }
 
+    // An email address of the given length in characters, for the S47 bound.
+    public string Email(int length)
+    {
+        const string domain = "@example.test";
+        var email = new string('a', length - domain.Length) + domain;
+        fixtures.Register("email", email);
+        return email;
+    }
+
+    // A password of the given length in characters, for the S79 bounds.
+    public string Password(int length)
+    {
+        var password = string.Concat(Enumerable.Repeat(Guid.NewGuid().ToString("N"), (length / 32) + 1))[..length];
+        fixtures.Register("password", password);
+        return password;
+    }
+
     // A postcode a test sends as a climber's home area (S15); see FixturePostcodes.
     public string Postcode(string code)
     {

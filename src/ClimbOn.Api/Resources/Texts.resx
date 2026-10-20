@@ -45,4 +45,25 @@
   <data name="postcode_retired" xml:space="preserve">
     <value>This postcode is no longer in use. Please choose another.</value>
   </data>
+  <data name="email_invalid" xml:space="preserve">
+    <value>Enter a valid email address.</value>
+  </data>
+  <data name="password_too_short" xml:space="preserve">
+    <value>The password must have at least 10 characters.</value>
+  </data>
+  <data name="password_too_long" xml:space="preserve">
+    <value>The password can have at most 128 characters.</value>
+  </data>
+  <data name="date_of_birth_required" xml:space="preserve">
+    <value>Enter your date of birth.</value>
+  </data>
+  <data name="under_18" xml:space="preserve">
+    <value>You must be at least 18 years old to register.</value>
+  </data>
+  <data name="terms_not_accepted" xml:space="preserve">
+    <value>You must accept the current terms of service.</value>
+  </data>
+  <data name="privacy_not_acknowledged" xml:space="preserve">
+    <value>You must acknowledge the current privacy policy.</value>
+  </data>
 </root>

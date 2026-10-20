@@ -25,6 +25,27 @@ public sealed class OpenApiContractTests(OpenApiContractTests.DevelopmentFactory
             $"openapi/{ApiDocuments.Climber}.json is stale; run tools/regenerate-api.sh. Served:\n{served}");
     }
 
+    // C45: the generated client reads the error code only for statuses the document declares.
+    [Fact]
+    public async Task Every_operation_declares_the_error_body_for_4xx_and_5xx()
+    {
+        using var client = factory.CreateClient();
+
+        var document = JsonNode.Parse(
+            await client.GetStringAsync($"/openapi/{ApiDocuments.Climber}.json", TestContext.Current.CancellationToken))!;
+        var operations = document["paths"]!.AsObject()
+            .SelectMany(path => path.Value!.AsObject().Select(operation => (Name: $"{operation.Key} {path.Key}", Operation: operation.Value!)))
+            .ToList();
+
+        Assert.NotEmpty(operations);
+        Assert.Empty(
+            from operation in operations
+            from range in new[] { "4XX", "5XX" }
+            let reference = operation.Operation["responses"]?[range]?["content"]?["application/json"]?["schema"]?["$ref"]?.GetValue<string>()
+            where reference != "#/components/schemas/ErrorBody"
+            select $"{operation.Name} {range}");
+    }
+
     // The document is served in Development only; it needs no database.
     public sealed class DevelopmentFactory : WebApplicationFactory<Program>
     {
