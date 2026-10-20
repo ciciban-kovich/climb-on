@@ -15,4 +15,7 @@ public sealed class AccountRow
     public required string Language { get; set; }
 
     public required DateTimeOffset RegisteredAt { get; init; }
+
+    // Null until the address is confirmed (S49).
+    public DateTimeOffset? EmailConfirmedAt { get; init; }
 }

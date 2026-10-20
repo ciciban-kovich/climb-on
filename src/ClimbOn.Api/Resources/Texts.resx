@@ -66,4 +66,19 @@
   <data name="privacy_not_acknowledged" xml:space="preserve">
     <value>You must acknowledge the current privacy policy.</value>
   </data>
+  <data name="link_invalid" xml:space="preserve">
+    <value>The confirmation link is not valid, or it has already been used.</value>
+  </data>
+  <data name="email_confirmation_subject" xml:space="preserve">
+    <value>Confirm your email address for climb-on</value>
+  </data>
+  <data name="email_confirmation_body" xml:space="preserve">
+    <value>Hi,
+
+Confirm your email address by opening this link:
+
+{0}
+
+If you did not register with climb-on, you can ignore this email.</value>
+  </data>
 </root>

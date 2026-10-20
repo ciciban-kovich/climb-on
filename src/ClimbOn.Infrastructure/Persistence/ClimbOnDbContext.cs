@@ -1,4 +1,5 @@
 using ClimbOn.Infrastructure.Persistence.Accounts;
+using ClimbOn.Infrastructure.Persistence.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -15,6 +16,10 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
     public DbSet<LegalDocumentRow> LegalDocuments => Set<LegalDocumentRow>();
 
     public DbSet<LegalAcknowledgementRow> LegalAcknowledgements => Set<LegalAcknowledgementRow>();
+
+    public DbSet<LinkTokenRow> LinkTokens => Set<LinkTokenRow>();
+
+    public DbSet<OutboxRow> Outbox => Set<OutboxRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -44,6 +49,7 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             account.Property(row => row.DateOfBirth).HasColumnName("date_of_birth");
             account.Property(row => row.Language).HasColumnName("language").HasMaxLength(2);
             account.Property(row => row.RegisteredAt).HasColumnName("registered_at");
+            account.Property(row => row.EmailConfirmedAt).HasColumnName("email_confirmed_at");
         });
 
         modelBuilder.Entity<LegalDocumentRow>(document =>
@@ -75,6 +81,46 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             acknowledgement.HasOne<LegalDocumentRow>().WithMany().HasForeignKey(row => new { row.Document, row.Version })
                 .HasConstraintName("fk_legal_acknowledgements_legal_documents").OnDelete(DeleteBehavior.Restrict);
             acknowledgement.HasIndex(row => new { row.Document, row.Version }).HasDatabaseName("ix_legal_acknowledgements_document_version");
+        });
+
+        modelBuilder.Entity<LinkTokenRow>(token =>
+        {
+            token.ToTable("link_tokens", table =>
+            {
+                table.HasCheckConstraint("ck_link_tokens_purpose", $"purpose IN ('{LinkPurposes.EmailConfirmation}')");
+                table.HasCheckConstraint("ck_link_tokens_token_hash", "octet_length(token_hash) = 32");
+            });
+            token.HasKey(row => row.TokenHash).HasName("pk_link_tokens");
+            token.Property(row => row.TokenHash).HasColumnName("token_hash");
+            token.Property(row => row.AccountId).HasColumnName("account_id");
+            token.Property(row => row.Purpose).HasColumnName("purpose").HasMaxLength(32);
+            token.Property(row => row.CreatedAt).HasColumnName("created_at");
+            token.Property(row => row.UsedAt).HasColumnName("used_at");
+            token.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.AccountId)
+                .HasConstraintName("fk_link_tokens_accounts").OnDelete(DeleteBehavior.Cascade);
+            token.HasIndex(row => row.AccountId).HasDatabaseName("ix_link_tokens_account_id");
+        });
+
+        modelBuilder.Entity<OutboxRow>(outbox =>
+        {
+            outbox.ToTable("outbox", table =>
+                table.HasCheckConstraint("ck_outbox_attempts", "attempts >= 0"));
+            outbox.HasKey(row => row.Id).HasName("pk_outbox");
+            outbox.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
+            outbox.Property(row => row.AccountId).HasColumnName("account_id");
+            outbox.Property(row => row.Recipient).HasColumnName("recipient").HasMaxLength(254);
+            outbox.Property(row => row.Subject).HasColumnName("subject");
+            outbox.Property(row => row.Body).HasColumnName("body");
+            outbox.Property(row => row.CreatedAt).HasColumnName("created_at");
+            outbox.Property(row => row.Attempts).HasColumnName("attempts");
+            outbox.Property(row => row.NextAttemptAt).HasColumnName("next_attempt_at");
+            outbox.Property(row => row.SentAt).HasColumnName("sent_at");
+            outbox.Property(row => row.FailedAt).HasColumnName("failed_at");
+            outbox.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.AccountId)
+                .HasConstraintName("fk_outbox_accounts").OnDelete(DeleteBehavior.Cascade);
+            outbox.HasIndex(row => row.AccountId).HasDatabaseName("ix_outbox_account_id");
+            outbox.HasIndex(row => row.NextAttemptAt).HasDatabaseName("ix_outbox_due")
+                .HasFilter("sent_at IS NULL AND failed_at IS NULL");
         });
     }
 
