@@ -155,6 +155,7 @@ Rationale lives in decisions.md, not here.
   - S101.1 The import is idempotent.
   - S101.2 It is applied atomically: a failed import leaves the table unchanged.
   - S101.3 Its result (added, changed, retired, reactivated) is reported to the admin.
+  - S101.4 An import that would retire more than 10% of the postcodes that are active before it is refused. A refused import is a failed import (S101.2): the table is unchanged and the admin is told.
 - S102. A postcode missing from a new dataset version is marked retired.
   - S102.1 It keeps its last reference point.
   - S102.2 It cannot be chosen when a profile is created or its postcode is changed.

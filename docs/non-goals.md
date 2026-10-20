@@ -23,3 +23,4 @@ What v1 deliberately does not do. Anything not in specs.md and not listed here i
 - N19. No gym integrations: no booking, check-in or membership lookups.
 - N20. No live location sharing. No location more precise than the postcode is collected.
 - N21. No offline functionality beyond loading the cached client.
+- N22. No admin override of S101.4 and no configurable threshold. A genuine dataset change that retires more than 10% of active postcodes is let through only by changing S101.4.
