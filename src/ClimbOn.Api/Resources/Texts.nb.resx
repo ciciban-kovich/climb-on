@@ -45,4 +45,25 @@
   <data name="postcode_retired" xml:space="preserve">
     <value>Dette postnummeret er ikke lenger i bruk. Velg et annet.</value>
   </data>
+  <data name="email_invalid" xml:space="preserve">
+    <value>Skriv inn en gyldig e-postadresse.</value>
+  </data>
+  <data name="password_too_short" xml:space="preserve">
+    <value>Passordet må ha minst 10 tegn.</value>
+  </data>
+  <data name="password_too_long" xml:space="preserve">
+    <value>Passordet kan ha høyst 128 tegn.</value>
+  </data>
+  <data name="date_of_birth_required" xml:space="preserve">
+    <value>Skriv inn fødselsdatoen din.</value>
+  </data>
+  <data name="under_18" xml:space="preserve">
+    <value>Du må være minst 18 år for å registrere deg.</value>
+  </data>
+  <data name="terms_not_accepted" xml:space="preserve">
+    <value>Du må godta de gjeldende brukervilkårene.</value>
+  </data>
+  <data name="privacy_not_acknowledged" xml:space="preserve">
+    <value>Du må bekrefte at du har lest den gjeldende personvernerklæringen.</value>
+  </data>
 </root>

@@ -7,12 +7,16 @@ public static class ApiDocuments
 
     public const string ClimberPathPrefix = "api/climber/";
 
+    // Readable without an account (S112); the climber client reads them too.
+    public const string PublicPathPrefix = "api/public/";
+
     public static IServiceCollection AddApiDocuments(this IServiceCollection services)
     {
         services.AddOpenApi(Climber, options =>
         {
             options.ShouldInclude = description =>
-                description.RelativePath?.StartsWith(ClimberPathPrefix, StringComparison.Ordinal) == true;
+                description.RelativePath?.StartsWith(ClimberPathPrefix, StringComparison.Ordinal) == true
+                || description.RelativePath?.StartsWith(PublicPathPrefix, StringComparison.Ordinal) == true;
 
             // A served document would name the requesting host; the client sets its own base URL.
             options.AddDocumentTransformer((document, _, _) =>
