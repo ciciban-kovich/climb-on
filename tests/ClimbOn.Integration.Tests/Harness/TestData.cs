@@ -33,6 +33,15 @@ public sealed class TestData(FixtureValues fixtures)
         return account;
     }
 
+    // An email address of the given length in characters, for the S47 bound.
+    public string Email(int length)
+    {
+        const string domain = "@example.test";
+        var email = new string('a', length - domain.Length) + domain;
+        fixtures.Register("email", email);
+        return email;
+    }
+
     // A password of the given length in characters, for the S79 bounds.
     public string Password(int length)
     {

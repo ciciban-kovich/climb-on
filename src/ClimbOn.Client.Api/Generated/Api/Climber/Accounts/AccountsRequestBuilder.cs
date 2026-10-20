@@ -38,6 +38,7 @@ namespace ClimbOn.Client.Api.Api.Climber.Accounts
         /// <param name="cancellationToken">Cancellation token to use when cancelling requests</param>
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
         /// <exception cref="global::ClimbOn.Client.Api.Models.ErrorBody">When receiving a 400 status code</exception>
+        /// <exception cref="global::ClimbOn.Client.Api.Models.ErrorBody">When receiving a 4XX or 5XX status code</exception>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
         public async Task<global::ClimbOn.Client.Api.Models.RegistrationResponse?> PostAsync(global::ClimbOn.Client.Api.Models.RegistrationRequest body, Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
@@ -52,6 +53,7 @@ namespace ClimbOn.Client.Api.Api.Climber.Accounts
             var errorMapping = new Dictionary<string, ParsableFactory<IParsable>>
             {
                 { "400", global::ClimbOn.Client.Api.Models.ErrorBody.CreateFromDiscriminatorValue },
+                { "XXX", global::ClimbOn.Client.Api.Models.ErrorBody.CreateFromDiscriminatorValue },
             };
             return await RequestAdapter.SendAsync<global::ClimbOn.Client.Api.Models.RegistrationResponse>(requestInfo, global::ClimbOn.Client.Api.Models.RegistrationResponse.CreateFromDiscriminatorValue, errorMapping, cancellationToken).ConfigureAwait(false);
         }

@@ -8,7 +8,7 @@
     "/api/climber/accounts": {
       "post": {
         "tags": [
-          "AccountsEndpoints"
+          "Accounts"
         ],
         "requestBody": {
           "content": {
@@ -40,6 +40,26 @@
                 }
               }
             }
+          },
+          "4XX": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
           }
         }
       }
@@ -47,7 +67,7 @@
     "/api/public/legal/{document}": {
       "get": {
         "tags": [
-          "ClimbOn.Api"
+          "Accounts"
         ],
         "parameters": [
           {
@@ -79,6 +99,26 @@
                 }
               }
             }
+          },
+          "4XX": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
           }
         }
       }
@@ -86,7 +126,7 @@
     "/api/public/legal/{document}/{version}": {
       "get": {
         "tags": [
-          "ClimbOn.Api"
+          "Accounts"
         ],
         "parameters": [
           {
@@ -121,6 +161,26 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -254,10 +314,7 @@
   },
   "tags": [
     {
-      "name": "AccountsEndpoints"
-    },
-    {
-      "name": "ClimbOn.Api"
+      "name": "Accounts"
     }
   ]
 }

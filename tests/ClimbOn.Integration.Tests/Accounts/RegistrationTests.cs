@@ -131,10 +131,7 @@ public sealed class RegistrationTests(ApiFactory factory) : IntegrationTest(fact
     [Trait("SpecPartial", "S47")]
     public async Task Email_longer_than_254_characters_is_rejected()
     {
-        var email = new string('a', 243) + "@example.test";
-        Factory.Fixtures.Register("email", email);
-
-        using var response = await RegisterAsync(Request(Factory.Data.Account()) with { Email = email });
+        using var response = await RegisterAsync(Request(Factory.Data.Account()) with { Email = Factory.Data.Email(255) });
 
         await AssertRejectedAsync(response, Account.EmailInvalidCode);
     }

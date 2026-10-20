@@ -24,18 +24,23 @@ public sealed record LegalDocumentResponse(string Document, int Version, DateTim
 
 public static class AccountsEndpoints
 {
+    private const string Tag = "Accounts";
+
     public static IEndpointRouteBuilder MapAccountsEndpoints(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/api/climber/accounts", RegisterAsync)
-            .Produces<ErrorBody>(StatusCodes.Status400BadRequest);
+            .Produces<ErrorBody>(StatusCodes.Status400BadRequest)
+            .WithTags(Tag);
 
         // S112: readable without an account, every version retrievable.
         endpoints.MapGet("/api/public/legal/{document}", (string document, HttpContext context, ILegalDocumentStore store, CancellationToken cancellationToken) =>
                 ReadLegalDocumentAsync(document, null, context, store, cancellationToken))
-            .Produces<ErrorBody>(StatusCodes.Status404NotFound);
+            .Produces<ErrorBody>(StatusCodes.Status404NotFound)
+            .WithTags(Tag);
         endpoints.MapGet("/api/public/legal/{document}/{version:int}", (string document, int version, HttpContext context, ILegalDocumentStore store, CancellationToken cancellationToken) =>
                 ReadLegalDocumentAsync(document, version, context, store, cancellationToken))
-            .Produces<ErrorBody>(StatusCodes.Status404NotFound);
+            .Produces<ErrorBody>(StatusCodes.Status404NotFound)
+            .WithTags(Tag);
         return endpoints;
     }
 
