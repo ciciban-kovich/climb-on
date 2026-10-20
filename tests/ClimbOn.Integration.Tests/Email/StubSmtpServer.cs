@@ -12,7 +12,7 @@ namespace ClimbOn.Integration.Tests.Email;
 
 // An SMTP server on a loopback port that speaks just enough of the protocol for SmtpEmailSender. It
 // offers STARTTLS with a self-signed certificate made here (unless told not to) and AUTH PLAIN/LOGIN,
-// and records the commands in order, the AUTH user and password, and MAIL FROM. ClientFactory makes
+// and records the commands in order, the AUTH user and password, MAIL FROM and RCPT TO. ClientFactory makes
 // clients that trust this server's certificate and no other.
 public sealed class StubSmtpServer : IAsyncDisposable
 {
@@ -45,6 +45,9 @@ public sealed class StubSmtpServer : IAsyncDisposable
     public string? AuthPassword { get; private set; }
 
     public string? MailFrom { get; private set; }
+
+    // The address of the last RCPT TO.
+    public string? RecipientTo { get; private set; }
 
     public ISmtpClientFactory ClientFactory => new TrustingClientFactory(Certificate);
 
@@ -142,6 +145,7 @@ public sealed class StubSmtpServer : IAsyncDisposable
                         await WriteAsync(stream, "250 2.1.0 ok");
                         break;
                     case "RCPT":
+                        RecipientTo = Address(argument);
                         await WriteAsync(stream, recipientReply?.Invoke(Address(argument)) ?? "250 2.1.5 ok");
                         break;
                     case "DATA":

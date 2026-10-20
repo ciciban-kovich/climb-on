@@ -39,6 +39,23 @@ public sealed class SmtpEmailSenderTests(ApiFactory factory) : IntegrationTest(f
         Assert.Equal(0, meters.SendFailed);
     }
 
+    // The forms registration accepts at their edges reach the server as given (an IDN domain punycoded).
+    [Theory]
+    [InlineData("ola+klatring@example.no", "ola+klatring@example.no")]
+    [InlineData("o'brien@example.ie", "o'brien@example.ie")]
+    [InlineData("ola@ærø.no", "ola@xn--r-3fa9c.no")]
+    public async Task Accepted_address_forms_are_sent(string address, string recipient)
+    {
+        await using var server = new StubSmtpServer();
+        using var meters = new StandaloneMeters();
+        var sender = Standalone(server, meters, new ListLogger());
+
+        await sender.SendAsync(Message(address), TestContext.Current.CancellationToken);
+
+        Assert.Equal(recipient, server.RecipientTo);
+        Assert.Equal(0, meters.SendFailed);
+    }
+
     [Fact]
     public async Task Smtp_failure_logs_type_and_status_only()
     {

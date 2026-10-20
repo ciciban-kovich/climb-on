@@ -21,6 +21,9 @@ public sealed class Account
 
     public const int MaximumEmailLength = 254;
 
+    // The characters besides ASCII letters and digits an atom of the part before the @ may hold (RFC 5321).
+    private const string AtomSpecials = "!#$%&'*+-/=?^_`{|}~";
+
     private Account(
         Guid id,
         string email,
@@ -101,8 +104,11 @@ public sealed class Account
             ]);
     }
 
-    // Surrounding white space is dropped. What remains is one @ with text on both sides, a dot in the
-    // part after it, and no white space or control characters.
+    // Surrounding white space is dropped. What remains must be an address the email adapter can send to:
+    // an ASCII dot-atom before the one @ (RFC 5321: atoms of letters, digits and the specials below, joined
+    // by single dots), and after it at least two dot-separated labels of letters, digits and inner hyphens.
+    // Labels may hold non-ASCII letters (internationalised domains are sent punycoded); the part before
+    // the @ may not, because the provider is not known to accept SMTPUTF8.
     private static string EnsureEmail(string? value)
     {
         var email = value?.Trim();
@@ -110,14 +116,23 @@ public sealed class Account
         if (email is null
             || email.Length > MaximumEmailLength
             || at <= 0
-            || at != email.LastIndexOf('@')
-            || !email.AsSpan(at + 1).Contains('.')
-            || email.EndsWith('.')
-            || email.Any(character => char.IsWhiteSpace(character) || char.IsControl(character)))
+            || !email[..at].Split('.').All(IsAtom)
+            || email[(at + 1)..].Split('.') is not { Length: >= 2 } labels
+            || !labels.All(IsDomainLabel))
         {
             throw new DomainError(EmailInvalidCode);
         }
 
         return email;
     }
+
+    private static bool IsAtom(string atom) =>
+        atom.Length > 0 && atom.All(character => char.IsAsciiLetterOrDigit(character) || AtomSpecials.Contains(character));
+
+    private static bool IsDomainLabel(string label) =>
+        label.Length > 0
+        && label[0] != '-'
+        && label[^1] != '-'
+        && label.All(character => char.IsLetterOrDigit(character) || character == '-');
+
 }

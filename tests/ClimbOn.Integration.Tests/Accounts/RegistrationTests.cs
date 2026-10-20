@@ -120,6 +120,9 @@ public sealed class RegistrationTests(ApiFactory factory) : IntegrationTest(fact
     [InlineData("climber@@example.test")]
     [InlineData("climber@one@example.test")]
     [InlineData("clim ber@example.test")]
+    [InlineData("ola..nordmann@gmail.com")]
+    [InlineData("a,b@x.test")]
+    [InlineData("øystein@example.no")]
     public async Task Malformed_email_is_rejected(string? email)
     {
         using var response = await RegisterAsync(Request(Factory.Data.Account()) with { Email = email });
