@@ -2,7 +2,9 @@ using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using ClimbOn.Api.Jobs;
 using ClimbOn.Application.Abstractions;
+using ClimbOn.Application.Postcodes;
 using ClimbOn.Infrastructure.Persistence;
+using ClimbOn.Infrastructure.Postcodes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -17,7 +19,7 @@ using Xunit;
 namespace ClimbOn.Integration.Tests.Harness;
 
 // The api host on real PostgreSQL (C11) with a fixed clock (C4), recording fakes (C22) and the
-// C33 telemetry scan at the end of every test.
+// C33 telemetry scan at the end of every test. Migrating also seeds the fixture postcodes (C44).
 // Default: one container per test collection. With CLIMBON_TEST_DB set: that database, shared by
 // every collection, so tests on it run one at a time (C30, task 32).
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
@@ -55,6 +57,8 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public RecordingEmailSender Email { get; }
 
+    public KartverketFixture Kartverket { get; } = new();
+
     public TestData Data { get; }
 
     public TelemetryCapture Telemetry { get; } = new();
@@ -82,11 +86,12 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             await using var scope = Services.CreateAsyncScope();
             await scope.ServiceProvider.GetRequiredService<ClimbOnDbContext>().Database
                 .MigrateAsync(TestContext.Current.CancellationToken);
+            await FixturePostcodes.SeedAsync(connectionString, TestContext.Current.CancellationToken);
         }
     }
 
     // Called at the start of every test: waits for the shared database when there is one,
-    // then resets data, clock and recorded email. Dispose the lease when the test ends: it fails
+    // then resets data, clock, recorded email and the served postcode dataset. Dispose the lease when the test ends: it fails
     // the test with TelemetryLeakException if a fixture value reached telemetry (C33).
     public async Task<IAsyncDisposable> BeginTestAsync(CancellationToken cancellationToken)
     {
@@ -102,6 +107,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             await DatabaseReset.ResetAsync(ConnectionString, cancellationToken);
             Clock.Reset();
             Email.Clear();
+            Kartverket.Reset();
             return new Lease(this, gate);
         }
         catch
@@ -158,6 +164,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         {
             services.AddSingleton<IClock>(Clock);
             services.AddSingleton<IEmailSender>(Email);
+            services.AddHttpClient<IPostcodeSource, KartverketSource>().ConfigurePrimaryHttpMessageHandler(Kartverket.CreateHandler);
             services.AddSingleton<IStartupFilter, TestEndpoints>();
             services.ConfigureOpenTelemetryTracerProvider(tracing => tracing.AddProcessor(Telemetry.SpanProcessor));
             services.ConfigureOpenTelemetryLoggerProvider(logging => logging.AddProcessor(Telemetry.LogProcessor));

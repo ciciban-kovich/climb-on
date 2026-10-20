@@ -10,6 +10,7 @@
     <Project Path="tests/ClimbOn.Api.Tests/ClimbOn.Api.Tests.csproj" />
     <Project Path="tests/ClimbOn.Architecture.Tests/ClimbOn.Architecture.Tests.csproj" />
     <Project Path="tests/ClimbOn.Domain.Tests/ClimbOn.Domain.Tests.csproj" />
+    <Project Path="tests/ClimbOn.Infrastructure.Tests/ClimbOn.Infrastructure.Tests.csproj" />
     <Project Path="tests/ClimbOn.Integration.Tests/ClimbOn.Integration.Tests.csproj" />
   </Folder>
   <Folder Name="/tools/">

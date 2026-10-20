@@ -36,4 +36,13 @@
   <data name="database_unavailable" xml:space="preserve">
     <value>The service cannot reach its database right now. Please try again later.</value>
   </data>
+  <data name="postcode_malformed" xml:space="preserve">
+    <value>A postcode is four digits.</value>
+  </data>
+  <data name="postcode_unknown" xml:space="preserve">
+    <value>This postcode is not recognised as a home area.</value>
+  </data>
+  <data name="postcode_retired" xml:space="preserve">
+    <value>This postcode is no longer in use. Please choose another.</value>
+  </data>
 </root>

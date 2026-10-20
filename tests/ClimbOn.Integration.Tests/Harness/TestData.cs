@@ -32,4 +32,11 @@ public sealed class TestData(FixtureValues fixtures)
 
         return account;
     }
+
+    // A postcode a test sends as a climber's home area (S15); see FixturePostcodes.
+    public string Postcode(string code)
+    {
+        fixtures.Register(FixtureValues.PostcodeKind, code);
+        return code;
+    }
 }

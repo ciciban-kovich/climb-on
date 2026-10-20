@@ -14,6 +14,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Fixtures\postcodes.csv" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Fixtures\kartverket\*.geojson" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\ClimbOn.Api\ClimbOn.Api.csproj" />
   </ItemGroup>
 

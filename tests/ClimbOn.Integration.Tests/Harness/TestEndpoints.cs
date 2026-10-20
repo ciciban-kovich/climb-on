@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using ClimbOn.Api.Jobs;
 using ClimbOn.Application.Abstractions;
+using ClimbOn.Application.Postcodes;
 using ClimbOn.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -54,6 +55,23 @@ public sealed class TestEndpoints : IStartupFilter
                 return Results.NoContent();
             });
             endpoints.MapGet($"{Prefix}/telemetry/query/{{value}}", () => Results.NoContent());
+
+            // Postcodes (S15, S16) until the profile endpoints (task 16) use them, and the whole table
+            // for the import tests (task 08).
+            endpoints.MapPost($"{Prefix}/postcodes/validate", async (ProbeValue probe, PostcodeValidator validator, CancellationToken cancellationToken) =>
+            {
+                await validator.ValidateAsync(probe.Value, cancellationToken);
+                return Results.NoContent();
+            });
+            endpoints.MapPost($"{Prefix}/postcodes/point", async (ProbeValue probe, PostcodeLookup lookup, CancellationToken cancellationToken) =>
+                await lookup.FindPointAsync(probe.Value, cancellationToken) is { } point
+                    ? Results.Ok(new PointProbe(point.Latitude, point.Longitude))
+                    : Results.NotFound());
+            endpoints.MapGet($"{Prefix}/postcodes", async (ClimbOnDbContext db, CancellationToken cancellationToken) =>
+                Results.Ok(await db.Postcodes.AsNoTracking()
+                    .OrderBy(postcode => postcode.Code)
+                    .Select(postcode => new FixturePostcode(postcode.Code, postcode.Latitude, postcode.Longitude, postcode.Retired))
+                    .ToListAsync(cancellationToken)));
         });
         next(app);
     };
@@ -62,6 +80,8 @@ public sealed class TestEndpoints : IStartupFilter
 public sealed record ClockProbe(DateTimeOffset UtcNow);
 
 public sealed record ProbeValue(string Value);
+
+public sealed record PointProbe(double Latitude, double Longitude);
 
 // Records each run so the harness can prove RunJobAsync dispatches through JobRunner on the test host.
 public sealed class ProbeJob(IClock clock, ProbeJob.Runs runs) : IJob

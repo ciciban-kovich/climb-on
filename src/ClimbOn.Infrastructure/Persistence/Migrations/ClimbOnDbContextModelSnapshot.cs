@@ -20,6 +20,38 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Postcode", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)")
+                        .HasColumnName("code");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("lat");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("lon");
+
+                    b.Property<bool>("Retired")
+                        .HasColumnType("boolean")
+                        .HasColumnName("retired");
+
+                    b.HasKey("Code")
+                        .HasName("pk_postcodes");
+
+                    b.ToTable("postcodes", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_postcodes_code", "code ~ '^[0-9]{4}$'");
+
+                            t.HasCheckConstraint("ck_postcodes_lat", "lat BETWEEN -90 AND 90");
+
+                            t.HasCheckConstraint("ck_postcodes_lon", "lon BETWEEN -180 AND 180");
+                        });
+                });
 #pragma warning restore 612, 618
         }
     }
