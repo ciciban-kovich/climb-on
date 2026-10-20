@@ -36,6 +36,7 @@ Rationale lives in decisions.md, not here.
 - C19. The domain module has no dependency on the database, HTTP, email, push or the system clock. An architecture test in CI enforces this.
 - C20. S10 (including after blocks, S24.1), the total order of S60, and S13.4 are tested with property-based tests (FsCheck) over randomly generated profiles.
 - C21. Integration tests call the HTTP API (C7), run against PostgreSQL per C11, and fix time through the clock in C4.
+  - C21.1 In an integration test that carries a Spec or SpecPartial trait, arrangement and assertion use only the HTTP API and the fakes in C22, plus, below the API: resetting and seeding the database between tests; a job's exit status and the result events it logs; injecting faults (such as a failing database trigger, including reading the injector's own counter); arranging state that neither the API nor a job can produce; reading the postcode reference table (S99–S102), which no product endpoint lists; and observing whether an import rewrote a postcode row (S101.1). Test-only endpoints count as below the API. The scans required by C33 and C41, wherever they run, and tests of the test harness itself follow their own constraints, not C21.1.
 - C22. In tests, email and push are replaced at the system boundary by fakes that record every notification that would have been sent. Tests assert on that record.
 - C23. CI runs on GitHub Actions for every pull request. Merging to main is blocked unless all steps pass.
 - C24. Where specs.md says that a climber sees or is shown something, it means the API returns it. How it is presented is the client's concern and is not covered by S-points.
@@ -81,7 +82,7 @@ Rationale lives in decisions.md, not here.
 - C63. Admin login is through Microsoft Entra ID with multi-factor authentication required.
 - C64. The admin client is a separate Blazor WebAssembly app on its own hostname. The climber client's bundle contains no admin code.
 - C65. Admin API integration tests use tokens signed by a local test key. Token validation accepts that key only in the test environment. A test asserts that the production configuration accepts tokens from the Entra tenant only.
-- C66. Messages addressed to the admin (S19, S101.3, C26, C34, C54) go to an admin email address set in configuration, outside the database.
+- C66. Messages addressed to the admin (S19, S101.3, S101.4, C26, C34, C54) go to an admin email address set in configuration, outside the database.
 
 ## Repository
 
