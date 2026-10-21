@@ -2,6 +2,7 @@
 #pragma warning disable CS0618
 using ClimbOn.Client.Api.Api.Climber.Accounts;
 using ClimbOn.Client.Api.Api.Climber.EmailConfirmations;
+using ClimbOn.Client.Api.Api.Climber.Language;
 using ClimbOn.Client.Api.Api.Climber.Login;
 using ClimbOn.Client.Api.Api.Climber.Logout;
 using ClimbOn.Client.Api.Api.Climber.Me;
@@ -28,6 +29,11 @@ namespace ClimbOn.Client.Api.Api.Climber
         public global::ClimbOn.Client.Api.Api.Climber.EmailConfirmations.EmailConfirmationsRequestBuilder EmailConfirmations
         {
             get => new global::ClimbOn.Client.Api.Api.Climber.EmailConfirmations.EmailConfirmationsRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The language property</summary>
+        public global::ClimbOn.Client.Api.Api.Climber.Language.LanguageRequestBuilder Language
+        {
+            get => new global::ClimbOn.Client.Api.Api.Climber.Language.LanguageRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>The login property</summary>
         public global::ClimbOn.Client.Api.Api.Climber.Login.LoginRequestBuilder Login

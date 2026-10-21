@@ -47,6 +47,7 @@ builder.Services.AddScoped<ConfirmEmail>();
 builder.Services.AddScoped<ISessionStore, SessionStore>();
 builder.Services.AddScoped<Sessions>();
 builder.Services.AddScoped<Login>();
+builder.Services.AddScoped<ChangeLanguage>();
 builder.Services.AddScoped<ILinkTokenStore, LinkTokenStore>();
 builder.Services.AddScoped<IOutboxStore, OutboxStore>();
 builder.Services.AddScoped<EmailOutbox>();

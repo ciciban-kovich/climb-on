@@ -66,4 +66,8 @@ public sealed class AccountStore(ClimbOnDbContext db) : IAccountStore
             .FirstOrDefaultAsync(cancellationToken) is { } found
             ? new OwnAccount(found.Email, Languages.FromClientSetting(found.Language), found.EmailConfirmedAt is not null)
             : null;
+
+    public Task SetLanguageAsync(Guid id, Language language, CancellationToken cancellationToken) =>
+        db.Accounts.Where(account => account.Id == id)
+            .ExecuteUpdateAsync(set => set.SetProperty(account => account.Language, language.Tag()), cancellationToken);
 }

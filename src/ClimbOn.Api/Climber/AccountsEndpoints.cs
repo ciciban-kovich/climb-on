@@ -1,4 +1,5 @@
 using ClimbOn.Api.Errors;
+using ClimbOn.Api.Middleware;
 using ClimbOn.Application.Accounts;
 using ClimbOn.Application.Legal;
 using ClimbOn.Domain.Accounts;
@@ -19,6 +20,12 @@ public sealed record RegistrationRequest(
 // The language stored for the account, en or nb.
 public sealed record RegistrationResponse(string Language);
 
+// The client's language setting, mapped as at registration (S104).
+public sealed record LanguageChangeRequest(string? Language);
+
+// The language now stored for the account, en or nb.
+public sealed record LanguageResponse(string Language);
+
 // Text is in the request's language (Accept-Language, mapped as in S104).
 public sealed record LegalDocumentResponse(string Document, int Version, DateTimeOffset PublishedAt, string Language, string Text);
 
@@ -30,6 +37,9 @@ public static class AccountsEndpoints
     {
         endpoints.MapPost("/api/climber/accounts", RegisterAsync)
             .Produces<ErrorBody>(StatusCodes.Status400BadRequest)
+            .WithTags(Tag);
+        endpoints.MapPut("/api/climber/language", ChangeLanguageAsync)
+            .RequireClimberSession()
             .WithTags(Tag);
 
         // S112: readable without an account, every version retrievable.
@@ -52,6 +62,13 @@ public static class AccountsEndpoints
                 request.Email, request.Password, request.DateOfBirth, request.Language, request.TermsVersion, request.PrivacyVersion),
             cancellationToken);
         return TypedResults.Created((string?)null, new RegistrationResponse(language.Tag()));
+    }
+
+    private static async Task<Ok<LanguageResponse>> ChangeLanguageAsync(
+        LanguageChangeRequest request, HttpContext context, ChangeLanguage change, CancellationToken cancellationToken)
+    {
+        var language = await change.RunAsync(ClimberSessions.Current(context).AccountId, request.Language, cancellationToken);
+        return TypedResults.Ok(new LanguageResponse(language.Tag()));
     }
 
     private static async Task<Results<Ok<LegalDocumentResponse>, NotFound>> ReadLegalDocumentAsync(

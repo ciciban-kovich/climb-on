@@ -22,4 +22,6 @@ public interface IAccountStore
     Task<AccountCredentials?> FindCredentialsAsync(string email, CancellationToken cancellationToken);
 
     Task<OwnAccount?> FindOwnAsync(Guid id, CancellationToken cancellationToken);
+
+    Task SetLanguageAsync(Guid id, Language language, CancellationToken cancellationToken);
 }
