@@ -99,10 +99,11 @@ public sealed class SessionMiddleware(RequestDelegate next)
         context.Features.Set(new AccountLanguageFeature(session.Language));
 
         // Written as the response starts, so it survives an error response clearing the headers, unless the
-        // endpoint has set the cookie itself (login, logout) or answered that the climber is not logged in.
+        // endpoint has set the cookie itself (login, logout) or answered that the climber is not logged in. Any
+        // other error, a failed login included, leaves the session live and extended, so the cookie follows.
         context.Response.OnStarting(() =>
         {
-            if (!SessionCookie.IsSet(context.Response) && context.Response.StatusCode != StatusCodes.Status401Unauthorized)
+            if (!SessionCookie.IsSet(context.Response) && ErrorResponses.CodeOf(context) != ClimberSessions.RequiredCode)
             {
                 SessionCookie.Write(context.Response, token, session.ExpiresAt);
             }

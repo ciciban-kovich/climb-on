@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -26,6 +27,8 @@ public sealed class LoginTests(ApiFactory factory) : IntegrationTest(factory)
     private const string LoginRoute = "/api/climber/login";
     private const string LogoutRoute = "/api/climber/logout";
     private const string MeRoute = "/api/climber/me";
+    private const string AccountsRoute = "/api/climber/accounts";
+    private const string ConfirmationRoute = "/api/climber/email-confirmations";
 
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(30);
 
@@ -291,6 +294,71 @@ public sealed class LoginTests(ApiFactory factory) : IntegrationTest(factory)
         AssertSessionCookie(SessionCookieOf(response), Factory.Clock.UtcNow + SessionLifetime);
     }
 
+    // A failed login leaves the session that sent it live, and the server extends it, so the cookie follows.
+    [Fact]
+    public async Task Failed_login_still_refreshes_the_cookie_of_a_live_session()
+    {
+        var account = Factory.Data.Account();
+        await RegisterAsync(account);
+        var token = await LogInAsync(account);
+        Factory.Clock.Advance(TimeSpan.FromDays(3));
+        using var request = Request(HttpMethod.Post, LoginRoute, token);
+        request.Content = JsonContent.Create(new LoginRequest(account.Email, account.Password + "x"));
+
+        using var response = await Client().SendAsync(request, TestContext.Current.CancellationToken);
+
+        await AssertErrorAsync(response, HttpStatusCode.Unauthorized, Login.FailedCode);
+        var cookie = SessionCookieOf(response);
+        Assert.Equal(token, cookie.Value.Value);
+        AssertSessionCookie(cookie, Factory.Clock.UtcNow + SessionLifetime);
+        using var me = await SendAsync(HttpMethod.Get, MeRoute, token);
+        Assert.Equal(HttpStatusCode.OK, me.StatusCode);
+    }
+
+    // Accepted as built (task 11): a stale cookie never blocks login, registration or email confirmation. The
+    // request goes on without a session, and the cookie is neither refused nor deleted.
+    [Theory]
+    [InlineData(LoginRoute, true)]
+    [InlineData(LoginRoute, false)]
+    [InlineData(AccountsRoute, true)]
+    [InlineData(AccountsRoute, false)]
+    [InlineData(ConfirmationRoute, true)]
+    [InlineData(ConfirmationRoute, false)]
+    public async Task Stale_cookie_does_not_block_endpoints_that_need_no_session(string route, bool loggedOut)
+    {
+        var account = Factory.Data.Account();
+        await RegisterAsync(account);
+        var stale = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+        if (loggedOut)
+        {
+            stale = await LogInAsync(account);
+            using var logout = await SendAsync(HttpMethod.Post, LogoutRoute, stale);
+            Assert.Equal(HttpStatusCode.NoContent, logout.StatusCode);
+        }
+
+        using var request = Request(HttpMethod.Post, route, stale);
+        (request.Content, var status) = route switch
+        {
+            LoginRoute => (JsonContent.Create(new LoginRequest(account.Email, account.Password)), HttpStatusCode.NoContent),
+            AccountsRoute => (JsonContent.Create(Registration(Factory.Data.Account(), "nb")), HttpStatusCode.Created),
+            _ => (JsonContent.Create(new EmailConfirmationRequest(ConfirmationToken(account.Email))), HttpStatusCode.NoContent),
+        };
+
+        using var response = await Client().SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(status, response.StatusCode);
+        if (route == LoginRoute)
+        {
+            var cookie = SessionCookieOf(response);
+            Assert.NotEqual(stale, cookie.Value.Value);
+            AssertSessionCookie(cookie, Factory.Clock.UtcNow + SessionLifetime);
+        }
+        else
+        {
+            Assert.DoesNotContain(SetCookies(response), cookie => cookie.Name == SessionCookie.Name);
+        }
+    }
+
     // A 401 says the climber is not logged in, so it never hands out a session cookie.
     [Fact]
     public async Task Unauthenticated_response_does_not_refresh_the_cookie()
@@ -367,11 +435,13 @@ public sealed class LoginTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(Factory.Clock.UtcNow, await LastActivityAsync(account.Email));
     }
 
-    [Theory]
-    [InlineData(Login.FailedCode)]
-    [InlineData(ClimberSessions.RequiredCode)]
-    public void Login_and_session_codes_have_a_text_in_both_languages(string code) =>
-        Assert.All(new[] { Language.English, Language.Bokmal }, language => Assert.NotEqual(code, Texts.Get(code, language)));
+    // Read without the fallback to English, so a text missing from either file fails. session_required is in
+    // ErrorCodes.All, which ErrorContractTests checks.
+    [Fact]
+    public void Login_failed_has_a_text_in_both_languages() =>
+        Assert.All(new[] { Language.English, Language.Bokmal }, language => Assert.False(string.IsNullOrWhiteSpace(
+            Texts.Resources.GetResourceSet(CultureInfo.GetCultureInfo(language.Tag()), createIfNotExists: true, tryParents: false)
+                ?.GetString(Login.FailedCode))));
 
     private HttpClient Client() => Factory.CreateClient(new WebApplicationFactoryClientOptions
     {
@@ -381,11 +451,23 @@ public sealed class LoginTests(ApiFactory factory) : IntegrationTest(factory)
 
     private async Task RegisterAsync(AccountDraft account, string language = "nb")
     {
-        using var response = await Client().PostAsJsonAsync(
-            "/api/climber/accounts",
-            new RegistrationRequest(account.Email, account.Password, account.DateOfBirth, language, TermsVersion: 1, PrivacyVersion: 1),
-            TestContext.Current.CancellationToken);
+        using var response = await Client().PostAsJsonAsync(AccountsRoute, Registration(account, language), TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
+
+    private static RegistrationRequest Registration(AccountDraft account, string language) =>
+        new(account.Email, account.Password, account.DateOfBirth, language, TermsVersion: 1, PrivacyVersion: 1);
+
+    // The token in the link registration sent to the address: {PublicBaseUrl}/confirm#t=<token>.
+    private string ConfirmationToken(string email)
+    {
+        const string Marker = "/confirm#t=";
+        var body = Assert.Single(Factory.Email.Sent, message => message.To == email).Body;
+        var start = body.IndexOf(ApiFactory.PublicBaseUrl + Marker, StringComparison.Ordinal);
+        Assert.True(start >= 0, "The email holds no link.");
+        start += ApiFactory.PublicBaseUrl.Length + Marker.Length;
+        var end = body.IndexOfAny([' ', '\r', '\n'], start);
+        return end < 0 ? body[start..] : body[start..end];
     }
 
     private Task<HttpResponseMessage> PostLoginAsync(string? email, string? password) =>
@@ -418,10 +500,11 @@ public sealed class LoginTests(ApiFactory factory) : IntegrationTest(factory)
         return await Client().SendAsync(request, TestContext.Current.CancellationToken);
     }
 
+    private static IList<SetCookieHeaderValue> SetCookies(HttpResponseMessage response) =>
+        SetCookieHeaderValue.ParseList(response.Headers.TryGetValues(HeaderNames.SetCookie, out var values) ? [.. values] : []);
+
     private static SetCookieHeaderValue SessionCookieOf(HttpResponseMessage response) =>
-        Assert.Single(
-            SetCookieHeaderValue.ParseList(response.Headers.TryGetValues(HeaderNames.SetCookie, out var values) ? [.. values] : []),
-            cookie => cookie.Name == SessionCookie.Name);
+        Assert.Single(SetCookies(response), cookie => cookie.Name == SessionCookie.Name);
 
     private static void AssertSessionCookie(SetCookieHeaderValue cookie, DateTimeOffset expires)
     {

@@ -66,8 +66,12 @@ public static class ErrorResponses
         await WriteAsync(context, status, code);
     }
 
+    // The code of the error the response carries, or null if it carries none.
+    public static string? CodeOf(HttpContext context) => context.Features.Get<ErrorCodeFeature>()?.Code;
+
     internal static Task WriteAsync(HttpContext context, int status, string code)
     {
+        context.Features.Set(new ErrorCodeFeature(code));
         var language = MessageLanguage.For(context);
         context.Response.StatusCode = status;
         context.Response.Headers.ContentLanguage = language.Tag();
@@ -91,6 +95,8 @@ public static class ErrorResponses
         DomainErrorKind.Unauthenticated => StatusCodes.Status401Unauthorized,
         _ => StatusCodes.Status400BadRequest,
     };
+
+    private sealed record ErrorCodeFeature(string Code);
 
     private sealed class StartupFilter : IStartupFilter
     {
