@@ -1,4 +1,5 @@
 using Azure.Monitor.OpenTelemetry.Exporter;
+using ClimbOn.Infrastructure.Email;
 using Npgsql;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -64,7 +65,7 @@ public static class TelemetrySetup
             })
             .WithMetrics(metrics =>
             {
-                metrics.AddAspNetCoreInstrumentation();
+                metrics.AddAspNetCoreInstrumentation().AddMeter(EmailMetrics.MeterName);
                 if (exportToAzureMonitor)
                 {
                     metrics.AddAzureMonitorMetricExporter(options => options.ConnectionString = azureMonitor);

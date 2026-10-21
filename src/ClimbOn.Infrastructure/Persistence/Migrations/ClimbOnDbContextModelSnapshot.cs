@@ -38,6 +38,10 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(254)")
                         .HasColumnName("email");
 
+                    b.Property<DateTimeOffset?>("EmailConfirmedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("email_confirmed_at");
+
                     b.Property<string>("Language")
                         .IsRequired()
                         .HasMaxLength(2)
@@ -144,6 +148,103 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Outbox.LinkTokenRow", b =>
+                {
+                    b.Property<byte[]>("TokenHash")
+                        .HasColumnType("bytea")
+                        .HasColumnName("token_hash");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("purpose");
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.HasKey("TokenHash")
+                        .HasName("pk_link_tokens");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("ix_link_tokens_account_id");
+
+                    b.ToTable("link_tokens", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_link_tokens_purpose", "purpose IN ('email_confirmation')");
+
+                            t.HasCheckConstraint("ck_link_tokens_token_hash", "octet_length(token_hash) = 32");
+                        });
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Outbox.OutboxRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("attempts");
+
+                    b.Property<string>("Body")
+                        .HasColumnType("text")
+                        .HasColumnName("body");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("FailedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("failed_at");
+
+                    b.Property<DateTimeOffset>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("next_attempt_at");
+
+                    b.Property<string>("Recipient")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("recipient");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<string>("Subject")
+                        .HasColumnType("text")
+                        .HasColumnName("subject");
+
+                    b.HasKey("Id")
+                        .HasName("pk_outbox");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("ix_outbox_account_id");
+
+                    b.HasIndex("NextAttemptAt")
+                        .HasDatabaseName("ix_outbox_due")
+                        .HasFilter("sent_at IS NULL AND failed_at IS NULL");
+
+                    b.ToTable("outbox", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_outbox_attempts", "attempts >= 0");
+                        });
+                });
+
             modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Postcode", b =>
                 {
                     b.Property<string>("Code")
@@ -191,6 +292,26 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_legal_acknowledgements_legal_documents");
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Outbox.LinkTokenRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_link_tokens_accounts");
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Outbox.OutboxRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_outbox_accounts");
                 });
 #pragma warning restore 612, 618
         }

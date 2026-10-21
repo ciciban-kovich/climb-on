@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
+using ClimbOn.Api.Email;
 using ClimbOn.Api.Jobs;
 using ClimbOn.Application.Abstractions;
 using ClimbOn.Application.Postcodes;
@@ -25,6 +26,9 @@ namespace ClimbOn.Integration.Tests.Harness;
 public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string Environment = "Test";
+
+    // The base of every link in an email.
+    public const string PublicBaseUrl = "https://climbon.test";
 
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> SharedDatabaseGates = new();
 
@@ -151,6 +155,7 @@ public sealed class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         builder.UseEnvironment(Environment);
         builder.UseSetting($"ConnectionStrings:{ClimbOnDbContext.ConnectionStringName}", ConnectionString);
+        builder.UseSetting(EmailContent.PublicBaseUrlKey, PublicBaseUrl);
 
         // The instrumentation masks query values itself by default; off here, so that SpanRedaction
         // is what the tests prove keeps the query string out (C32).

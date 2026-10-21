@@ -1,4 +1,5 @@
 using ClimbOn.Api.Climber;
+using ClimbOn.Api.Email;
 using ClimbOn.Api.Errors;
 using ClimbOn.Api.Health;
 using ClimbOn.Api.Jobs;
@@ -7,10 +8,14 @@ using ClimbOn.Api.Telemetry;
 using ClimbOn.Application.Abstractions;
 using ClimbOn.Application.Accounts;
 using ClimbOn.Application.Legal;
+using ClimbOn.Application.Outbox;
 using ClimbOn.Application.Postcodes;
+using ClimbOn.Application.Tokens;
 using ClimbOn.Infrastructure.Accounts;
+using ClimbOn.Infrastructure.Email;
 using ClimbOn.Infrastructure.Persistence;
 using ClimbOn.Infrastructure.Persistence.Accounts;
+using ClimbOn.Infrastructure.Persistence.Outbox;
 using ClimbOn.Infrastructure.Postcodes;
 using ClimbOn.Infrastructure.Time;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +41,18 @@ builder.Services.AddSingleton<IPasswordHasher, IdentityPasswordHasher>();
 builder.Services.AddScoped<IAccountStore, AccountStore>();
 builder.Services.AddScoped<ILegalDocumentStore, LegalDocumentStore>();
 builder.Services.AddScoped<Register>();
+builder.Services.AddScoped<ConfirmEmail>();
+builder.Services.AddScoped<ILinkTokenStore, LinkTokenStore>();
+builder.Services.AddScoped<IOutboxStore, OutboxStore>();
+builder.Services.AddScoped<EmailOutbox>();
+builder.Services.AddSingleton<IEmailContent, EmailContent>();
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+builder.Services.AddSingleton<EmailMetrics>();
+builder.Services.AddSingleton<ISmtpClientFactory, SmtpClientFactory>();
+builder.Services.AddSingleton<KeyVaultSmtpPasswordSource>();
+builder.Services.AddSingleton<ISmtpPasswordSource>(services => new CachedSmtpPasswordSource(
+    services.GetRequiredService<KeyVaultSmtpPasswordSource>(), services.GetRequiredService<IClock>()));
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>(DatabaseHealthCheck.Name);
 builder.Services.AddApiDocuments();
 
@@ -43,6 +60,7 @@ var app = builder.Build();
 
 app.MapHealthChecks("/health", HealthResponse.Options);
 app.MapAccountsEndpoints();
+app.MapConfirmationEndpoints();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

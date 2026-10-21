@@ -65,6 +65,44 @@ public sealed class AccountTests
         Assert.False(hashed);
     }
 
+    // Only addresses the email adapter can send to: an ASCII dot-atom before the @, so no double dots,
+    // RFC 5322 specials or non-ASCII letters there; internationalised domains are allowed.
+    [Theory]
+    [Trait("SpecPartial", "S47")]
+    [InlineData("ola..nordmann@gmail.com")]
+    [InlineData(".ola@example.no")]
+    [InlineData("ola.@example.no")]
+    [InlineData("ola@gmail..com")]
+    [InlineData("a,b@example.test")]
+    [InlineData("<a>@x.test")]
+    [InlineData("a(b)@x.test")]
+    [InlineData("a;b@x.test")]
+    [InlineData("a:b@x.test")]
+    [InlineData("a[b]@x.test")]
+    [InlineData("\"a b\"@x.test")]
+    [InlineData("øystein@example.no")]
+    [InlineData("ola@-example.no")]
+    [InlineData("ola@example-.no")]
+    [InlineData("ola@x_y.no")]
+    [InlineData("ola@[192.0.2.1]")]
+    public void Undeliverable_email_is_refused(string email)
+    {
+        var error = Assert.Throws<DomainError>(() => Account.Register(Guid.NewGuid(), Valid with { Email = email }, Current, Now, password => password));
+
+        Assert.Equal(Account.EmailInvalidCode, error.Code);
+    }
+
+    [Theory]
+    [Trait("SpecPartial", "S47")]
+    [InlineData("ola+klatring@example.no")]
+    [InlineData("ola.nordmann@gmail.com")]
+    [InlineData("o'brien@example.ie")]
+    [InlineData("ola@ærø.no")]
+    [InlineData("ola@sub.xn--r-3fa9c.no")]
+    [InlineData("ola@my-gym.example")]
+    public void Deliverable_email_is_accepted(string email) =>
+        Assert.Equal(email, Account.Register(Guid.NewGuid(), Valid with { Email = email }, Current, Now, password => password).Email);
+
     // The registration date is the UTC date of now (C3): 00:30 at UTC+1 is still the day before in UTC.
     [Fact]
     [Trait("SpecPartial", "S28")]

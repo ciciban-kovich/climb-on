@@ -66,4 +66,19 @@
   <data name="privacy_not_acknowledged" xml:space="preserve">
     <value>Du må bekrefte at du har lest den gjeldende personvernerklæringen.</value>
   </data>
+  <data name="link_invalid" xml:space="preserve">
+    <value>Bekreftelseslenken er ikke gyldig, eller den er allerede brukt.</value>
+  </data>
+  <data name="email_confirmation_subject" xml:space="preserve">
+    <value>Bekreft e-postadressen din for climb-on</value>
+  </data>
+  <data name="email_confirmation_body" xml:space="preserve">
+    <value>Hei,
+
+Bekreft e-postadressen din ved å åpne denne lenken:
+
+{0}
+
+Hvis du ikke har registrert deg hos climb-on, kan du se bort fra denne e-posten.</value>
+  </data>
 </root>
