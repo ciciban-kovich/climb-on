@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Globalization;
 using System.Net;
@@ -112,6 +113,48 @@ public sealed class SmtpEmailSenderTests(ApiFactory factory) : IntegrationTest(f
         Assert.Equal(1, meters.SendFailed);
     }
 
+    // A server that accepts and never answers fails the attempt at SendTimeout, not after MailKit's
+    // 2 minutes per operation.
+    [Fact]
+    public async Task Stalled_server_fails_at_send_timeout()
+    {
+        await using var server = new StubSmtpServer(silent: true);
+        using var meters = new StandaloneMeters();
+        var settings = Options.Create(new EmailOptions
+        {
+            Sender = Sender,
+            Smtp = server.Smtp(Username),
+            SendTimeout = TimeSpan.FromSeconds(1),
+        });
+        var sender = new SmtpEmailSender(settings, new FixedPassword(), server.ClientFactory, new EmailMetrics(meters.Factory), new ListLogger());
+        var started = Stopwatch.GetTimestamp();
+
+        await Assert.ThrowsAsync<EmailSendFailedException>(
+            () => sender.SendAsync(Message(Factory.Data.Account().Email), TestContext.Current.CancellationToken));
+
+        Assert.InRange(Stopwatch.GetElapsedTime(started), TimeSpan.Zero, TimeSpan.FromSeconds(30));
+        Assert.Equal(1, meters.SendFailed);
+    }
+
+    // C32: the caller's token is cancelled as the attempt fails. The original exception, which can carry
+    // the recipient, is still wrapped, so it never reaches the request's error log.
+    [Fact]
+    public async Task Failure_after_cancellation_is_still_wrapped()
+    {
+        await using var server = new StubSmtpServer();
+        using var meters = new StandaloneMeters();
+        using var caller = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        var recipient = Factory.Data.Account().Email;
+        var sender = new SmtpEmailSender(
+            Settings(server), new CancellingPassword(caller, recipient), server.ClientFactory, new EmailMetrics(meters.Factory), new ListLogger());
+
+        var failure = await Assert.ThrowsAsync<EmailSendFailedException>(() => sender.SendAsync(Message(recipient), caller.Token));
+
+        Assert.Equal(nameof(InvalidOperationException), failure.ExceptionType);
+        Assert.DoesNotContain(recipient, failure.ToString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, meters.SendFailed);
+    }
+
     // What the Azure Monitor exporter would receive (TelemetryCapture), not only a MeterListener.
     [Fact]
     public async Task Failure_counter_reaches_otel_exporter()
@@ -149,6 +192,16 @@ public sealed class SmtpEmailSenderTests(ApiFactory factory) : IntegrationTest(f
     private sealed class FixedPassword : ISmtpPasswordSource
     {
         public Task<string> GetAsync(CancellationToken cancellationToken) => Task.FromResult(Password);
+    }
+
+    // Cancels the caller's token, then fails with an exception that names the recipient.
+    private sealed class CancellingPassword(CancellationTokenSource caller, string recipient) : ISmtpPasswordSource
+    {
+        public async Task<string> GetAsync(CancellationToken cancellationToken)
+        {
+            await caller.CancelAsync();
+            throw new InvalidOperationException($"No password for {recipient}.");
+        }
     }
 
     // Each entry is the formatted message followed by any exception passed to the logger.

@@ -32,16 +32,21 @@ public sealed partial class SmtpEmailSender(
     {
         ArgumentNullException.ThrowIfNull(message);
         var settings = options.Value;
+
+        // Only the caller's own cancellation passes through unwrapped. Anything else, the deadline
+        // included, is a failed attempt, whatever the caller's token says by the time it is caught.
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(settings.SendTimeout);
         try
         {
-            var password = await passwords.GetAsync(cancellationToken);
+            var password = await passwords.GetAsync(deadline.Token);
             using var client = clients.Create();
-            await client.ConnectAsync(Required(settings.Smtp.Host, "Email:Smtp:Host"), settings.Smtp.Port, SecureSocketOptions.StartTls, cancellationToken);
-            await client.AuthenticateAsync(Required(settings.Smtp.Username, "Email:Smtp:Username"), password, cancellationToken);
-            await client.SendAsync(Mime(Required(settings.Sender, "Email:Sender"), message), cancellationToken);
-            await client.DisconnectAsync(quit: true, cancellationToken);
+            await client.ConnectAsync(Required(settings.Smtp.Host, "Email:Smtp:Host"), settings.Smtp.Port, SecureSocketOptions.StartTls, deadline.Token);
+            await client.AuthenticateAsync(Required(settings.Smtp.Username, "Email:Smtp:Username"), password, deadline.Token);
+            await client.SendAsync(Mime(Required(settings.Sender, "Email:Sender"), message), deadline.Token);
+            await client.DisconnectAsync(quit: true, deadline.Token);
         }
-        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             var type = exception.GetType().Name;
             int? status = exception is SmtpCommandException command ? (int)command.StatusCode : null;

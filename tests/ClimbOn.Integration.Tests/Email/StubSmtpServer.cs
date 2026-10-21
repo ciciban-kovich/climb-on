@@ -21,13 +21,16 @@ public sealed class StubSmtpServer : IAsyncDisposable
     private readonly ConcurrentQueue<string> commands = new();
     private readonly bool offerStartTls;
     private readonly Func<string, string>? recipientReply;
+    private readonly bool silent;
     private readonly Task accepting;
 
     // recipientReply answers RCPT TO for an address, e.g. "550 5.1.1 <address> unknown"; by default 250.
-    public StubSmtpServer(bool offerStartTls = true, Func<string, string>? recipientReply = null)
+    // A silent server accepts connections and never answers, not even with its greeting.
+    public StubSmtpServer(bool offerStartTls = true, Func<string, string>? recipientReply = null, bool silent = false)
     {
         this.offerStartTls = offerStartTls;
         this.recipientReply = recipientReply;
+        this.silent = silent;
         Certificate = CreateCertificate();
         listener.Start();
         accepting = AcceptAsync();
@@ -107,6 +110,11 @@ public sealed class StubSmtpServer : IAsyncDisposable
         Stream stream = client.GetStream();
         try
         {
+            if (silent)
+            {
+                await Task.Delay(Timeout.Infinite, stopping.Token);
+            }
+
             await WriteAsync(stream, "220 stub ESMTP");
             var tls = false;
             var reader = Reader(stream);

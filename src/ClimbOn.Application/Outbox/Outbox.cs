@@ -1,4 +1,5 @@
 using ClimbOn.Application.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace ClimbOn.Application.Outbox;
 
@@ -32,7 +33,7 @@ public interface IOutboxClaim : IAsyncDisposable
 
 // Design §4.1: an email is written to the outbox in the same transaction as the state change, delivered
 // after commit, and what remains is retried by the sweeper (RetryDueAsync) with backoff.
-public sealed class EmailOutbox(IOutboxStore store, IEmailSender sender, IClock clock)
+public sealed partial class EmailOutbox(IOutboxStore store, IEmailSender sender, IClock clock, ILogger<EmailOutbox> logger)
 {
     // The wait after each failed attempt; the attempt after the last of these is the last one.
     public static readonly IReadOnlyList<TimeSpan> Backoff =
@@ -48,8 +49,19 @@ public sealed class EmailOutbox(IOutboxStore store, IEmailSender sender, IClock 
         return email.Id;
     }
 
-    // After commit: one attempt at this row. A failure leaves it to the sweeper.
-    public Task DeliverAsync(Guid id, CancellationToken cancellationToken) => DeliverDueAsync(id, cancellationToken);
+    // After commit: one attempt at this row. Any failure, the store's included, leaves it to the sweeper,
+    // so the request that committed the row still succeeds. Logged by exception type only (C32).
+    public async Task DeliverAsync(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await DeliverDueAsync(id, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            LogDeliveryFailed(id, exception.GetType().Name);
+        }
+    }
 
     // The sweeper's step: every row that is due now.
     public Task RetryDueAsync(CancellationToken cancellationToken) => DeliverDueAsync(null, cancellationToken);
@@ -96,4 +108,10 @@ public sealed class EmailOutbox(IOutboxStore store, IEmailSender sender, IClock 
 
         await claim.MarkSentAsync(clock.UtcNow, cancellationToken);
     }
+
+    [LoggerMessage(
+        EventName = "OutboxDeliveryFailed",
+        Level = LogLevel.Warning,
+        Message = "Delivering outbox email {OutboxId} after commit failed: {ExceptionType}")]
+    private partial void LogDeliveryFailed(Guid outboxId, string exceptionType);
 }

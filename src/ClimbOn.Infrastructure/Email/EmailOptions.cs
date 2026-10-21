@@ -10,6 +10,10 @@ public sealed class EmailOptions
     public string? Sender { get; set; }
 
     public SmtpOptions Smtp { get; set; } = new();
+
+    // The deadline for one send attempt, password read included. The first attempt runs inside the
+    // registration request, so it must not wait on MailKit's own 2-minute timeout per operation.
+    public TimeSpan SendTimeout { get; set; } = TimeSpan.FromSeconds(15);
 }
 
 public sealed class SmtpOptions

@@ -1,4 +1,5 @@
 using System.Buffers.Text;
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -75,7 +76,8 @@ public sealed class EmailConfirmationTests(ApiFactory factory) : IntegrationTest
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
-    // Design §3: the token is in the fragment, which browsers never send, and carries 256 random bits.
+    // Task 10: the link is {PublicBaseUrl}/confirm#t=<token>. The token is in the fragment, which browsers
+    // never send, and carries 256 random bits.
     [Fact]
     [Trait("SpecPartial", "S49")]
     public async Task Link_carries_token_in_fragment()
@@ -115,6 +117,9 @@ public sealed class EmailConfirmationTests(ApiFactory factory) : IntegrationTest
 
         var email = Assert.Single(Factory.Email.Sent);
         Assert.Equal(Texts.Get(EmailContent.ConfirmationSubjectKey, expected), email.Subject);
+        var body = string.Format(
+            CultureInfo.GetCultureInfo(expected.Tag()), Texts.Get(EmailContent.ConfirmationBodyKey, expected), Link(email).OriginalString);
+        Assert.Equal(body, email.Body);
     }
 
     // Below the API, so no Spec trait (C21.1): the confirmation is recorded on the account.
