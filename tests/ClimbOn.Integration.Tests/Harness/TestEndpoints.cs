@@ -51,6 +51,11 @@ public sealed class TestEndpoints : IStartupFilter
                 throw new DomainError(ErrorCodes.ValidationFailed);
             }).RequireClimberSession();
 
+            // A climber endpoint that answers, after the session has resolved, that the climber is not logged in.
+            endpoints.MapPost($"{Prefix}/climber/unauthenticated", IResult () =>
+                throw new DomainError(ClimberSessions.RequiredCode, DomainErrorKind.Unauthenticated))
+                .RequireClimberSession();
+
             // C33 probes: each puts a value where telemetry would carry it.
             endpoints.MapPost($"{Prefix}/telemetry/log", (ProbeValue probe, ILogger<TestEndpoints> logger) =>
             {

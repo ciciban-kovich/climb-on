@@ -236,6 +236,20 @@ public sealed class LoginTests(ApiFactory factory) : IntegrationTest(factory)
         AssertSessionCookie(SessionCookieOf(response), Factory.Clock.UtcNow + SessionLifetime);
     }
 
+    // A 401 says the climber is not logged in, so it never hands out a session cookie.
+    [Fact]
+    public async Task Unauthenticated_response_does_not_refresh_the_cookie()
+    {
+        var account = Factory.Data.Account();
+        await RegisterAsync(account);
+        var token = await LogInAsync(account);
+
+        using var response = await SendAsync(HttpMethod.Post, $"{TestEndpoints.Prefix}/climber/unauthenticated", token);
+
+        await AssertErrorAsync(response, HttpStatusCode.Unauthorized, ClimberSessions.RequiredCode);
+        Assert.False(response.Headers.Contains(HeaderNames.SetCookie));
+    }
+
     // Logout's expired cookie is the only session cookie in its response.
     [Fact]
     public async Task Logout_expires_the_cookie()
