@@ -221,6 +221,35 @@ public sealed class LoginTests(ApiFactory factory) : IntegrationTest(factory)
         AssertSessionCookie(SessionCookieOf(used), Factory.Clock.UtcNow + SessionLifetime);
     }
 
+    // The server extends the session on a failed request too, so the cookie must follow.
+    [Fact]
+    public async Task Failed_request_still_refreshes_the_cookie()
+    {
+        var account = Factory.Data.Account();
+        await RegisterAsync(account);
+        var token = await LogInAsync(account);
+        Factory.Clock.Advance(TimeSpan.FromDays(3));
+
+        using var response = await SendAsync(HttpMethod.Post, $"{TestEndpoints.Prefix}/climber/fail", token);
+
+        await AssertErrorAsync(response, HttpStatusCode.BadRequest, ErrorCodes.ValidationFailed);
+        AssertSessionCookie(SessionCookieOf(response), Factory.Clock.UtcNow + SessionLifetime);
+    }
+
+    // Logout's expired cookie is the only session cookie in its response.
+    [Fact]
+    public async Task Logout_expires_the_cookie()
+    {
+        var account = Factory.Data.Account();
+        await RegisterAsync(account);
+        var token = await LogInAsync(account);
+
+        using var response = await SendAsync(HttpMethod.Post, LogoutRoute, token);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.True(SessionCookieOf(response).Expires < Factory.Clock.UtcNow);
+    }
+
     // Below the API, so no Spec trait (C21.1).
     [Fact]
     public async Task Session_token_is_stored_only_as_its_hash()

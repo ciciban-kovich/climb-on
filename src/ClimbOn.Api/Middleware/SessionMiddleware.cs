@@ -36,6 +36,9 @@ public static class SessionCookie
 
     public static void Delete(HttpResponse response) => response.Cookies.Delete(Name, Options(null));
 
+    public static bool IsSet(HttpResponse response) =>
+        response.Headers.SetCookie.Any(value => value?.StartsWith(Name + "=", StringComparison.Ordinal) == true);
+
     private static CookieOptions Options(DateTimeOffset? expiresAt) => new()
     {
         HttpOnly = true,
@@ -91,7 +94,18 @@ public sealed class SessionMiddleware(RequestDelegate next)
 
         context.Features.Set(new ClimberSessionFeature(session));
         context.Features.Set(new AccountLanguageFeature(session.Language));
-        SessionCookie.Write(context.Response, token, session.ExpiresAt);
+
+        // Written as the response starts, so it survives an error response clearing the headers, unless the
+        // endpoint has set the cookie itself (logout).
+        context.Response.OnStarting(() =>
+        {
+            if (!SessionCookie.IsSet(context.Response))
+            {
+                SessionCookie.Write(context.Response, token, session.ExpiresAt);
+            }
+
+            return Task.CompletedTask;
+        });
         await next(context);
     }
 
