@@ -7,6 +7,7 @@ public enum DomainErrorKind
     NotFound,
     Conflict,
     Forbidden,
+    Unauthenticated,
 }
 
 // A rule refused the request. Code is stable and language-independent (C45); it is also the key of

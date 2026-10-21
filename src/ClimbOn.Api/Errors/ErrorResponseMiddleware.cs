@@ -88,6 +88,7 @@ public static class ErrorResponses
         DomainErrorKind.NotFound => StatusCodes.Status404NotFound,
         DomainErrorKind.Conflict => StatusCodes.Status409Conflict,
         DomainErrorKind.Forbidden => StatusCodes.Status403Forbidden,
+        DomainErrorKind.Unauthenticated => StatusCodes.Status401Unauthorized,
         _ => StatusCodes.Status400BadRequest,
     };
 

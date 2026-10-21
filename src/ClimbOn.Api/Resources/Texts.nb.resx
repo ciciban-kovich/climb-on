@@ -66,6 +66,12 @@
   <data name="privacy_not_acknowledged" xml:space="preserve">
     <value>Du må bekrefte at du har lest den gjeldende personvernerklæringen.</value>
   </data>
+  <data name="login_failed" xml:space="preserve">
+    <value>E-postadressen eller passordet er feil.</value>
+  </data>
+  <data name="session_required" xml:space="preserve">
+    <value>Du er ikke logget inn, eller økten din er avsluttet. Logg inn på nytt.</value>
+  </data>
   <data name="link_invalid" xml:space="preserve">
     <value>Bekreftelseslenken er ikke gyldig, eller den er allerede brukt.</value>
   </data>

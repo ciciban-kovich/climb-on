@@ -2,6 +2,9 @@
 #pragma warning disable CS0618
 using ClimbOn.Client.Api.Api.Climber.Accounts;
 using ClimbOn.Client.Api.Api.Climber.EmailConfirmations;
+using ClimbOn.Client.Api.Api.Climber.Login;
+using ClimbOn.Client.Api.Api.Climber.Logout;
+using ClimbOn.Client.Api.Api.Climber.Me;
 using Microsoft.Kiota.Abstractions.Extensions;
 using Microsoft.Kiota.Abstractions;
 using System.Collections.Generic;
@@ -25,6 +28,21 @@ namespace ClimbOn.Client.Api.Api.Climber
         public global::ClimbOn.Client.Api.Api.Climber.EmailConfirmations.EmailConfirmationsRequestBuilder EmailConfirmations
         {
             get => new global::ClimbOn.Client.Api.Api.Climber.EmailConfirmations.EmailConfirmationsRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The login property</summary>
+        public global::ClimbOn.Client.Api.Api.Climber.Login.LoginRequestBuilder Login
+        {
+            get => new global::ClimbOn.Client.Api.Api.Climber.Login.LoginRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The logout property</summary>
+        public global::ClimbOn.Client.Api.Api.Climber.Logout.LogoutRequestBuilder Logout
+        {
+            get => new global::ClimbOn.Client.Api.Api.Climber.Logout.LogoutRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The me property</summary>
+        public global::ClimbOn.Client.Api.Api.Climber.Me.MeRequestBuilder Me
+        {
+            get => new global::ClimbOn.Client.Api.Api.Climber.Me.MeRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>
         /// Instantiates a new <see cref="global::ClimbOn.Client.Api.Api.Climber.ClimberRequestBuilder"/> and sets the default values.

@@ -1,8 +1,11 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using ClimbOn.Api.Errors;
 using ClimbOn.Api.Jobs;
+using ClimbOn.Api.Middleware;
 using ClimbOn.Application.Abstractions;
 using ClimbOn.Application.Postcodes;
+using ClimbOn.Domain.Errors;
 using ClimbOn.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -18,9 +21,15 @@ public sealed class TestEndpoints : IStartupFilter
 {
     public const string Prefix = "/_test";
 
+    // What the failing climber endpoint writes as last activity before it fails and rolls back.
+    public static readonly DateTimeOffset RolledBackActivity = new(2001, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
     public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next) => app =>
     {
         app.UseRouting();
+
+        // Program's climber pipeline, for the climber endpoints below.
+        app.UseClimberPipeline();
         app.UseEndpoints(endpoints =>
         {
             endpoints.MapGet($"{Prefix}/clock", (IClock clock) => Results.Ok(new ClockProbe(clock.UtcNow)));
@@ -31,6 +40,16 @@ public sealed class TestEndpoints : IStartupFilter
                 await db.Database.ExecuteSqlRawAsync("SELECT 1", cancellationToken);
                 return Results.NoContent();
             });
+
+            // A climber endpoint that writes in its own transaction and then fails, so the write rolls back.
+            endpoints.MapPost($"{Prefix}/climber/fail", async (HttpContext context, ClimbOnDbContext db, CancellationToken cancellationToken) =>
+            {
+                var accountId = ClimberSessions.Current(context).AccountId;
+                await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+                await db.Accounts.Where(account => account.Id == accountId)
+                    .ExecuteUpdateAsync(set => set.SetProperty(account => account.LastActivityAt, RolledBackActivity), cancellationToken);
+                throw new DomainError(ErrorCodes.ValidationFailed);
+            }).RequireClimberSession();
 
             // C33 probes: each puts a value where telemetry would carry it.
             endpoints.MapPost($"{Prefix}/telemetry/log", (ProbeValue probe, ILogger<TestEndpoints> logger) =>
