@@ -11,7 +11,7 @@ public sealed record ClimberSessionFeature(ClimberSession Session);
 
 public static class ClimberSessions
 {
-    public const string RequiredCode = "session_required";
+    public const string RequiredCode = ErrorCodes.SessionRequired;
 
     public static RouteHandlerBuilder RequireClimberSession(this RouteHandlerBuilder builder) =>
         builder.WithMetadata(new ClimberSessionRequired()).Produces<ErrorBody>(StatusCodes.Status401Unauthorized);
@@ -50,14 +50,15 @@ public static class SessionCookie
     };
 }
 
-// Design §2 'Request pipeline', first step: the session cookie gives the climber. On every request that
-// resolves a session, the account's last activity and the session's last use are written and committed
+// Design §2 'Request pipeline', first step: the session cookie gives the climber. On every climber API request
+// that resolves a session, the account's last activity and the session's last use are written and committed
 // before the endpoint runs (Sessions.ResumeAsync), and errors follow the account's stored language (S105).
+// That includes endpoints that need no session and the 405 and 415 endpoints routing answers with itself.
 public sealed class SessionMiddleware(RequestDelegate next)
 {
     private const string ClimberApiPrefix = "/api/climber";
 
-    public async Task InvokeAsync(HttpContext context, Sessions sessions)
+    public async Task InvokeAsync(HttpContext context)
     {
         var endpoint = context.GetEndpoint();
         var required = endpoint?.Metadata.GetMetadata<ClimberSessionRequired>() is not null;
@@ -74,15 +75,17 @@ public sealed class SessionMiddleware(RequestDelegate next)
             return;
         }
 
-        if (!required)
-        {
-            await next(context);
-            return;
-        }
-
+        // Sessions is resolved here, so a request outside the climber API builds no session services.
         var token = SessionCookie.Read(context.Request);
-        if (token is null || await sessions.ResumeAsync(token, context.RequestAborted) is not { } session)
+        if (token is null
+            || await context.RequestServices.GetRequiredService<Sessions>().ResumeAsync(token, context.RequestAborted) is not { } session)
         {
+            if (!required)
+            {
+                await next(context);
+                return;
+            }
+
             if (token is not null)
             {
                 SessionCookie.Delete(context.Response);
@@ -96,7 +99,7 @@ public sealed class SessionMiddleware(RequestDelegate next)
         context.Features.Set(new AccountLanguageFeature(session.Language));
 
         // Written as the response starts, so it survives an error response clearing the headers, unless the
-        // endpoint has set the cookie itself (logout) or answered that the climber is not logged in.
+        // endpoint has set the cookie itself (login, logout) or answered that the climber is not logged in.
         context.Response.OnStarting(() =>
         {
             if (!SessionCookie.IsSet(context.Response) && context.Response.StatusCode != StatusCodes.Status401Unauthorized)

@@ -36,6 +36,7 @@ public sealed class LanguageChangeTests(ApiFactory factory) : IntegrationTest(fa
     // S105: the next error is in the new language, whatever Accept-Language says.
     [Theory]
     [Trait("SpecPartial", "S104")]
+    [Trait("SpecPartial", "S105")]
     [InlineData("nb", "en")]
     [InlineData("en", "nb")]
     public async Task Next_error_follows_the_new_language(string registered, string changed)
@@ -51,6 +52,20 @@ public sealed class LanguageChangeTests(ApiFactory factory) : IntegrationTest(fa
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(ErrorCodes.ValidationFailed, (await response.Content.ReadFromJsonAsync<ErrorBody>(TestContext.Current.CancellationToken))?.Code);
         Assert.Equal(changed, Assert.Single(response.Content.Headers.ContentLanguage));
+    }
+
+    [Fact]
+    [Trait("SpecPartial", "S104")]
+    public async Task Change_leaves_other_accounts_alone()
+    {
+        var token = await RegisterAndLogInAsync("nb");
+        var other = await RegisterAndLogInAsync("nb");
+
+        using var change = await ChangeAsync(token, "en");
+
+        Assert.Equal(HttpStatusCode.OK, change.StatusCode);
+        using var me = await SendAsync(new HttpRequestMessage(HttpMethod.Get, "/api/climber/me"), other);
+        Assert.Equal("nb", (await me.Content.ReadFromJsonAsync<MeResponse>(TestContext.Current.CancellationToken))?.Language);
     }
 
     [Fact]

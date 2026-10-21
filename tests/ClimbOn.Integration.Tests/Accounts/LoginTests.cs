@@ -6,7 +6,9 @@ using System.Text;
 using ClimbOn.Api.Climber;
 using ClimbOn.Api.Errors;
 using ClimbOn.Api.Middleware;
+using ClimbOn.Api.Resources;
 using ClimbOn.Application.Accounts;
+using ClimbOn.Domain.Accounts;
 using ClimbOn.Infrastructure.Persistence;
 using ClimbOn.Integration.Tests.Harness;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -40,6 +42,30 @@ public sealed class LoginTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var me = await response.Content.ReadFromJsonAsync<MeResponse>(TestContext.Current.CancellationToken);
         Assert.Equal(new MeResponse(account.Email, "nb", EmailConfirmed: false), me);
+    }
+
+    // Each session gives the account that logged in, and /me that account's own data. Asked in the reverse
+    // of login order, so neither the first nor the last session stored can stand in for the right one.
+    [Fact]
+    [Trait("Spec", "S78")]
+    public async Task Each_session_belongs_to_the_account_that_logged_in()
+    {
+        var first = Factory.Data.Account();
+        var second = Factory.Data.Account();
+        await RegisterAsync(first, "nb");
+        await RegisterAsync(second, "en");
+        var firstToken = await LogInAsync(first);
+        var secondToken = await LogInAsync(second);
+
+        using var secondMe = await SendAsync(HttpMethod.Get, MeRoute, secondToken);
+        using var firstMe = await SendAsync(HttpMethod.Get, MeRoute, firstToken);
+
+        Assert.Equal(
+            new MeResponse(second.Email, "en", EmailConfirmed: false),
+            await secondMe.Content.ReadFromJsonAsync<MeResponse>(TestContext.Current.CancellationToken));
+        Assert.Equal(
+            new MeResponse(first.Email, "nb", EmailConfirmed: false),
+            await firstMe.Content.ReadFromJsonAsync<MeResponse>(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -205,6 +231,35 @@ public sealed class LoginTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(expected, Assert.Single(response.Content.Headers.ContentLanguage));
     }
 
+    // S105 on climber requests that need no session, and on those routing answers itself (405, 415): a live
+    // session still resolves, so the error is in the stored language and the session is used.
+    [Theory]
+    [Trait("SpecPartial", "S105")]
+    [InlineData("DELETE", MeRoute, null, null, HttpStatusCode.MethodNotAllowed, ErrorCodes.MethodNotAllowed)]
+    [InlineData("PUT", "/api/climber/language", "text/plain", """{"language":"en"}""", HttpStatusCode.UnsupportedMediaType, ErrorCodes.UnsupportedMediaType)]
+    [InlineData("POST", "/api/climber/email-confirmations", "application/json", """{"token":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}""", HttpStatusCode.BadRequest, ConfirmEmail.LinkInvalidCode)]
+    public async Task Session_resolves_on_every_climber_request(
+        string method, string route, string? contentType, string? body, HttpStatusCode status, string code)
+    {
+        var account = Factory.Data.Account();
+        await RegisterAsync(account, "nb");
+        var token = await LogInAsync(account);
+        Factory.Clock.Advance(TimeSpan.FromDays(3));
+        using var request = Request(new HttpMethod(method), route, token);
+        request.Headers.AcceptLanguage.ParseAdd("en");
+        if (body is not null)
+        {
+            request.Content = new StringContent(body, Encoding.UTF8, contentType);
+        }
+
+        using var response = await Client().SendAsync(request, TestContext.Current.CancellationToken);
+
+        await AssertErrorAsync(response, status, code);
+        Assert.Equal("nb", Assert.Single(response.Content.Headers.ContentLanguage));
+        AssertSessionCookie(SessionCookieOf(response), Factory.Clock.UtcNow + SessionLifetime);
+        Assert.Equal(Factory.Clock.UtcNow, await LastActivityAsync(account.Email));
+    }
+
     // Design §2 'Runtime components'. Every authenticated request moves the cookie's expiry with the session's.
     [Fact]
     public async Task Cookie_is_httponly_secure_samesite_strict()
@@ -311,6 +366,12 @@ public sealed class LoginTests(ApiFactory factory) : IntegrationTest(factory)
         await AssertErrorAsync(response, HttpStatusCode.BadRequest, ErrorCodes.ValidationFailed);
         Assert.Equal(Factory.Clock.UtcNow, await LastActivityAsync(account.Email));
     }
+
+    [Theory]
+    [InlineData(Login.FailedCode)]
+    [InlineData(ClimberSessions.RequiredCode)]
+    public void Login_and_session_codes_have_a_text_in_both_languages(string code) =>
+        Assert.All(new[] { Language.English, Language.Bokmal }, language => Assert.NotEqual(code, Texts.Get(code, language)));
 
     private HttpClient Client() => Factory.CreateClient(new WebApplicationFactoryClientOptions
     {
