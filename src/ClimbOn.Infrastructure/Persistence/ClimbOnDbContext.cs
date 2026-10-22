@@ -1,5 +1,6 @@
 using ClimbOn.Infrastructure.Persistence.Accounts;
 using ClimbOn.Infrastructure.Persistence.Outbox;
+using ClimbOn.Infrastructure.Persistence.Sessions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -20,6 +21,8 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
     public DbSet<LinkTokenRow> LinkTokens => Set<LinkTokenRow>();
 
     public DbSet<OutboxRow> Outbox => Set<OutboxRow>();
+
+    public DbSet<SessionRow> Sessions => Set<SessionRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,6 +53,7 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             account.Property(row => row.Language).HasColumnName("language").HasMaxLength(2);
             account.Property(row => row.RegisteredAt).HasColumnName("registered_at");
             account.Property(row => row.EmailConfirmedAt).HasColumnName("email_confirmed_at");
+            account.Property(row => row.LastActivityAt).HasColumnName("last_activity_at");
         });
 
         modelBuilder.Entity<LegalDocumentRow>(document =>
@@ -121,6 +125,20 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             outbox.HasIndex(row => row.AccountId).HasDatabaseName("ix_outbox_account_id");
             outbox.HasIndex(row => row.NextAttemptAt).HasDatabaseName("ix_outbox_due")
                 .HasFilter("sent_at IS NULL AND failed_at IS NULL");
+        });
+
+        modelBuilder.Entity<SessionRow>(session =>
+        {
+            session.ToTable("sessions", table =>
+                table.HasCheckConstraint("ck_sessions_token_hash", "octet_length(token_hash) = 32"));
+            session.HasKey(row => row.TokenHash).HasName("pk_sessions");
+            session.Property(row => row.TokenHash).HasColumnName("token_hash");
+            session.Property(row => row.AccountId).HasColumnName("account_id");
+            session.Property(row => row.CreatedAt).HasColumnName("created_at");
+            session.Property(row => row.LastUsedAt).HasColumnName("last_used_at");
+            session.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.AccountId)
+                .HasConstraintName("fk_sessions_accounts").OnDelete(DeleteBehavior.Cascade);
+            session.HasIndex(row => row.AccountId).HasDatabaseName("ix_sessions_account_id");
         });
     }
 

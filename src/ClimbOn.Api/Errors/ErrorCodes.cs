@@ -13,11 +13,12 @@ public static class ErrorCodes
     public const string InternalError = "internal_error";
     public const string ServiceUnavailable = "service_unavailable";
     public const string DatabaseUnavailable = "database_unavailable";
+    public const string SessionRequired = "session_required";
 
     public static IReadOnlyList<string> All { get; } =
     [
         ValidationFailed, NotFound, MethodNotAllowed, UnsupportedMediaType, RequestFailed,
-        InternalError, ServiceUnavailable, DatabaseUnavailable,
+        InternalError, ServiceUnavailable, DatabaseUnavailable, SessionRequired,
     ];
 
     // The code for an error status that carries no code of its own.

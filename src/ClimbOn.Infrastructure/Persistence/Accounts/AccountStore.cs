@@ -18,6 +18,7 @@ public sealed class AccountStore(ClimbOnDbContext db) : IAccountStore
             DateOfBirth = account.DateOfBirth,
             Language = account.Language.Tag(),
             RegisteredAt = account.RegisteredAt,
+            LastActivityAt = account.RegisteredAt,
         });
         db.LegalAcknowledgements.AddRange(account.Acknowledgements.Select(acknowledgement => new LegalAcknowledgementRow
         {
@@ -45,4 +46,28 @@ public sealed class AccountStore(ClimbOnDbContext db) : IAccountStore
             WHERE accounts.id = used.account_id
             """,
             cancellationToken) == 1;
+
+    // Addresses are stored trimmed (Account.Register). Until task 12's unique index, an address may
+    // belong to more than one account; the first registered is the one that logs in.
+    public Task<AccountCredentials?> FindCredentialsAsync(string email, CancellationToken cancellationToken)
+    {
+        var normalised = email.Trim().ToLowerInvariant();
+        return db.Accounts.AsNoTracking()
+            .Where(account => account.Email.ToLower() == normalised)
+            .OrderBy(account => account.RegisteredAt)
+            .Select(account => new AccountCredentials(account.Id, account.PasswordHash))
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<OwnAccount?> FindOwnAsync(Guid id, CancellationToken cancellationToken) =>
+        await db.Accounts.AsNoTracking()
+            .Where(account => account.Id == id)
+            .Select(account => new { account.Email, account.Language, account.EmailConfirmedAt })
+            .FirstOrDefaultAsync(cancellationToken) is { } found
+            ? new OwnAccount(found.Email, Languages.FromClientSetting(found.Language), found.EmailConfirmedAt is not null)
+            : null;
+
+    public Task SetLanguageAsync(Guid id, Language language, CancellationToken cancellationToken) =>
+        db.Accounts.Where(account => account.Id == id)
+            .ExecuteUpdateAsync(set => set.SetProperty(account => account.Language, language.Tag()), cancellationToken);
 }

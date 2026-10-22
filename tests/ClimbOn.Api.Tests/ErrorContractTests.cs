@@ -15,6 +15,7 @@ public sealed class ErrorContractTests(ErrorContractTests.Host host) : IClassFix
     [InlineData(DomainErrorKind.NotFound, HttpStatusCode.NotFound)]
     [InlineData(DomainErrorKind.Conflict, HttpStatusCode.Conflict)]
     [InlineData(DomainErrorKind.Forbidden, HttpStatusCode.Forbidden)]
+    [InlineData(DomainErrorKind.Unauthenticated, HttpStatusCode.Unauthorized)]
     public async Task Domain_error_returns_its_code(DomainErrorKind kind, HttpStatusCode status)
     {
         var (response, body) = await GetAsync($"/domain-error/{kind}");

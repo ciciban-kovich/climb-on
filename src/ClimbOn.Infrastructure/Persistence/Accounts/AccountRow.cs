@@ -18,4 +18,7 @@ public sealed class AccountRow
 
     // Null until the address is confirmed (S49).
     public DateTimeOffset? EmailConfirmedAt { get; init; }
+
+    // The time of the account's most recent authenticated request; registration sets it (specs glossary).
+    public required DateTimeOffset LastActivityAt { get; set; }
 }

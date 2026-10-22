@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using ClimbOn.Api.Health;
+using ClimbOn.Application.Accounts;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -23,6 +24,19 @@ public sealed class HealthEndpointTests(HealthEndpointTests.HealthyDatabaseFacto
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await response.Content.ReadFromJsonAsync<HealthBody>(TestContext.Current.CancellationToken);
         Assert.Equal("ok", body?.Status);
+    }
+
+    // The session step builds its services only for the climber API, so /health needs none of them.
+    [Fact]
+    public async Task Health_builds_no_session_services()
+    {
+        await using var host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+            services.AddScoped<ISessionStore>(_ => throw new InvalidOperationException("The session store was built."))));
+        using var client = host.CreateClient();
+
+        using var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     private sealed record HealthBody(string Status);

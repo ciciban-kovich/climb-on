@@ -48,6 +48,10 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(2)")
                         .HasColumnName("language");
 
+                    b.Property<DateTimeOffset>("LastActivityAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_activity_at");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text")
@@ -277,6 +281,36 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Sessions.SessionRow", b =>
+                {
+                    b.Property<byte[]>("TokenHash")
+                        .HasColumnType("bytea")
+                        .HasColumnName("token_hash");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_used_at");
+
+                    b.HasKey("TokenHash")
+                        .HasName("pk_sessions");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("ix_sessions_account_id");
+
+                    b.ToTable("sessions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_sessions_token_hash", "octet_length(token_hash) = 32");
+                        });
+                });
+
             modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Accounts.LegalAcknowledgementRow", b =>
                 {
                     b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
@@ -312,6 +346,16 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_outbox_accounts");
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Sessions.SessionRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sessions_accounts");
                 });
 #pragma warning restore 612, 618
         }
