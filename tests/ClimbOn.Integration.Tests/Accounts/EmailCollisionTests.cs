@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using ClimbOn.Api.Climber;
 using ClimbOn.Api.Email;
+using ClimbOn.Api.Errors;
 using ClimbOn.Api.Resources;
 using ClimbOn.Application.Abstractions;
 using ClimbOn.Domain.Accounts;
@@ -57,7 +58,7 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
 
         await RegisterAsync(intruder with { Email = owner.Email });
 
-        Assert.Equal(1, await AccountsWithAsync(owner.Email));
+        // A second account at the address would make the owner's login fail too: login expects one.
         using var intruderLogin = await PostLoginAsync(owner.Email, intruder.Password);
         Assert.Equal(HttpStatusCode.Unauthorized, intruderLogin.StatusCode);
         using var ownerLogin = await PostLoginAsync(owner.Email, owner.Password);
@@ -104,6 +105,8 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
         Assert.Equal(owner.Email, Assert.Single(Factory.Email.Sent).To);
     }
 
+    // The barrier holds every account insert until all the registrations have reached theirs, so none
+    // of them can see another's account before inserting its own: only the unique index can decide.
     [Fact]
     [Trait("SpecPartial", "S84")]
     [Trait("SpecPartial", "S87")]
@@ -113,7 +116,12 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
         var email = Factory.Data.Account().Email;
         var drafts = Enumerable.Range(0, Registrations).Select(_ => Factory.Data.Account() with { Email = email }).ToArray();
 
-        var responses = await Task.WhenAll(drafts.Select(draft => PostRegistrationAsync(Registration(draft, "nb"))));
+        HttpResponseMessage[] responses;
+        await using (var barrier = await HoldAccountInsertsAsync(Registrations))
+        {
+            responses = await Task.WhenAll(drafts.Select(draft => PostRegistrationAsync(Registration(draft, "nb"))));
+            Assert.Equal(Registrations, await barrier.ArrivedAsync());
+        }
 
         try
         {
@@ -127,7 +135,6 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
             }
         }
 
-        Assert.Equal(1, await AccountsWithAsync(email));
         var sent = Factory.Email.Sent;
         Assert.Equal(Registrations, sent.Count);
         Assert.All(sent, message => Assert.Equal(email, message.To));
@@ -167,10 +174,11 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
 
         await RegisterAsync(other);
 
-        Assert.Equal(1, await AccountsWithAsync(owner.Email));
         var notice = Assert.Single(Factory.Email.Sent);
         Assert.Equal(owner.Email, notice.To);
         Assert.False(IsConfirmation(notice));
+        using var otherLogin = await PostLoginAsync(other.Email, other.Password);
+        Assert.Equal(HttpStatusCode.Unauthorized, otherLogin.StatusCode);
     }
 
     // A format character is not a letter, so a spelling with one is refused rather than becoming a
@@ -189,7 +197,8 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
             Registration(Factory.Data.Account(), "nb") with { Email = Factory.Data.Email(Spelling(spelling, owner.Email.Split('@')[0])) });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal(1, await AccountsWithAsync(owner.Email));
+        var body = await response.Content.ReadFromJsonAsync<ErrorBody>(TestContext.Current.CancellationToken);
+        Assert.Equal(Account.EmailInvalidCode, body?.Code);
     }
 
     // S78 on the S84 normal form: any spelling of the address logs in to its account.
@@ -210,9 +219,9 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
     }
 
     // Accounts registered before the normal form existed get it from the migration, and the index then
-    // refuses a second account for their addresses.
+    // refuses a second account for their addresses. A label of 63 characters is the longest the
+    // migration accepts. Below the API, so no Spec trait (C21.1).
     [Fact]
-    [Trait("SpecPartial", "S84")]
     [Trait("Compat", "exclude")]
     public async Task Migration_normalises_existing_addresses()
     {
@@ -221,21 +230,24 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
         await server.CreateDatabaseAsync("backfill", cancellationToken);
         await using var db = Context(server.ConnectionStringFor("backfill"));
         await db.GetService<IMigrator>().MigrateAsync(MigrationBeforeNormalForm, cancellationToken: cancellationToken);
-        var email = Factory.Data.Email("Ola.Nordmann@Example.TEST");
-        await InsertAccountAsync(server, "backfill", email, cancellationToken);
+        var longestLabel = $"ola@{new string('B', 63)}.test";
+        await InsertAccountAsync(server, "backfill", Factory.Data.Email("Ola.Nordmann@Example.TEST"), cancellationToken);
+        await InsertAccountAsync(server, "backfill", Factory.Data.Email(longestLabel), cancellationToken);
 
         await db.Database.MigrateAsync(cancellationToken);
 
+        var normalised = await db.Database.SqlQuery<string>($"SELECT email_normalised AS \"Value\" FROM accounts").ToListAsync(cancellationToken);
         Assert.Equal(
-            "ola.nordmann@example.test",
-            await db.Database.SqlQuery<string>($"SELECT email_normalised AS \"Value\" FROM accounts").SingleAsync(cancellationToken));
+            new[] { "ola.nordmann@example.test", longestLabel.ToLowerInvariant() }.Order(StringComparer.Ordinal),
+            normalised.Order(StringComparer.Ordinal));
         var duplicate = await Assert.ThrowsAsync<PostgresException>(() =>
             InsertAccountAsync(server, "backfill", Factory.Data.Email("ola.nordmann@example.test"), cancellationToken, "ola.nordmann@example.test"));
         Assert.Equal(PostgresErrorCodes.UniqueViolation, duplicate.SqlState);
     }
 
     // SQL cannot compute IDNA or check punycode, so an address whose normal form is not lower(email), or
-    // which has none, stops the migration instead of getting a wrong form.
+    // which has none, stops the migration instead of getting a wrong form. Below the API, so no Spec trait
+    // (C21.1).
     public static TheoryData<string> AddressesSqlCannotNormalise => new()
     {
         "ola@bølgen.test",
@@ -245,7 +257,6 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
     };
 
     [Theory]
-    [Trait("SpecPartial", "S84")]
     [Trait("Compat", "exclude")]
     [MemberData(nameof(AddressesSqlCannotNormalise))]
     public async Task Migration_stops_at_an_address_it_cannot_normalise(string email)
@@ -323,10 +334,57 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
     private Task<HttpResponseMessage> PostLoginAsync(string email, string password) =>
         Factory.CreateClient().PostAsJsonAsync(LoginRoute, new LoginRequest(email, password), TestContext.Current.CancellationToken);
 
-    private async Task<int> AccountsWithAsync(string email)
+    // A row trigger that holds each account insert until the given number have arrived, or ten seconds
+    // have passed; counts the arrivals and is removed on dispose.
+    private async Task<InsertBarrier> HoldAccountInsertsAsync(int arrivals)
     {
-        await using var db = Context(Factory.ConnectionString);
-        var normalised = Account.NormaliseEmail(email);
-        return await db.Accounts.CountAsync(account => account.NormalisedEmail == normalised, TestContext.Current.CancellationToken);
+        await InsertBarrier.ExecuteAsync(
+            Factory.ConnectionString,
+            $$"""
+            CREATE SEQUENCE account_insert_arrivals;
+            CREATE FUNCTION account_insert_barrier() RETURNS trigger LANGUAGE plpgsql AS $$
+            DECLARE
+                deadline timestamptz := clock_timestamp() + interval '10 seconds';
+            BEGIN
+                PERFORM nextval('account_insert_arrivals');
+                WHILE (SELECT last_value FROM account_insert_arrivals) < {{arrivals}} AND clock_timestamp() < deadline LOOP
+                    PERFORM pg_sleep(0.01);
+                END LOOP;
+                RETURN NEW;
+            END $$;
+            CREATE TRIGGER account_insert_barrier BEFORE INSERT ON accounts
+                FOR EACH ROW EXECUTE FUNCTION account_insert_barrier();
+            """,
+            TestContext.Current.CancellationToken);
+        return new InsertBarrier(Factory.ConnectionString);
+    }
+
+    private sealed class InsertBarrier(string connectionString) : IAsyncDisposable
+    {
+        // Account inserts that reached the barrier while it was in place.
+        public async Task<long> ArrivedAsync()
+        {
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync(TestContext.Current.CancellationToken);
+            await using var command = new NpgsqlCommand("SELECT last_value FROM account_insert_arrivals", connection);
+            return (long)(await command.ExecuteScalarAsync(TestContext.Current.CancellationToken))!;
+        }
+
+        public async ValueTask DisposeAsync() => await ExecuteAsync(
+            connectionString,
+            """
+            DROP TRIGGER account_insert_barrier ON accounts;
+            DROP FUNCTION account_insert_barrier();
+            DROP SEQUENCE account_insert_arrivals;
+            """,
+            CancellationToken.None);
+
+        public static async Task ExecuteAsync(string connectionString, string sql, CancellationToken cancellationToken)
+        {
+            await using var connection = new NpgsqlConnection(connectionString);
+            await connection.OpenAsync(cancellationToken);
+            await using var command = new NpgsqlCommand(sql, connection);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
     }
 }

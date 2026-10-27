@@ -143,11 +143,15 @@ public sealed class AccountTests
         Assert.Equal(Account.EmailInvalidCode, error.Code);
     }
 
-    // An address without a normal form is refused: a label IDNA cannot map (over 63 characters), or one
-    // of 254 characters whose punycoded domain makes it longer (each label of 40 æ becomes 46 characters).
+    // An address without a normal form is refused: a label IDNA cannot map (over 63 characters, or a
+    // letter IDNA maps to a space, which is no host name), or one of 254 characters whose punycoded
+    // domain makes it longer (each label of 40 æ becomes 46 characters).
     public static TheoryData<string> WithoutNormalForm => new()
     {
         $"ola@{new string('a', 64)}.no",
+        "ola@aͺb.no",
+        "ola@ﷺ.no",
+        "ola@aﹰb.no",
         $"{new string('o', 254 - 1 - 84)}@{new string('æ', 40)}.{new string('æ', 40)}.no",
     };
 

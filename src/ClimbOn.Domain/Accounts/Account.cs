@@ -114,8 +114,8 @@ public sealed class Account
     // S84: the form two spellings of one address share, so that they collide. The domain is mapped by
     // IDNA and punycoded, as it is sent, which folds full-width and other compatibility variants into one
     // domain; then the whole address is lower-cased, and it is all ASCII by then. Null when value is not
-    // an address registration accepts (EnsureEmail), including one whose domain IDNA cannot map or whose
-    // punycoded form is longer than the maximum.
+    // an address registration accepts (EnsureEmail), including one whose domain IDNA cannot map to a host
+    // name (some letters map to a space) or whose punycoded form is longer than the maximum.
     public static string? NormaliseEmail(string? value)
     {
         var email = value?.Trim();
@@ -133,7 +133,7 @@ public sealed class Account
         string domain;
         try
         {
-            domain = new IdnMapping().GetAscii(email[(at + 1)..]);
+            domain = new IdnMapping { UseStd3AsciiRules = true }.GetAscii(email[(at + 1)..]);
         }
         catch (ArgumentException)
         {
