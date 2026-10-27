@@ -234,18 +234,28 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
         Assert.Equal(PostgresErrorCodes.UniqueViolation, duplicate.SqlState);
     }
 
-    // SQL cannot compute IDNA, so a non-ASCII address stops the migration instead of getting a wrong form.
-    [Fact]
+    // SQL cannot compute IDNA or check punycode, so an address whose normal form is not lower(email), or
+    // which has none, stops the migration instead of getting a wrong form.
+    public static TheoryData<string> AddressesSqlCannotNormalise => new()
+    {
+        "ola@bølgen.test",
+        "ola@xn--zz.test",
+        "ola@XN--blgen-vua.test",
+        $"ola@{new string('b', 64)}.test",
+    };
+
+    [Theory]
     [Trait("SpecPartial", "S84")]
     [Trait("Compat", "exclude")]
-    public async Task Migration_stops_at_an_address_it_cannot_normalise()
+    [MemberData(nameof(AddressesSqlCannotNormalise))]
+    public async Task Migration_stops_at_an_address_it_cannot_normalise(string email)
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var server = await IsolatedPostgres.StartAsync(cancellationToken);
         await server.CreateDatabaseAsync("backfill", cancellationToken);
         await using var db = Context(server.ConnectionStringFor("backfill"));
         await db.GetService<IMigrator>().MigrateAsync(MigrationBeforeNormalForm, cancellationToken: cancellationToken);
-        await InsertAccountAsync(server, "backfill", Factory.Data.Email("ola@bølgen.test"), cancellationToken);
+        await InsertAccountAsync(server, "backfill", Factory.Data.Email(email), cancellationToken);
 
         var stopped = await Assert.ThrowsAsync<PostgresException>(() => db.Database.MigrateAsync(cancellationToken));
 
