@@ -40,3 +40,8 @@ Rationale behind specs and constraints. Not input to the critic: only specs.md, 
 - Digital Services Act: statement of reasons to affected users (S93), and whether and how it applies in Norway at this scale.
 - Whether Norwegian universal-design rules apply to a private, non-commercial app (C59).
 - The terms and privacy policy texts, and confirmation that no special-category data is processed (D24).
+
+## Before launch
+
+- Rate-limit registration per address and per client (from the m1/registration review, 2026-10-20).
+- Cap S87 taken-address notices per address, like S80.3 (from the m1/email-collisions review, 2026-10-27).

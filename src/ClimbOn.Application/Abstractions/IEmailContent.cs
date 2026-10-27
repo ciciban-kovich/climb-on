@@ -6,4 +6,7 @@ namespace ClimbOn.Application.Abstractions;
 public interface IEmailContent
 {
     EmailMessage EmailConfirmation(string to, Language language, string token);
+
+    // S87: someone tried to register with the address of a password account.
+    EmailMessage RegistrationAttempt(string to, Language language);
 }

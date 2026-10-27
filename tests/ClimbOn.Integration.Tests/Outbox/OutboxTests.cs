@@ -303,6 +303,8 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
 
         public void Add(OutboxEmail email, DateTimeOffset now) => inner.Add(email, now);
 
+        public Task SaveAsync(CancellationToken cancellationToken) => inner.SaveAsync(cancellationToken);
+
         public async Task<IOutboxClaim?> ClaimNextAsync(DateTimeOffset now, Guid? id, CancellationToken cancellationToken)
         {
             if (fault == Fault.Claim)

@@ -10,6 +10,9 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
 {
     public const string ConnectionStringName = "ClimbOn";
 
+    // S84: one account per normalised address.
+    public const string AccountEmailIndex = "ix_accounts_email_normalised";
+
     public DbSet<Postcode> Postcodes => Set<Postcode>();
 
     public DbSet<AccountRow> Accounts => Set<AccountRow>();
@@ -48,6 +51,8 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             account.HasKey(row => row.Id).HasName("pk_accounts");
             account.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
             account.Property(row => row.Email).HasColumnName("email").HasMaxLength(254);
+            account.Property(row => row.NormalisedEmail).HasColumnName("email_normalised").HasMaxLength(254);
+            account.HasIndex(row => row.NormalisedEmail).IsUnique().HasDatabaseName(AccountEmailIndex);
             account.Property(row => row.PasswordHash).HasColumnName("password_hash");
             account.Property(row => row.DateOfBirth).HasColumnName("date_of_birth");
             account.Property(row => row.Language).HasColumnName("language").HasMaxLength(2);

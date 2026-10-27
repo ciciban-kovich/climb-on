@@ -16,9 +16,10 @@ public sealed class Login(IAccountStore accounts, ISessionStore sessions, IPassw
 
     public async Task<StartedSession> RunAsync(string? email, string? password, CancellationToken cancellationToken)
     {
-        var credentials = string.IsNullOrWhiteSpace(email)
-            ? null
-            : await accounts.FindCredentialsAsync(email.Trim(), cancellationToken);
+        // S84: any spelling of the address finds its account; one registration refuses finds none.
+        var credentials = Account.NormaliseEmail(email) is { } normalised
+            ? await accounts.FindCredentialsAsync(normalised, cancellationToken)
+            : null;
         if (!hasher.Verify(credentials?.PasswordHash, password ?? string.Empty) || credentials is null)
         {
             throw new DomainError(FailedCode, DomainErrorKind.Unauthenticated);

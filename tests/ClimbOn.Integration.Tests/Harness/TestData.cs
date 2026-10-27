@@ -42,6 +42,13 @@ public sealed class TestData(FixtureValues fixtures)
         return email;
     }
 
+    // Another spelling of an address a test built, for S84.
+    public string Email(string spelling)
+    {
+        fixtures.Register("email", spelling);
+        return spelling;
+    }
+
     // A password of the given length in characters, for the S79 bounds.
     public string Password(int length)
     {
