@@ -334,8 +334,8 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
     private Task<HttpResponseMessage> PostLoginAsync(string email, string password) =>
         Factory.CreateClient().PostAsJsonAsync(LoginRoute, new LoginRequest(email, password), TestContext.Current.CancellationToken);
 
-    // A row trigger that holds each account insert until the given number have arrived, or ten seconds
-    // have passed; counts the arrivals and is removed on dispose.
+    // A row trigger that holds each account insert until the given number have arrived, and fails it if
+    // they have not within ten seconds; counts the arrivals and is removed on dispose.
     private async Task<InsertBarrier> HoldAccountInsertsAsync(int arrivals)
     {
         await InsertBarrier.ExecuteAsync(
@@ -350,6 +350,9 @@ public sealed class EmailCollisionTests(ApiFactory factory) : IntegrationTest(fa
                 WHILE (SELECT last_value FROM account_insert_arrivals) < {{arrivals}} AND clock_timestamp() < deadline LOOP
                     PERFORM pg_sleep(0.01);
                 END LOOP;
+                IF (SELECT last_value FROM account_insert_arrivals) < {{arrivals}} THEN
+                    RAISE EXCEPTION 'account insert barrier timed out';
+                END IF;
                 RETURN NEW;
             END $$;
             CREATE TRIGGER account_insert_barrier BEFORE INSERT ON accounts
