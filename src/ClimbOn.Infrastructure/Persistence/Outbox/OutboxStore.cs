@@ -23,6 +23,8 @@ public sealed partial class OutboxStore(ClimbOnDbContext db, ILogger<OutboxStore
             NextAttemptAt = now,
         });
 
+    public Task SaveAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
+
     public async Task<IOutboxClaim?> ClaimNextAsync(DateTimeOffset now, Guid? id, CancellationToken cancellationToken)
     {
         var transaction = await db.Database.BeginTransactionAsync(cancellationToken);

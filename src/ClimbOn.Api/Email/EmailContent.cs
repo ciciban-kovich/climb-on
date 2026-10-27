@@ -15,14 +15,23 @@ public sealed class EmailContent(IConfiguration configuration) : IEmailContent
 
     public const string ConfirmationBodyKey = "email_confirmation_body";
 
+    public const string RegistrationAttemptSubjectKey = "registration_attempt_subject";
+
+    public const string RegistrationAttemptBodyKey = "registration_attempt_body";
+
     public EmailMessage EmailConfirmation(string to, Language language, string token) =>
         new(to, Texts.Get(ConfirmationSubjectKey, language), Format(ConfirmationBodyKey, language, Link("confirm", token)));
 
-    private string Link(string path, string token)
+    // S87: the login link only. The password reset link joins it with password reset (S80, M2).
+    public EmailMessage RegistrationAttempt(string to, Language language) =>
+        new(to, Texts.Get(RegistrationAttemptSubjectKey, language), Format(RegistrationAttemptBodyKey, language, Link("login")));
+
+    private string Link(string path, string? token = null)
     {
         var baseUrl = configuration[PublicBaseUrlKey]
             ?? throw new InvalidOperationException($"{PublicBaseUrlKey} is not configured.");
-        return $"{baseUrl.TrimEnd('/')}/{path}#t={token}";
+        var link = $"{baseUrl.TrimEnd('/')}/{path}";
+        return token is null ? link : $"{link}#t={token}";
     }
 
     private static string Format(string key, Language language, params object[] values) =>

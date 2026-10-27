@@ -52,6 +52,12 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_activity_at");
 
+                    b.Property<string>("NormalisedEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)")
+                        .HasColumnName("email_normalised");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text")
@@ -63,6 +69,10 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_accounts");
+
+                    b.HasIndex("NormalisedEmail")
+                        .IsUnique()
+                        .HasDatabaseName("ix_accounts_email_normalised");
 
                     b.ToTable("accounts", null, t =>
                         {

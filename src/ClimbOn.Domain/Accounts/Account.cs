@@ -1,3 +1,4 @@
+using System.Globalization;
 using ClimbOn.Domain.Errors;
 using ClimbOn.Domain.Legal;
 
@@ -27,6 +28,7 @@ public sealed class Account
     private Account(
         Guid id,
         string email,
+        string normalisedEmail,
         string passwordHash,
         DateOnly dateOfBirth,
         Language language,
@@ -35,6 +37,7 @@ public sealed class Account
     {
         Id = id;
         Email = email;
+        NormalisedEmail = normalisedEmail;
         PasswordHash = passwordHash;
         DateOfBirth = dateOfBirth;
         Language = language;
@@ -52,6 +55,9 @@ public sealed class Account
 
     // S47: exactly one.
     public string Email { get; }
+
+    // S84: NormaliseEmail of Email.
+    public string NormalisedEmail { get; }
 
     public string PasswordHash { get; }
 
@@ -73,7 +79,7 @@ public sealed class Account
         ArgumentNullException.ThrowIfNull(current);
         ArgumentNullException.ThrowIfNull(hashPassword);
 
-        var email = EnsureEmail(registration.Email);
+        var (email, normalisedEmail) = EnsureEmail(registration.Email);
         PasswordPolicy.Ensure(registration.Password);
         if (registration.DateOfBirth is not { } dateOfBirth)
         {
@@ -94,6 +100,7 @@ public sealed class Account
         return new Account(
             id,
             email,
+            normalisedEmail,
             hashPassword(registration.Password),
             dateOfBirth,
             Languages.FromClientSetting(registration.LanguageSetting),
@@ -104,12 +111,12 @@ public sealed class Account
             ]);
     }
 
-    // Surrounding white space is dropped. What remains must be an address the email adapter can send to:
-    // an ASCII dot-atom before the one @ (RFC 5321: atoms of letters, digits and the specials below, joined
-    // by single dots), and after it at least two dot-separated labels of letters, digits and inner hyphens.
-    // Labels may hold non-ASCII letters (internationalised domains are sent punycoded); the part before
-    // the @ may not, because the provider is not known to accept SMTPUTF8.
-    private static string EnsureEmail(string? value)
+    // S84: the form two spellings of one address share, so that they collide. The domain is mapped by
+    // IDNA and punycoded, as it is sent, which folds full-width and other compatibility variants into one
+    // domain; then the whole address is lower-cased, and it is all ASCII by then. Null when value is not
+    // an address registration accepts (EnsureEmail), including one whose domain IDNA cannot map or whose
+    // punycoded form is longer than the maximum.
+    public static string? NormaliseEmail(string? value)
     {
         var email = value?.Trim();
         var at = email?.IndexOf('@', StringComparison.Ordinal) ?? -1;
@@ -120,11 +127,33 @@ public sealed class Account
             || email[(at + 1)..].Split('.') is not { Length: >= 2 } labels
             || !labels.All(IsDomainLabel))
         {
-            throw new DomainError(EmailInvalidCode);
+            return null;
         }
 
-        return email;
+        string domain;
+        try
+        {
+            domain = new IdnMapping().GetAscii(email[(at + 1)..]);
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+
+        var normalised = $"{email[..at]}@{domain}".ToLowerInvariant();
+        return normalised.Length <= MaximumEmailLength ? normalised : null;
     }
+
+    // Surrounding white space is dropped. What remains must be an address the email adapter can send to:
+    // an ASCII dot-atom before the one @ (RFC 5321: atoms of letters, digits and the specials below, joined
+    // by single dots), and after it at least two dot-separated labels of letters, digits and inner hyphens.
+    // Labels may hold non-ASCII letters (internationalised domains are sent punycoded); the part before
+    // the @ may not, because the provider is not known to accept SMTPUTF8. Returns the address as typed
+    // but trimmed, and its normal form.
+    private static (string Email, string Normalised) EnsureEmail(string? value) =>
+        NormaliseEmail(value) is { } normalised
+            ? (value!.Trim(), normalised)
+            : throw new DomainError(EmailInvalidCode);
 
     private static bool IsAtom(string atom) =>
         atom.Length > 0 && atom.All(character => char.IsAsciiLetterOrDigit(character) || AtomSpecials.Contains(character));

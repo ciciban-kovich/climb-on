@@ -87,4 +87,18 @@ Confirm your email address by opening this link:
 
 If you did not register with climb-on, you can ignore this email.</value>
   </data>
+  <data name="registration_attempt_subject" xml:space="preserve">
+    <value>Someone tried to register with your email address at climb-on</value>
+  </data>
+  <data name="registration_attempt_body" xml:space="preserve">
+    <value>Hi,
+
+Someone tried to register a new climb-on account with this email address. You already have an account, so no new account was created.
+
+If it was you, you can log in here:
+
+{0}
+
+If it was not you, you can ignore this email. Your account has not been changed.</value>
+  </data>
 </root>

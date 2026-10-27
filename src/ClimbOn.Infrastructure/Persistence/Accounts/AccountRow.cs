@@ -7,6 +7,9 @@ public sealed class AccountRow
 
     public required string Email { get; init; }
 
+    // S84: Account.NormaliseEmail of Email, unique (ClimbOnDbContext.AccountEmailIndex).
+    public required string NormalisedEmail { get; init; }
+
     public required string PasswordHash { get; init; }
 
     public required DateOnly DateOfBirth { get; init; }

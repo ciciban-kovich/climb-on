@@ -103,6 +103,71 @@ public sealed class AccountTests
     public void Deliverable_email_is_accepted(string email) =>
         Assert.Equal(email, Account.Register(Guid.NewGuid(), Valid with { Email = email }, Current, Now, password => password).Email);
 
+    [Fact]
+    [Trait("SpecPartial", "S84")]
+    public void Registration_stores_the_normal_form_beside_the_address()
+    {
+        var account = Account.Register(Guid.NewGuid(), Valid with { Email = " Ola.Nordmann@Ærø.NO " }, Current, Now, password => password);
+
+        Assert.Equal("Ola.Nordmann@Ærø.NO", account.Email);
+        Assert.Equal("ola.nordmann@xn--r-3fa9c.no", account.NormalisedEmail);
+    }
+
+    // Case, surrounding space, full-width letters and the punycoded spelling of a domain are one address.
+    [Theory]
+    [Trait("SpecPartial", "S84")]
+    [InlineData("ola@example.no", "ola@example.no")]
+    [InlineData("  OLA@Example.NO\t", "ola@example.no")]
+    [InlineData("ola@ｅｘａｍｐｌｅ.no", "ola@example.no")]
+    [InlineData("ola@ＥＸＡＭＰＬＥ.no", "ola@example.no")]
+    [InlineData("ola@ærø.no", "ola@xn--r-3fa9c.no")]
+    [InlineData("ola@ÆRØ.no", "ola@xn--r-3fa9c.no")]
+    [InlineData("ola@xn--r-3fa9c.no", "ola@xn--r-3fa9c.no")]
+    [InlineData("ola@XN--R-3FA9C.NO", "ola@xn--r-3fa9c.no")]
+    public void Spellings_of_one_address_share_a_normal_form(string email, string expected) =>
+        Assert.Equal(expected, Account.NormaliseEmail(email));
+
+    // Format characters (Unicode Cf) are not letters, so they never reach the normal form, where IDNA
+    // would drop some of them and make a second spelling of a taken address.
+    [Theory]
+    [Trait("SpecPartial", "S84")]
+    [InlineData("ola​@example.no")]
+    [InlineData("ola@exam­ple.no")]
+    [InlineData("ola@exam‍ple.no")]
+    [InlineData("ola@‮example.no")]
+    [InlineData("ola@exam﻿ple.no")]
+    public void Format_characters_are_refused(string email)
+    {
+        Assert.Null(Account.NormaliseEmail(email));
+        var error = Assert.Throws<DomainError>(() => Account.Register(Guid.NewGuid(), Valid with { Email = email }, Current, Now, password => password));
+        Assert.Equal(Account.EmailInvalidCode, error.Code);
+    }
+
+    // An address without a normal form is refused: a label IDNA cannot map (over 63 characters), or one
+    // of 254 characters whose punycoded domain makes it longer (each label of 40 æ becomes 46 characters).
+    public static TheoryData<string> WithoutNormalForm => new()
+    {
+        $"ola@{new string('a', 64)}.no",
+        $"{new string('o', 254 - 1 - 84)}@{new string('æ', 40)}.{new string('æ', 40)}.no",
+    };
+
+    [Theory]
+    [Trait("SpecPartial", "S84")]
+    [MemberData(nameof(WithoutNormalForm))]
+    public void Address_without_a_normal_form_is_refused(string email)
+    {
+        Assert.InRange(email.Length, 1, Account.MaximumEmailLength);
+        var error = Assert.Throws<DomainError>(() => Account.Register(Guid.NewGuid(), Valid with { Email = email }, Current, Now, password => password));
+        Assert.Equal(Account.EmailInvalidCode, error.Code);
+    }
+
+    // The edge the second case above crosses: with a local part 12 characters shorter, the punycoded
+    // form is exactly 254 characters, and accepted.
+    [Fact]
+    [Trait("SpecPartial", "S84")]
+    public void Punycoded_address_of_254_characters_is_accepted() =>
+        Assert.Equal(254, Account.NormaliseEmail($"{new string('o', 254 - 1 - 96)}@{new string('æ', 40)}.{new string('æ', 40)}.no")?.Length);
+
     // The registration date is the UTC date of now (C3): 00:30 at UTC+1 is still the day before in UTC.
     [Fact]
     [Trait("SpecPartial", "S28")]

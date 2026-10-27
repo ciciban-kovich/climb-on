@@ -10,6 +10,9 @@ public interface IOutboxStore
     // Saved with the request's other changes, in one transaction (IAccountStore.AddAsync).
     void Add(OutboxEmail email, DateTimeOffset now);
 
+    // Commits the rows added, for a request whose only change is an email (EmailOutbox.EnqueueAsync).
+    Task SaveAsync(CancellationToken cancellationToken);
+
     // Opens a transaction and locks the oldest due row (FOR UPDATE SKIP LOCKED), or the row with
     // this id when it is due; null when there is none. Disposing an unmarked claim rolls back.
     Task<IOutboxClaim?> ClaimNextAsync(DateTimeOffset now, Guid? id, CancellationToken cancellationToken);
@@ -47,6 +50,14 @@ public sealed partial class EmailOutbox(IOutboxStore store, IEmailSender sender,
         var email = new OutboxEmail(Guid.CreateVersion7(now), accountId, message);
         store.Add(email, now);
         return email.Id;
+    }
+
+    // Enqueue for a request that changes nothing else: the row is committed on its own.
+    public async Task<Guid> EnqueueAsync(Guid accountId, EmailMessage message, CancellationToken cancellationToken)
+    {
+        var id = Enqueue(accountId, message);
+        await store.SaveAsync(cancellationToken);
+        return id;
     }
 
     // After commit: one attempt at this row. Any failure, the store's included, leaves it to the sweeper,

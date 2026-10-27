@@ -87,4 +87,18 @@ Bekreft e-postadressen din ved å åpne denne lenken:
 
 Hvis du ikke har registrert deg hos climb-on, kan du se bort fra denne e-posten.</value>
   </data>
+  <data name="registration_attempt_subject" xml:space="preserve">
+    <value>Noen prøvde å registrere seg med e-postadressen din hos climb-on</value>
+  </data>
+  <data name="registration_attempt_body" xml:space="preserve">
+    <value>Hei,
+
+Noen prøvde å registrere en ny konto hos climb-on med denne e-postadressen. Du har allerede en konto, så ingen ny konto ble opprettet.
+
+Hvis det var deg, kan du logge inn her:
+
+{0}
+
+Hvis det ikke var deg, kan du se bort fra denne e-posten. Kontoen din er ikke endret.</value>
+  </data>
 </root>

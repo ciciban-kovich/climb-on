@@ -3,17 +3,19 @@ using ClimbOn.Domain.Accounts;
 using ClimbOn.Domain.Legal;
 using ClimbOn.Infrastructure.Persistence.Outbox;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace ClimbOn.Infrastructure.Persistence.Accounts;
 
 public sealed class AccountStore(ClimbOnDbContext db) : IAccountStore
 {
-    public async Task AddAsync(Account account, CancellationToken cancellationToken)
+    public async Task<bool> AddAsync(Account account, CancellationToken cancellationToken)
     {
         db.Accounts.Add(new AccountRow
         {
             Id = account.Id,
             Email = account.Email,
+            NormalisedEmail = account.NormalisedEmail,
             PasswordHash = account.PasswordHash,
             DateOfBirth = account.DateOfBirth,
             Language = account.Language.Tag(),
@@ -28,8 +30,22 @@ public sealed class AccountStore(ClimbOnDbContext db) : IAccountStore
             AcknowledgedAt = acknowledgement.At,
         }));
 
-        // One SaveChanges is one transaction.
-        await db.SaveChangesAsync(cancellationToken);
+        // One SaveChanges is one transaction. S84 is the unique index's to decide, so a registration
+        // racing this one waits for it and then fails here.
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: ClimbOnDbContext.AccountEmailIndex,
+        })
+        {
+            db.ChangeTracker.Clear();
+            return false;
+        }
     }
 
     // One statement, so a token is used once even by concurrent requests: the second waits for the
@@ -47,17 +63,19 @@ public sealed class AccountStore(ClimbOnDbContext db) : IAccountStore
             """,
             cancellationToken) == 1;
 
-    // Addresses are stored trimmed (Account.Register). Until task 12's unique index, an address may
-    // belong to more than one account; the first registered is the one that logs in.
-    public Task<AccountCredentials?> FindCredentialsAsync(string email, CancellationToken cancellationToken)
-    {
-        var normalised = email.Trim().ToLowerInvariant();
-        return db.Accounts.AsNoTracking()
-            .Where(account => account.Email.ToLower() == normalised)
-            .OrderBy(account => account.RegisteredAt)
+    public Task<AccountCredentials?> FindCredentialsAsync(string normalisedEmail, CancellationToken cancellationToken) =>
+        db.Accounts.AsNoTracking()
+            .Where(account => account.NormalisedEmail == normalisedEmail)
             .Select(account => new AccountCredentials(account.Id, account.PasswordHash))
-            .FirstOrDefaultAsync(cancellationToken);
-    }
+            .SingleOrDefaultAsync(cancellationToken);
+
+    public async Task<EmailOwner?> FindEmailOwnerAsync(string normalisedEmail, CancellationToken cancellationToken) =>
+        await db.Accounts.AsNoTracking()
+            .Where(account => account.NormalisedEmail == normalisedEmail)
+            .Select(account => new { account.Id, account.Email, account.Language })
+            .SingleOrDefaultAsync(cancellationToken) is { } found
+            ? new EmailOwner(found.Id, found.Email, Languages.FromClientSetting(found.Language))
+            : null;
 
     public async Task<OwnAccount?> FindOwnAsync(Guid id, CancellationToken cancellationToken) =>
         await db.Accounts.AsNoTracking()
