@@ -1,0 +1,5 @@
+id,name,address,postcode,active
+6f1c2a10-0000-4000-8000-000000000001,Fixture Klatresenter Sentrum,Testgata 1,0150,true
+6f1c2a10-0000-4000-8000-000000000002,Fixture Buldrehall Ost,Testveien 2,0560,true
+6f1c2a10-0000-4000-8000-000000000003,Fixture Klatrehall Bergen,Provegaten 3,5003,true
+6f1c2a10-0000-4000-8000-000000000004,Fixture Klatrehall Nedlagt,Gamleveien 4,7010,false

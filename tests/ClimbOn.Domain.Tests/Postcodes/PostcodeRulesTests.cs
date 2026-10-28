@@ -5,7 +5,7 @@ using Xunit;
 
 namespace ClimbOn.Domain.Tests.Postcodes;
 
-[Trait("SpecPartial", "S15")]
+[Trait("Spec", "S15")]
 public sealed class PostcodeRulesTests
 {
     private static readonly GeoPoint Point = new(60, 10);
@@ -46,7 +46,7 @@ public sealed class PostcodeRulesTests
         Assert.Equal(PostcodeRules.UnknownCode, Assert.Throws<DomainError>(() => PostcodeRules.Accept(null)).Code);
 
     [Fact]
-    [Trait("SpecPartial", "S102.2")]
+    [Trait("Spec", "S102.2")]
     public void Retired_postcode_is_rejected() =>
         Assert.Equal(
             PostcodeRules.RetiredCode,

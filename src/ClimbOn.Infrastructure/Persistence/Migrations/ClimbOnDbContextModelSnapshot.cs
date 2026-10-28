@@ -291,6 +291,240 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Profiles.AvailabilityWindowRow", b =>
+                {
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<string>("Day")
+                        .HasMaxLength(9)
+                        .HasColumnType("character varying(9)")
+                        .HasColumnName("day");
+
+                    b.Property<int>("StartHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("start_hour");
+
+                    b.Property<int>("EndHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("end_hour");
+
+                    b.HasKey("AccountId", "Day", "StartHour")
+                        .HasName("pk_availability_windows");
+
+                    b.ToTable("availability_windows", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_availability_windows_day", "day IN ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')");
+
+                            t.HasCheckConstraint("ck_availability_windows_hours", "0 <= start_hour AND start_hour < end_hour AND end_hour <= 24");
+                        });
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Profiles.DisciplineVariantRow", b =>
+                {
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<string>("Variant")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("variant");
+
+                    b.Property<string>("OwnHighest")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("own_highest");
+
+                    b.Property<int>("OwnHighestPosition")
+                        .HasColumnType("integer")
+                        .HasColumnName("own_highest_position");
+
+                    b.Property<string>("OwnLowest")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("own_lowest");
+
+                    b.Property<int>("OwnLowestPosition")
+                        .HasColumnType("integer")
+                        .HasColumnName("own_lowest_position");
+
+                    b.Property<string>("PartnerHighest")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("partner_highest");
+
+                    b.Property<int>("PartnerHighestPosition")
+                        .HasColumnType("integer")
+                        .HasColumnName("partner_highest_position");
+
+                    b.Property<string>("PartnerLowest")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("partner_lowest");
+
+                    b.Property<int>("PartnerLowestPosition")
+                        .HasColumnType("integer")
+                        .HasColumnName("partner_lowest_position");
+
+                    b.Property<string>("Scale")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("scale");
+
+                    b.Property<bool>("Shared")
+                        .HasColumnType("boolean")
+                        .HasColumnName("shared");
+
+                    b.HasKey("AccountId", "Variant")
+                        .HasName("pk_discipline_variants");
+
+                    b.ToTable("discipline_variants", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_discipline_variants_own", "own_lowest_position <= own_highest_position");
+
+                            t.HasCheckConstraint("ck_discipline_variants_partner", "partner_lowest_position <= partner_highest_position");
+
+                            t.HasCheckConstraint("ck_discipline_variants_scale", "scale IN ('norwegian', 'french', 'font', 'water-ice')");
+
+                            t.HasCheckConstraint("ck_discipline_variants_variant", "variant IN ('bouldering-indoor', 'bouldering-outdoor', 'top-rope-indoor', 'top-rope-outdoor', 'lead-indoor', 'lead-outdoor', 'multipitch-outdoor', 'ice-outdoor')");
+                        });
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Profiles.GymRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("address");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Postcode")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)")
+                        .HasColumnName("postcode");
+
+                    b.HasKey("Id")
+                        .HasName("pk_gyms");
+
+                    b.ToTable("gyms", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_gyms_postcode", "postcode ~ '^[0-9]{4}$'");
+                        });
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Profiles.HomeGymRow", b =>
+                {
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<Guid>("GymId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("gym_id");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.HasKey("AccountId", "GymId")
+                        .HasName("pk_home_gyms");
+
+                    b.HasIndex("GymId")
+                        .HasDatabaseName("ix_home_gyms_gym_id");
+
+                    b.ToTable("home_gyms", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_home_gyms_position", "position >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Profiles.ProfileRow", b =>
+                {
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.PrimitiveCollection<string[]>("AcceptedSexes")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("accepted_sexes");
+
+                    b.Property<string>("Certification")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("certification");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("display_name");
+
+                    b.Property<int>("MaxTravelKm")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_travel_km");
+
+                    b.Property<bool>("OwnGear")
+                        .HasColumnType("boolean")
+                        .HasColumnName("own_gear");
+
+                    b.Property<string>("Postcode")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)")
+                        .HasColumnName("postcode");
+
+                    b.Property<string>("RopeScale")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("rope_scale");
+
+                    b.Property<string>("Sex")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("sex");
+
+                    b.HasKey("AccountId")
+                        .HasName("pk_profiles");
+
+                    b.ToTable("profiles", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_profiles_accepted_sexes", "cardinality(accepted_sexes) >= 1 AND accepted_sexes <@ ARRAY['female', 'male', 'other']::text[]");
+
+                            t.HasCheckConstraint("ck_profiles_certification", "certification IN ('none', 'brattkort-topptau', 'brattkort-led')");
+
+                            t.HasCheckConstraint("ck_profiles_max_travel_km", "max_travel_km BETWEEN 1 AND 100");
+
+                            t.HasCheckConstraint("ck_profiles_postcode", "postcode ~ '^[0-9]{4}$'");
+
+                            t.HasCheckConstraint("ck_profiles_rope_scale", "rope_scale IN ('norwegian', 'french')");
+
+                            t.HasCheckConstraint("ck_profiles_sex", "sex IN ('female', 'male', 'other')");
+                        });
+                });
+
             modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Sessions.SessionRow", b =>
                 {
                     b.Property<byte[]>("TokenHash")
@@ -356,6 +590,53 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_outbox_accounts");
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Profiles.AvailabilityWindowRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Profiles.ProfileRow", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_availability_windows_profiles");
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Profiles.DisciplineVariantRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Profiles.ProfileRow", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_discipline_variants_profiles");
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Profiles.HomeGymRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Profiles.ProfileRow", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_home_gyms_profiles");
+
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Profiles.GymRow", null)
+                        .WithMany()
+                        .HasForeignKey("GymId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_home_gyms_gyms");
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Profiles.ProfileRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithOne()
+                        .HasForeignKey("ClimbOn.Infrastructure.Persistence.Profiles.ProfileRow", "AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_profiles_accounts");
                 });
 
             modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Sessions.SessionRow", b =>

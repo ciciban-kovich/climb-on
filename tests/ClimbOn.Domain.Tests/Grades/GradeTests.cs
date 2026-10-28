@@ -7,12 +7,12 @@ namespace ClimbOn.Domain.Tests.Grades;
 public sealed class GradeTests
 {
     [Fact]
-    [Trait("SpecPartial", "S13.1")]
+    [Trait("Spec", "S13.1")]
     public void Rope_scales_are_Norwegian_and_French() =>
         Assert.Equal([GradeScale.Norwegian, GradeScale.French], GradeScales.For(GradeFamily.Rope));
 
     [Fact]
-    [Trait("SpecPartial", "S13.2")]
+    [Trait("Spec", "S13.2")]
     public void Bouldering_uses_Font_and_ice_uses_WI()
     {
         Assert.Equal([GradeScale.Font], GradeScales.For(GradeFamily.Bouldering));
@@ -20,8 +20,8 @@ public sealed class GradeTests
     }
 
     [Theory]
-    [Trait("SpecPartial", "S13.2")]
-    [Trait("SpecPartial", "S13.3")]
+    [Trait("Spec", "S13.2")]
+    [Trait("Spec", "S13.3")]
     [InlineData(GradeScale.Norwegian)]
     [InlineData(GradeScale.French)]
     [InlineData(GradeScale.Font)]
@@ -30,7 +30,7 @@ public sealed class GradeTests
         Assert.Equal(ExpectedGrades.For(scale), scale.Grades());
 
     [Fact]
-    [Trait("SpecPartial", "S13.3")]
+    [Trait("Spec", "S13.3")]
     public void Rope_conversion_table_has_every_row_at_its_position()
     {
         var expected = ExpectedConversionTable.Rows;
@@ -45,7 +45,7 @@ public sealed class GradeTests
     }
 
     [Theory]
-    [Trait("SpecPartial", "S13.3")]
+    [Trait("Spec", "S13.3")]
     [InlineData(GradeScale.Norwegian)]
     [InlineData(GradeScale.French)]
     [InlineData(GradeScale.Font)]
@@ -58,7 +58,7 @@ public sealed class GradeTests
     }
 
     [Theory]
-    [Trait("SpecPartial", "S13.3")]
+    [Trait("Spec", "S13.3")]
     [InlineData(GradeScale.Norwegian, "3", GradeFamily.Rope, 0)]
     [InlineData(GradeScale.Norwegian, "7-", GradeFamily.Rope, 10)]
     [InlineData(GradeScale.Norwegian, "8", GradeFamily.Rope, 15)]
@@ -85,8 +85,8 @@ public sealed class GradeTests
     }
 
     [Theory]
-    [Trait("SpecPartial", "S13.2")]
-    [Trait("SpecPartial", "S13.3")]
+    [Trait("Spec", "S13.2")]
+    [Trait("Spec", "S13.3")]
     [InlineData(GradeScale.Norwegian, "6b")]
     [InlineData(GradeScale.Norwegian, "6A")]
     [InlineData(GradeScale.Norwegian, " 7")]
@@ -105,7 +105,7 @@ public sealed class GradeTests
     }
 
     [Fact]
-    [Trait("SpecPartial", "S13.3")]
+    [Trait("Spec", "S13.3")]
     public void Grade_in_an_undefined_scale_is_rejected()
     {
         Assert.False(Grade.TryCreate((GradeScale)99, "3", out var grade));
@@ -148,7 +148,7 @@ public sealed class GradeTests
     }
 
     [Theory]
-    [Trait("SpecPartial", "S13.3")]
+    [Trait("Spec", "S13.3")]
     [InlineData(GradeScale.Norwegian, -1)]
     [InlineData(GradeScale.French, 31)]
     public void Position_outside_the_table_is_rejected(GradeScale scale, int position) =>

@@ -9,7 +9,7 @@ using Xunit;
 
 namespace ClimbOn.Integration.Tests.Postcodes;
 
-[Trait("SpecPartial", "S15")]
+[Trait("Spec", "S15")]
 public sealed class PostcodeValidationTests(ApiFactory factory) : IntegrationTest(factory)
 {
     public static TheoryData<string> ActivePostcodes =>
@@ -25,7 +25,7 @@ public sealed class PostcodeValidationTests(ApiFactory factory) : IntegrationTes
     }
 
     [Fact]
-    [Trait("SpecPartial", "S102.2")]
+    [Trait("Spec", "S102.2")]
     public async Task Retired_postcode_is_rejected()
     {
         Assert.True(FixturePostcodes.Get(FixturePostcodes.Retired).Retired);

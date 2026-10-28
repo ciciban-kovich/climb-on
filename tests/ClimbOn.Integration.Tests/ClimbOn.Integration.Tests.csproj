@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <None Include="Fixtures\postcodes.csv" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Fixtures\gyms.csv" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Fixtures\kartverket\*.geojson" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

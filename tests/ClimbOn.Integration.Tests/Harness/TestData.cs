@@ -1,4 +1,5 @@
 using System.Globalization;
+using ClimbOn.Api.Climber;
 
 namespace ClimbOn.Integration.Tests.Harness;
 
@@ -63,4 +64,23 @@ public sealed class TestData(FixtureValues fixtures)
         fixtures.Register(FixtureValues.PostcodeKind, code);
         return code;
     }
+
+    // A valid profile for the account (S3): its display name, the postcode and the first active fixture gym,
+    // indoor bouldering and shared indoor/outdoor lead ranges on the Norwegian scale, one window.
+    public ProfileRequest Profile(AccountDraft account, string postcode = "0150") => new(
+        account.DisplayName,
+        Sex: "female",
+        AcceptedSexes: null,
+        RopeScale: "norwegian",
+        Disciplines:
+        [
+            new DisciplineEntryRequest("bouldering", ["indoor"], new GradeRangeRequest("5", "6B"), new GradeRangeRequest("4", "7A")),
+            new DisciplineEntryRequest("lead", ["indoor", "outdoor"], new GradeRangeRequest("6-", "7"), new GradeRangeRequest("5", "8-")),
+        ],
+        Certification: "brattkort-led",
+        OwnGear: true,
+        Postcode(postcode),
+        MaxTravelKm: 25,
+        HomeGyms: [FixtureGyms.Active[0].Id],
+        Windows: [new WindowRequest("tuesday", 18, 21)]);
 }
