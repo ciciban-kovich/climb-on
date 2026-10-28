@@ -101,4 +101,52 @@ Hvis det var deg, kan du logge inn her:
 
 Hvis det ikke var deg, kan du se bort fra denne e-posten. Kontoen din er ikke endret.</value>
   </data>
+  <data name="display_name_invalid" xml:space="preserve">
+    <value>Et visningsnavn er 1 til 50 tegn, med minst én bokstav eller ett siffer og uten kontroll- eller formateringstegn.</value>
+  </data>
+  <data name="sex_invalid" xml:space="preserve">
+    <value>Velg kjønnet ditt.</value>
+  </data>
+  <data name="accepted_sexes_invalid" xml:space="preserve">
+    <value>Velg minst ett kjønn du godtar hos en partner.</value>
+  </data>
+  <data name="rope_scale_invalid" xml:space="preserve">
+    <value>Velg norsk eller fransk som graderingsskala.</value>
+  </data>
+  <data name="discipline_variant_invalid" xml:space="preserve">
+    <value>Velg en disiplin og hvor du klatrer den.</value>
+  </data>
+  <data name="discipline_variant_duplicate" xml:space="preserve">
+    <value>Hver disiplin og hvert sted kan bare være med én gang.</value>
+  </data>
+  <data name="grade_invalid" xml:space="preserve">
+    <value>Velg en grad fra skalaen til denne disiplinen.</value>
+  </data>
+  <data name="grade_range_invalid" xml:space="preserve">
+    <value>Den laveste graden i et intervall kan ikke være vanskeligere enn den høyeste.</value>
+  </data>
+  <data name="certification_invalid" xml:space="preserve">
+    <value>Velg hvilket brattkort du har.</value>
+  </data>
+  <data name="own_gear_required" xml:space="preserve">
+    <value>Oppgi om du har eget utstyr.</value>
+  </data>
+  <data name="travel_distance_invalid" xml:space="preserve">
+    <value>Maksimal reiseavstand er 1 til 100 km.</value>
+  </data>
+  <data name="window_invalid" xml:space="preserve">
+    <value>Et tidsrom trenger en ukedag og hele timer, og det må slutte senere samme dag enn det starter.</value>
+  </data>
+  <data name="windows_overlap" xml:space="preserve">
+    <value>Tidsrom på samme dag kan ikke overlappe.</value>
+  </data>
+  <data name="windows_required" xml:space="preserve">
+    <value>Legg til minst ett tidsrom da du kan klatre.</value>
+  </data>
+  <data name="gym_unknown" xml:space="preserve">
+    <value>Denne klatrehallen finnes ikke i listen.</value>
+  </data>
+  <data name="gym_inactive" xml:space="preserve">
+    <value>Denne klatrehallen kan ikke velges lenger.</value>
+  </data>
 </root>

@@ -22,7 +22,7 @@ Rationale lives in decisions.md, not here.
 
 - S1. A climber can register with Google, Facebook or Apple SSO, or with an email address.
 - S2. An account whose email address is not confirmed cannot send or receive invites.
-- S3. A profile holds: display name; own sex; accepted partner sexes (default: any); per discipline variant: own grade range and acceptable partner grade range (grade ranges may be shared across the indoor and outdoor variants of one discipline); belay certification (none / Brattkort topptau / Brattkort led); own gear (yes/no); home area (postcode, S15); maximum travel distance in km; optional list of home gyms; one or more availability windows; optional profile photo (S55).
+- S3. A profile holds: display name (trimmed and in Unicode NFC: 1 to 50 code points, at least one letter or digit, and no control or format characters); own sex (female, male or other); accepted partner sexes (one or more of those; default: any); per discipline variant: own grade range and acceptable partner grade range (grade ranges may be shared across the indoor and outdoor variants of one discipline); belay certification (none / Brattkort topptau / Brattkort led); own gear (yes/no); home area (postcode, S15); maximum travel distance in km (1 to 100); optional list of home gyms; one or more availability windows; optional profile photo (S55).
 - S4. Climber B appears in climber A's suggestion list if and only if all of the following hold:
   - S4.1 The distance between their home areas is at most the smaller of A's and B's maximum travel distances.
   - S4.2 B's sex is in A's accepted set, and A's sex is in B's accepted set.
@@ -100,7 +100,7 @@ Rationale lives in decisions.md, not here.
   - S60.3 Shared active home gym: yes before no.
   - S60.4 Distance per S16, not rounded. Ascending.
   - S60.5 Most recent last activity, descending; then account ID, ascending.
-- S61. A climber's availability windows on the same weekday may not overlap, and each window ends later on the same day than it starts. Saving a window that violates this is rejected.
+- S61. Availability windows are in whole hours: a window starts at an hour from 00 to 23 and ends at an hour from 01 to 24 on the same weekday, later than it starts. A climber's windows on the same weekday may not overlap; windows that only touch (one ends when the next starts) do not overlap. Saving a window that violates this is rejected.
 - S62. A climber can request a data export in the app. The export is generated as one JSON file and can be downloaded for 7 days after generation. The climber receives an in-app notification when it is ready.
 - S63. The export contains: profile including email and date of birth; preferences, availability windows and home gyms; invites sent and received, with the counterpart's display name, dates and states; connections; all messages the climber wrote, with timestamps; the safety-notice acknowledgement (S23); deletion requests.
 - S64. The export does not contain messages written by other climbers, reports about the climber, or report attachments.

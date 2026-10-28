@@ -1,5 +1,6 @@
 using ClimbOn.Infrastructure.Persistence.Accounts;
 using ClimbOn.Infrastructure.Persistence.Outbox;
+using ClimbOn.Infrastructure.Persistence.Profiles;
 using ClimbOn.Infrastructure.Persistence.Sessions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -26,6 +27,16 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
     public DbSet<OutboxRow> Outbox => Set<OutboxRow>();
 
     public DbSet<SessionRow> Sessions => Set<SessionRow>();
+
+    public DbSet<GymRow> Gyms => Set<GymRow>();
+
+    public DbSet<ProfileRow> Profiles => Set<ProfileRow>();
+
+    public DbSet<DisciplineVariantRow> DisciplineVariants => Set<DisciplineVariantRow>();
+
+    public DbSet<AvailabilityWindowRow> AvailabilityWindows => Set<AvailabilityWindowRow>();
+
+    public DbSet<HomeGymRow> HomeGyms => Set<HomeGymRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -144,6 +155,109 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             session.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.AccountId)
                 .HasConstraintName("fk_sessions_accounts").OnDelete(DeleteBehavior.Cascade);
             session.HasIndex(row => row.AccountId).HasDatabaseName("ix_sessions_account_id");
+        });
+
+        modelBuilder.Entity<GymRow>(gym =>
+        {
+            gym.ToTable("gyms", table =>
+                table.HasCheckConstraint("ck_gyms_postcode", "postcode ~ '^[0-9]{4}$'"));
+            gym.HasKey(row => row.Id).HasName("pk_gyms");
+            gym.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
+            gym.Property(row => row.Name).HasColumnName("name");
+            gym.Property(row => row.Address).HasColumnName("address");
+            gym.Property(row => row.Postcode).HasColumnName("postcode").HasMaxLength(4);
+            gym.Property(row => row.Active).HasColumnName("active");
+        });
+
+        modelBuilder.Entity<ProfileRow>(profile =>
+        {
+            profile.ToTable("profiles", table =>
+            {
+                table.HasCheckConstraint("ck_profiles_sex", "sex IN ('female', 'male', 'other')");
+                table.HasCheckConstraint(
+                    "ck_profiles_accepted_sexes",
+                    "cardinality(accepted_sexes) >= 1 AND accepted_sexes <@ ARRAY['female', 'male', 'other']::text[]");
+                table.HasCheckConstraint("ck_profiles_rope_scale", "rope_scale IN ('norwegian', 'french')");
+                table.HasCheckConstraint(
+                    "ck_profiles_certification", "certification IN ('none', 'brattkort-topptau', 'brattkort-led')");
+                table.HasCheckConstraint("ck_profiles_postcode", "postcode ~ '^[0-9]{4}$'");
+                table.HasCheckConstraint("ck_profiles_max_travel_km", "max_travel_km BETWEEN 1 AND 100");
+            });
+            profile.HasKey(row => row.AccountId).HasName("pk_profiles");
+            profile.Property(row => row.AccountId).HasColumnName("account_id");
+            profile.Property(row => row.DisplayName).HasColumnName("display_name");
+            profile.Property(row => row.Sex).HasColumnName("sex").HasMaxLength(8);
+            profile.Property(row => row.AcceptedSexes).HasColumnName("accepted_sexes");
+            profile.Property(row => row.RopeScale).HasColumnName("rope_scale").HasMaxLength(16);
+            profile.Property(row => row.Certification).HasColumnName("certification").HasMaxLength(32);
+            profile.Property(row => row.OwnGear).HasColumnName("own_gear");
+            profile.Property(row => row.Postcode).HasColumnName("postcode").HasMaxLength(4);
+            profile.Property(row => row.MaxTravelKm).HasColumnName("max_travel_km");
+            profile.HasOne<AccountRow>().WithOne().HasForeignKey<ProfileRow>(row => row.AccountId)
+                .HasConstraintName("fk_profiles_accounts").OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DisciplineVariantRow>(variant =>
+        {
+            variant.ToTable("discipline_variants", table =>
+            {
+                table.HasCheckConstraint(
+                    "ck_discipline_variants_variant",
+                    "variant IN ('bouldering-indoor', 'bouldering-outdoor', 'top-rope-indoor', 'top-rope-outdoor', "
+                    + "'lead-indoor', 'lead-outdoor', 'multipitch-outdoor', 'ice-outdoor')");
+                table.HasCheckConstraint("ck_discipline_variants_scale", "scale IN ('norwegian', 'french', 'font', 'water-ice')");
+                table.HasCheckConstraint("ck_discipline_variants_own", "own_lowest_position <= own_highest_position");
+                table.HasCheckConstraint("ck_discipline_variants_partner", "partner_lowest_position <= partner_highest_position");
+            });
+            variant.HasKey(row => new { row.AccountId, row.Variant }).HasName("pk_discipline_variants");
+            variant.Property(row => row.AccountId).HasColumnName("account_id");
+            variant.Property(row => row.Variant).HasColumnName("variant").HasMaxLength(32);
+            variant.Property(row => row.Shared).HasColumnName("shared");
+            variant.Property(row => row.Scale).HasColumnName("scale").HasMaxLength(16);
+            variant.Property(row => row.OwnLowest).HasColumnName("own_lowest").HasMaxLength(8);
+            variant.Property(row => row.OwnLowestPosition).HasColumnName("own_lowest_position");
+            variant.Property(row => row.OwnHighest).HasColumnName("own_highest").HasMaxLength(8);
+            variant.Property(row => row.OwnHighestPosition).HasColumnName("own_highest_position");
+            variant.Property(row => row.PartnerLowest).HasColumnName("partner_lowest").HasMaxLength(8);
+            variant.Property(row => row.PartnerLowestPosition).HasColumnName("partner_lowest_position");
+            variant.Property(row => row.PartnerHighest).HasColumnName("partner_highest").HasMaxLength(8);
+            variant.Property(row => row.PartnerHighestPosition).HasColumnName("partner_highest_position");
+            variant.HasOne<ProfileRow>().WithMany().HasForeignKey(row => row.AccountId)
+                .HasConstraintName("fk_discipline_variants_profiles").OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AvailabilityWindowRow>(window =>
+        {
+            window.ToTable("availability_windows", table =>
+            {
+                table.HasCheckConstraint(
+                    "ck_availability_windows_day",
+                    "day IN ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')");
+                table.HasCheckConstraint(
+                    "ck_availability_windows_hours", "0 <= start_hour AND start_hour < end_hour AND end_hour <= 24");
+            });
+            window.HasKey(row => new { row.AccountId, row.Day, row.StartHour }).HasName("pk_availability_windows");
+            window.Property(row => row.AccountId).HasColumnName("account_id");
+            window.Property(row => row.Day).HasColumnName("day").HasMaxLength(9);
+            window.Property(row => row.StartHour).HasColumnName("start_hour");
+            window.Property(row => row.EndHour).HasColumnName("end_hour");
+            window.HasOne<ProfileRow>().WithMany().HasForeignKey(row => row.AccountId)
+                .HasConstraintName("fk_availability_windows_profiles").OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<HomeGymRow>(home =>
+        {
+            home.ToTable("home_gyms", table =>
+                table.HasCheckConstraint("ck_home_gyms_position", "position >= 0"));
+            home.HasKey(row => new { row.AccountId, row.GymId }).HasName("pk_home_gyms");
+            home.Property(row => row.AccountId).HasColumnName("account_id");
+            home.Property(row => row.GymId).HasColumnName("gym_id");
+            home.Property(row => row.Position).HasColumnName("position");
+            home.HasOne<ProfileRow>().WithMany().HasForeignKey(row => row.AccountId)
+                .HasConstraintName("fk_home_gyms_profiles").OnDelete(DeleteBehavior.Cascade);
+            home.HasOne<GymRow>().WithMany().HasForeignKey(row => row.GymId)
+                .HasConstraintName("fk_home_gyms_gyms").OnDelete(DeleteBehavior.Restrict);
+            home.HasIndex(row => row.GymId).HasDatabaseName("ix_home_gyms_gym_id");
         });
     }
 

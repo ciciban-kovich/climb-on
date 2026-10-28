@@ -101,4 +101,52 @@ If it was you, you can log in here:
 
 If it was not you, you can ignore this email. Your account has not been changed.</value>
   </data>
+  <data name="display_name_invalid" xml:space="preserve">
+    <value>A display name is 1 to 50 characters, with at least one letter or digit and no control or formatting characters.</value>
+  </data>
+  <data name="sex_invalid" xml:space="preserve">
+    <value>Choose your sex.</value>
+  </data>
+  <data name="accepted_sexes_invalid" xml:space="preserve">
+    <value>Choose at least one partner sex you accept.</value>
+  </data>
+  <data name="rope_scale_invalid" xml:space="preserve">
+    <value>Choose Norwegian or French as your grade scale.</value>
+  </data>
+  <data name="discipline_variant_invalid" xml:space="preserve">
+    <value>Choose a discipline and where you climb it.</value>
+  </data>
+  <data name="discipline_variant_duplicate" xml:space="preserve">
+    <value>Each discipline and venue can be listed only once.</value>
+  </data>
+  <data name="grade_invalid" xml:space="preserve">
+    <value>Choose a grade from the scale of this discipline.</value>
+  </data>
+  <data name="grade_range_invalid" xml:space="preserve">
+    <value>The lowest grade of a range cannot be harder than the highest.</value>
+  </data>
+  <data name="certification_invalid" xml:space="preserve">
+    <value>Choose your belay certification.</value>
+  </data>
+  <data name="own_gear_required" xml:space="preserve">
+    <value>Say whether you have your own gear.</value>
+  </data>
+  <data name="travel_distance_invalid" xml:space="preserve">
+    <value>The maximum travel distance is 1 to 100 km.</value>
+  </data>
+  <data name="window_invalid" xml:space="preserve">
+    <value>A time slot needs a weekday and whole hours, and it must end later the same day than it starts.</value>
+  </data>
+  <data name="windows_overlap" xml:space="preserve">
+    <value>Time slots on the same day cannot overlap.</value>
+  </data>
+  <data name="windows_required" xml:space="preserve">
+    <value>Add at least one time slot when you can climb.</value>
+  </data>
+  <data name="gym_unknown" xml:space="preserve">
+    <value>This climbing gym is not in the list.</value>
+  </data>
+  <data name="gym_inactive" xml:space="preserve">
+    <value>This climbing gym can no longer be chosen.</value>
+  </data>
 </root>

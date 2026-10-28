@@ -445,10 +445,208 @@
           }
         }
       }
+    },
+    "/api/climber/profile": {
+      "get": {
+        "tags": [
+          "Profile"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Profile"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "DisciplineEntryRequest": {
+        "required": [
+          "discipline",
+          "venues",
+          "own",
+          "partner"
+        ],
+        "type": "object",
+        "properties": {
+          "discipline": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "venues": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "own": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GradeRangeRequest"
+              }
+            ]
+          },
+          "partner": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GradeRangeRequest"
+              }
+            ]
+          }
+        }
+      },
+      "DisciplineEntryResponse": {
+        "required": [
+          "discipline",
+          "venues",
+          "own",
+          "partner"
+        ],
+        "type": "object",
+        "properties": {
+          "discipline": {
+            "type": "string"
+          },
+          "venues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "own": {
+            "$ref": "#/components/schemas/GradeRangeResponse"
+          },
+          "partner": {
+            "$ref": "#/components/schemas/GradeRangeResponse"
+          }
+        }
+      },
       "EmailConfirmationRequest": {
         "required": [
           "token"
@@ -474,6 +672,42 @@
             "type": "string"
           },
           "message": {
+            "type": "string"
+          }
+        }
+      },
+      "GradeRangeRequest": {
+        "required": [
+          "lowest",
+          "highest"
+        ],
+        "type": "object",
+        "properties": {
+          "lowest": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "highest": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "GradeRangeResponse": {
+        "required": [
+          "lowest",
+          "highest"
+        ],
+        "type": "object",
+        "properties": {
+          "lowest": {
+            "type": "string"
+          },
+          "highest": {
             "type": "string"
           }
         }
@@ -576,6 +810,175 @@
           }
         }
       },
+      "ProfileRequest": {
+        "required": [
+          "displayName",
+          "sex",
+          "acceptedSexes",
+          "ropeScale",
+          "disciplines",
+          "certification",
+          "ownGear",
+          "postcode",
+          "maxTravelKm",
+          "homeGyms",
+          "windows"
+        ],
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sex": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "acceptedSexes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "ropeScale": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "disciplines": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/DisciplineEntryRequest"
+            }
+          },
+          "certification": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ownGear": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "postcode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "maxTravelKm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "homeGyms": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "windows": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/WindowRequest"
+            }
+          }
+        }
+      },
+      "ProfileResponse": {
+        "required": [
+          "displayName",
+          "sex",
+          "acceptedSexes",
+          "ropeScale",
+          "disciplines",
+          "certification",
+          "ownGear",
+          "postcode",
+          "maxTravelKm",
+          "homeGyms",
+          "windows"
+        ],
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string"
+          },
+          "sex": {
+            "type": "string"
+          },
+          "acceptedSexes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ropeScale": {
+            "type": "string"
+          },
+          "disciplines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DisciplineEntryResponse"
+            }
+          },
+          "certification": {
+            "type": "string"
+          },
+          "ownGear": {
+            "type": "boolean"
+          },
+          "postcode": {
+            "type": "string"
+          },
+          "maxTravelKm": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "homeGyms": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "windows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WindowResponse"
+            }
+          }
+        }
+      },
       "RegistrationRequest": {
         "required": [
           "email",
@@ -642,6 +1045,69 @@
             "type": "string"
           }
         }
+      },
+      "WindowRequest": {
+        "required": [
+          "day",
+          "start",
+          "end"
+        ],
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "start": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "end": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "WindowResponse": {
+        "required": [
+          "day",
+          "start",
+          "end"
+        ],
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string"
+          },
+          "start": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "end": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       }
     }
   },
@@ -651,6 +1117,9 @@
     },
     {
       "name": "Sessions"
+    },
+    {
+      "name": "Profile"
     }
   ]
 }

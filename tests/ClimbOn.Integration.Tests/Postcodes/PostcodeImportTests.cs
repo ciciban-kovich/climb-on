@@ -94,7 +94,7 @@ public sealed class PostcodeImportTests(ApiFactory factory) : IntegrationTest(fa
     }
 
     [Fact]
-    [Trait("SpecPartial", "S102.2")]
+    [Trait("Spec", "S102.2")]
     [Trait("SpecPartial", "S102.3")]
     public async Task Retired_postcode_cannot_be_chosen_and_keeps_its_point()
     {

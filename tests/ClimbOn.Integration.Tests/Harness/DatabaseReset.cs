@@ -7,7 +7,7 @@ namespace ClimbOn.Integration.Tests.Harness;
 public static class DatabaseReset
 {
     // Reference data loaded by migrations or fixtures and kept across tests.
-    public static readonly IReadOnlyList<string> ReferenceTables = ["postcodes", "legal_documents"];
+    public static readonly IReadOnlyList<string> ReferenceTables = ["postcodes", "legal_documents", "gyms"];
 
     private const string MigrationsHistory = "__EFMigrationsHistory";
 
