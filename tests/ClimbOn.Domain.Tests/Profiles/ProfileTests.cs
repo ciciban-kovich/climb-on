@@ -260,6 +260,14 @@ public sealed class ProfileTests
     public void Display_name_without_a_letter_or_digit_is_rejected(string name) =>
         AssertRejected(Profile.DisplayNameInvalidCode, Valid with { DisplayName = name });
 
+    [Theory]
+    [InlineData("\u202Enimda")] // right-to-left override
+    [InlineData("Kari\u200B")] // zero-width space
+    [InlineData("Ka\u00ADri")] // soft hyphen
+    [InlineData("Kari\u2066")] // left-to-right isolate
+    public void Display_name_with_a_format_character_is_rejected(string name) =>
+        AssertRejected(Profile.DisplayNameInvalidCode, Valid with { DisplayName = name });
+
     [Fact]
     public void Display_name_that_is_not_valid_text_is_rejected() =>
         AssertRejected(Profile.DisplayNameInvalidCode, Valid with { DisplayName = "\uD800kari" });

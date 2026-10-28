@@ -102,7 +102,7 @@ Hvis det var deg, kan du logge inn her:
 Hvis det ikke var deg, kan du se bort fra denne e-posten. Kontoen din er ikke endret.</value>
   </data>
   <data name="display_name_invalid" xml:space="preserve">
-    <value>Et visningsnavn er 1 til 50 tegn.</value>
+    <value>Et visningsnavn er 1 til 50 tegn, med minst én bokstav eller ett siffer og uten kontroll- eller formateringstegn.</value>
   </data>
   <data name="sex_invalid" xml:space="preserve">
     <value>Velg kjønnet ditt.</value>

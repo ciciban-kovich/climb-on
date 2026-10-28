@@ -152,11 +152,15 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         };
 
         using var saved = await PutAsync(token, request);
+        using var read = await GetAsync(token);
 
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
         var profile = (await saved.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!;
         Assert.Equal(scale, profile.RopeScale);
         Assert.All(profile.Disciplines, entry => Assert.Equal(new GradeRangeResponse(lowest, highest), entry.Own));
+
+        // Two disciplines with shared ranges come back as two entries, not one.
+        AssertProfile(Expected(request), await read.Content.ReadFromJsonAsync<ProfileResponse>(Ct));
     }
 
     [Theory]
@@ -220,13 +224,14 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         }
     }
 
-    // Positions: Font 6A+ is 6 and 7B is 13; Norwegian 7- is row 10, 8 row 15; French 6b+ row 11, 7b row 16; WI4 is 4.
+    // Positions: Font 6A+ is 6 and 7B is 13; Norwegian 7- is row 10, 8 row 15; French 6b+ row 11, 7b row 16; WI3 is 2, WI4 4.
+    // The partner range is the highest grade alone, so own and partner positions cannot be swapped unseen.
     [Theory]
     [Trait("Spec", "S13.3")]
     [InlineData("norwegian", "lead", "7-", 10, "8", 15)]
     [InlineData("french", "lead", "6b+", 11, "7b", 16)]
     [InlineData("norwegian", "bouldering", "6A+", 6, "7B", 13)]
-    [InlineData("norwegian", "ice", "WI4", 4, "WI4", 4)]
+    [InlineData("norwegian", "ice", "WI3", 2, "WI4", 4)]
     public async Task Grades_are_stored_as_entered_and_as_internal_positions(
         string scale, string discipline, string lowest, int lowestPosition, string highest, int highestPosition)
     {
@@ -236,14 +241,14 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         var request = Factory.Data.Profile(account) with
         {
             RopeScale = scale,
-            Disciplines = [new DisciplineEntryRequest(discipline, [venue], range, range)],
+            Disciplines = [new DisciplineEntryRequest(discipline, [venue], range, new GradeRangeRequest(highest, highest))],
         };
 
         using var saved = await PutAsync(token, request);
 
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
         Assert.Equal(
-            [$"{lowest}:{lowestPosition}:{highest}:{highestPosition}:{lowest}:{lowestPosition}:{highest}:{highestPosition}"],
+            [$"{lowest}:{lowestPosition}:{highest}:{highestPosition}:{highest}:{highestPosition}:{highest}:{highestPosition}"],
             await VariantColumnAsync(
                 account,
                 "own_lowest || ':' || own_lowest_position || ':' || own_highest || ':' || own_highest_position || ':' || "
@@ -515,6 +520,7 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         { "display-name-control", Profile.DisplayNameInvalidCode },
         { "display-name-invisible", Profile.DisplayNameInvalidCode },
         { "display-name-accents-51", Profile.DisplayNameInvalidCode },
+        { "display-name-bidi-override", Profile.DisplayNameInvalidCode },
         { "sex-missing", Profile.SexInvalidCode },
         { "sex-unknown", Profile.SexInvalidCode },
         { "accepted-sexes-empty", Profile.AcceptedSexesInvalidCode },
@@ -551,6 +557,7 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
             "display-name-control" => valid with { DisplayName = "Klatrer\u0007" },
             "display-name-invisible" => valid with { DisplayName = "\u200B" },
             "display-name-accents-51" => valid with { DisplayName = "k" + new string('\u0301', 51) },
+            "display-name-bidi-override" => valid with { DisplayName = "\u202Enimda" },
             "sex-missing" => valid with { Sex = null },
             "sex-unknown" => valid with { Sex = "kvinne" },
             "accepted-sexes-empty" => valid with { AcceptedSexes = [] },

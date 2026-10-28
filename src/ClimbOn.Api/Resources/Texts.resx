@@ -102,7 +102,7 @@ If it was you, you can log in here:
 If it was not you, you can ignore this email. Your account has not been changed.</value>
   </data>
   <data name="display_name_invalid" xml:space="preserve">
-    <value>A display name is 1 to 50 characters.</value>
+    <value>A display name is 1 to 50 characters, with at least one letter or digit and no control or formatting characters.</value>
   </data>
   <data name="sex_invalid" xml:space="preserve">
     <value>Choose your sex.</value>

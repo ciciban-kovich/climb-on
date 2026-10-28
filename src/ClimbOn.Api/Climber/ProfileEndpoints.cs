@@ -8,8 +8,8 @@ namespace ClimbOn.Api.Climber;
 
 // Values are lower-case names with hyphens: sexes female, male, other; rope scales norwegian, french;
 // disciplines bouldering, top-rope, lead, multipitch, ice; venues indoor, outdoor; certifications none,
-// brattkort-topptau, brattkort-led; days monday to sunday. Grades are on the rope scale for top-rope, lead
-// and multipitch, on Font for bouldering and on WI for ice. Window hours are whole, 0 to 24.
+// brattkort-topptau, brattkort-led; days monday to sunday. Grade scales as in S13.1 and S13.2; window hours
+// as in S61.
 public sealed record ProfileRequest(
     string? DisplayName,
     string? Sex,
@@ -60,6 +60,7 @@ public static class ProfileEndpoints
     public static IEndpointRouteBuilder MapProfileEndpoints(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet(Route, GetAsync)
+            .Produces<ErrorBody>(StatusCodes.Status404NotFound)
             .RequireClimberSession()
             .WithTags(Tag);
         endpoints.MapPut(Route, SaveAsync)

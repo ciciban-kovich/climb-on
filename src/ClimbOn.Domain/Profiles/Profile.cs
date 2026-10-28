@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using ClimbOn.Domain.Errors;
 using ClimbOn.Domain.Grades;
@@ -170,7 +171,8 @@ public sealed class Profile
         var family => GradeScales.For(family).Single(),
     };
 
-    // In NFC and trimmed: 1 to 50 code points, at least one of them a letter or digit, none a control character.
+    // S3: in NFC and trimmed, 1 to 50 code points, at least one of them a letter or digit, none a control or
+    // format character.
     private static string EnsureDisplayName(string? value)
     {
         string? name;
@@ -187,7 +189,7 @@ public sealed class Profile
         if (name is null
             || name.EnumerateRunes().Count() is < 1 or > MaximumDisplayNameLength
             || !name.EnumerateRunes().Any(Rune.IsLetterOrDigit)
-            || name.Any(char.IsControl))
+            || name.EnumerateRunes().Any(rune => Rune.GetUnicodeCategory(rune) is UnicodeCategory.Control or UnicodeCategory.Format))
         {
             throw new DomainError(DisplayNameInvalidCode);
         }
