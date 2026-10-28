@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text;
 using ClimbOn.Domain.Errors;
 using ClimbOn.Domain.Grades;
@@ -109,7 +108,7 @@ public sealed class Profile
     // S13.1: the climber's rope scale; every rope grade in the profile is on it.
     public GradeScale RopeScale { get; }
 
-    // Each variant at most once.
+    // Each variant at most once, in variant order.
     public IReadOnlyList<DisciplineEntry> Disciplines { get; }
 
     public BelayCertification Certification { get; }
@@ -171,12 +170,23 @@ public sealed class Profile
         var family => GradeScales.For(family).Single(),
     };
 
-    // 1 to 50 characters (text elements) after trimming, none of them a control character.
+    // In NFC and trimmed: 1 to 50 code points, at least one of them a letter or digit, none a control character.
     private static string EnsureDisplayName(string? value)
     {
-        var name = value?.Trim();
+        string? name;
+        try
+        {
+            name = value?.Normalize(NormalizationForm.FormC).Trim();
+        }
+        catch (ArgumentException)
+        {
+            // Not valid UTF-16: a lone surrogate.
+            name = null;
+        }
+
         if (name is null
-            || new StringInfo(name).LengthInTextElements is < 1 or > MaximumDisplayNameLength
+            || name.EnumerateRunes().Count() is < 1 or > MaximumDisplayNameLength
+            || !name.EnumerateRunes().Any(Rune.IsLetterOrDigit)
             || name.Any(char.IsControl))
         {
             throw new DomainError(DisplayNameInvalidCode);
@@ -234,7 +244,8 @@ public sealed class Profile
                 discipline, venues.Order().ToList(), EnsureRange(draft.Own, scale), EnsureRange(draft.Partner, scale)));
         }
 
-        return entries;
+        // In variant order, as the store reads them back.
+        return [.. entries.OrderBy(entry => entry.Variants.First())];
     }
 
     private static GradeRange EnsureRange(GradeRangeDraft? draft, GradeScale scale)

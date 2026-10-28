@@ -236,12 +236,41 @@ public sealed class ProfileTests
     public void Display_name_is_trimmed(string written, string stored) =>
         Assert.Equal(stored, Profile.Create(Valid with { DisplayName = written }).DisplayName);
 
-    // Counted in characters as the climber sees them: 50 letters with a combining accent each are 100 chars.
+    // Counted in code points after NFC, which is also the stored form: e and a combining accent become one (U+00E9).
     [Fact]
-    public void Display_name_of_50_characters_is_accepted()
+    public void Display_name_of_50_code_points_is_accepted()
     {
         Assert.Equal(50, Profile.Create(Valid with { DisplayName = new string('k', 50) }).DisplayName.Length);
-        Assert.Equal(100, Profile.Create(Valid with { DisplayName = string.Concat(Enumerable.Repeat("é", 50)) }).DisplayName.Length);
+        Assert.Equal(
+            new string('\u00E9', 50),
+            Profile.Create(Valid with { DisplayName = string.Concat(Enumerable.Repeat("e\u0301", 50)) }).DisplayName);
+    }
+
+    [Theory]
+    [InlineData("k\u0301\u0301")]
+    [InlineData("4")]
+    [InlineData("Kari \uD83D\uDE00")]
+    public void Display_name_with_a_letter_or_digit_is_accepted(string name) =>
+        Assert.Equal(name.Normalize(), Profile.Create(Valid with { DisplayName = name }).DisplayName);
+
+    [Theory]
+    [InlineData("\u200B")] // zero-width space
+    [InlineData("- -")]
+    [InlineData("\uD83D\uDE00")] // an emoji alone
+    public void Display_name_without_a_letter_or_digit_is_rejected(string name) =>
+        AssertRejected(Profile.DisplayNameInvalidCode, Valid with { DisplayName = name });
+
+    [Fact]
+    public void Display_name_that_is_not_valid_text_is_rejected() =>
+        AssertRejected(Profile.DisplayNameInvalidCode, Valid with { DisplayName = "\uD800kari" });
+
+    [Fact]
+    public void Display_name_over_50_code_points_is_rejected_however_few_characters_it_shows()
+    {
+        AssertRejected(Profile.DisplayNameInvalidCode, Valid with { DisplayName = new string('k', 51) });
+        AssertRejected(
+            Profile.DisplayNameInvalidCode,
+            Valid with { DisplayName = string.Concat(Enumerable.Repeat("a" + new string('\u0301', 40), 2)) });
     }
 
     [Theory]

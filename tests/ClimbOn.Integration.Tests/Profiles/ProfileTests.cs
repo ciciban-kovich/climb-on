@@ -110,6 +110,32 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(["shared", "shared", "alone", "alone"], await VariantColumnAsync(account, "CASE WHEN shared THEN 'shared' ELSE 'alone' END"));
     }
 
+    [Fact]
+    [Trait("SpecPartial", "S3")]
+    public async Task Entries_come_back_in_one_order_from_save_and_read()
+    {
+        var (account, token) = await RegisterAndLogInAsync();
+        var request = Factory.Data.Profile(account) with
+        {
+            Disciplines =
+            [
+                new DisciplineEntryRequest("ice", ["outdoor"], Ice, Ice),
+                new DisciplineEntryRequest("lead", ["outdoor", "indoor"], new GradeRangeRequest("6", "7"), new GradeRangeRequest("6", "7")),
+                new DisciplineEntryRequest("bouldering", ["outdoor"], new GradeRangeRequest("5", "6A"), new GradeRangeRequest("5", "6A")),
+            ],
+        };
+
+        using var saved = await PutAsync(token, request);
+        using var read = await GetAsync(token);
+
+        string[] expected = ["bouldering outdoor", "lead indoor+outdoor", "ice outdoor"];
+        Assert.Equal(expected, Order(await saved.Content.ReadFromJsonAsync<ProfileResponse>(Ct)));
+        Assert.Equal(expected, Order(await read.Content.ReadFromJsonAsync<ProfileResponse>(Ct)));
+
+        static IEnumerable<string> Order(ProfileResponse? profile) =>
+            profile!.Disciplines.Select(entry => $"{entry.Discipline} {string.Join('+', entry.Venues)}");
+    }
+
     [Theory]
     [Trait("Spec", "S13.1")]
     [InlineData("norwegian", "6+", "7+")]
@@ -487,6 +513,8 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         { "display-name-blank", Profile.DisplayNameInvalidCode },
         { "display-name-51", Profile.DisplayNameInvalidCode },
         { "display-name-control", Profile.DisplayNameInvalidCode },
+        { "display-name-invisible", Profile.DisplayNameInvalidCode },
+        { "display-name-accents-51", Profile.DisplayNameInvalidCode },
         { "sex-missing", Profile.SexInvalidCode },
         { "sex-unknown", Profile.SexInvalidCode },
         { "accepted-sexes-empty", Profile.AcceptedSexesInvalidCode },
@@ -521,6 +549,8 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
             "display-name-blank" => valid with { DisplayName = "   " },
             "display-name-51" => valid with { DisplayName = new string('k', 51) },
             "display-name-control" => valid with { DisplayName = "Klatrer\u0007" },
+            "display-name-invisible" => valid with { DisplayName = "\u200B" },
+            "display-name-accents-51" => valid with { DisplayName = "k" + new string('\u0301', 51) },
             "sex-missing" => valid with { Sex = null },
             "sex-unknown" => valid with { Sex = "kvinne" },
             "accepted-sexes-empty" => valid with { AcceptedSexes = [] },
@@ -639,13 +669,16 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
     private static DisciplineEntryRequest Rope(string discipline, params string[] venues) =>
         new(discipline, venues, new GradeRangeRequest("6", "7"), new GradeRangeRequest("6", "7"));
 
-    // The response a valid request is saved as: sexes, venues and windows in order, gyms once each.
+    // The response a valid request is saved as: sexes, venues, entries (by first variant) and windows in order,
+    // gyms once each.
     private static ProfileResponse Expected(ProfileRequest request) => new(
         request.DisplayName!.Trim(),
         request.Sex!,
         request.AcceptedSexes is null ? ["female", "male", "other"] : [.. request.AcceptedSexes.Distinct().Order(StringComparer.Ordinal).Select(sex => sex!)],
         request.RopeScale!,
-        [.. request.Disciplines!.Select(entry => new DisciplineEntryResponse(
+        [.. request.Disciplines!.OrderBy(entry => DisciplineVariants.Of(
+                WireNames.Parse<Discipline>(entry!.Discipline)!.Value,
+                entry.Venues!.Select(venue => WireNames.Parse<Venue>(venue)!.Value).Min())).Select(entry => new DisciplineEntryResponse(
             entry!.Discipline!,
             [.. entry.Venues!.Order(StringComparer.Ordinal).Select(venue => venue!)],
             new GradeRangeResponse(entry.Own!.Lowest!, entry.Own.Highest!),
@@ -658,7 +691,7 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         [.. request.Windows!.Select(window => new WindowResponse(window!.Day!, window.Start!.Value, window.End!.Value))
             .OrderBy(window => Enum.Parse<DayOfWeek>(window.Day, ignoreCase: true)).ThenBy(window => window.Start)]);
 
-    // Records hold lists, which compare by reference; this compares them by content, entries in any order.
+    // Records hold lists, which compare by reference; this compares them by content.
     private static void AssertProfile(ProfileResponse expected, ProfileResponse? actual)
     {
         Assert.NotNull(actual);
@@ -672,7 +705,7 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
     }
 
     private static List<string> Describe(IEnumerable<DisciplineEntryResponse> entries) =>
-        [.. entries.Select(entry => $"{entry.Discipline} {string.Join('+', entry.Venues)} {entry.Own} {entry.Partner}").Order(StringComparer.Ordinal)];
+        [.. entries.Select(entry => $"{entry.Discipline} {string.Join('+', entry.Venues)} {entry.Own} {entry.Partner}")];
 
     private HttpClient Client() => Factory.CreateClient(new WebApplicationFactoryClientOptions
     {
