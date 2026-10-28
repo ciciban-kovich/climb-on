@@ -56,6 +56,20 @@ public static class RopeConversionTable
         return null;
     }
 
+    // The last row a grade appears in; PositionOf gives the first.
+    public static int? LastPositionOf(GradeScale scale, string grade)
+    {
+        for (var position = Rows.Length - 1; position >= 0; position--)
+        {
+            if (Cell(scale, position) == grade)
+            {
+                return position;
+            }
+        }
+
+        return null;
+    }
+
     public static string GradeAt(GradeScale scale, int position)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(position);

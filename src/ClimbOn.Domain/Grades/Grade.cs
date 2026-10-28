@@ -5,11 +5,12 @@ namespace ClimbOn.Domain.Grades;
 // S13.3: a grade as entered plus its position on the internal scale of its family.
 public sealed record Grade
 {
-    private Grade(GradeScale scale, string entered, int position)
+    private Grade(GradeScale scale, string entered, int position, int lastPosition)
     {
         Scale = scale;
         Entered = entered;
         Position = position;
+        LastPosition = lastPosition;
     }
 
     public GradeScale Scale { get; }
@@ -17,6 +18,10 @@ public sealed record Grade
     public string Entered { get; }
 
     public int Position { get; }
+
+    // The last position the grade spans: above Position for a rope grade in several table rows (Norwegian 7- is
+    // French 6b and 6b+).
+    public int LastPosition { get; }
 
     public GradeFamily Family => Scale.Family();
 
@@ -26,12 +31,12 @@ public sealed record Grade
     public static bool TryCreate(GradeScale scale, string? entered, [NotNullWhen(true)] out Grade? grade)
     {
         grade = null;
-        if (entered is null || !Enum.IsDefined(scale) || GradeScales.PositionOf(scale, entered) is not { } position)
+        if (entered is null || !Enum.IsDefined(scale) || GradeScales.PositionsOf(scale, entered) is not { } positions)
         {
             return false;
         }
 
-        grade = new Grade(scale, entered, position);
+        grade = new Grade(scale, entered, positions.First, positions.Last);
         return true;
     }
 

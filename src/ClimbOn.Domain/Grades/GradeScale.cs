@@ -60,6 +60,19 @@ public static class GradeScales
         _ => throw new ArgumentOutOfRangeException(nameof(scale), scale, null),
     };
 
+    // The rows a grade spans on the internal scale: one, except for a rope grade the table lists in several.
+    internal static (int First, int Last)? PositionsOf(GradeScale scale, string grade)
+    {
+        if (scale.Family() == GradeFamily.Rope)
+        {
+            return RopeConversionTable.PositionOf(scale, grade) is { } first
+                ? (first, RopeConversionTable.LastPositionOf(scale, grade)!.Value)
+                : null;
+        }
+
+        return PositionOf(scale, grade) is { } position ? (position, position) : null;
+    }
+
     internal static int? PositionOf(GradeScale scale, string grade)
     {
         if (scale.Family() == GradeFamily.Rope)

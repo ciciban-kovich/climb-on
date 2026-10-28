@@ -41,6 +41,33 @@ public sealed class GradeFitTests
         Assert.Equal(1, GradeFit.Of(a, b));
     }
 
+    // Norwegian 7- spans the rows of French 6b and 6b+, and French 6a those of Norwegian 6- and 6: the fit is the
+    // same whichever scale each climber chose.
+    [Theory]
+    [InlineData("norwegian", "7-", "7-", "norwegian", "7-", "8-", 2)]
+    [InlineData("norwegian", "7-", "7-", "french", "6b+", "7a", 2)]
+    [InlineData("french", "6a", "6a", "norwegian", "6", "6", 2)]
+    [InlineData("french", "6a", "6a", "norwegian", "6+", "7", 0)]
+    [InlineData("norwegian", "6", "6", "french", "6a+", "6b", 0)]
+    public void Ranges_cover_every_row_their_grades_span(
+        string aScale, string aLow, string aHigh, string bScale, string bLow, string bHigh, int fit)
+    {
+        // Each climber's own and partner range are the same, so both directions hold or neither does.
+        var a = Profile.Create(Draft with
+        {
+            RopeScale = aScale,
+            Disciplines = [new("lead", ["outdoor"], Range(aLow, aHigh), Range(aLow, aHigh))],
+        });
+        var b = Profile.Create(Draft with
+        {
+            RopeScale = bScale,
+            Disciplines = [new("lead", ["outdoor"], Range(bLow, bHigh), Range(bLow, bHigh))],
+        });
+
+        Assert.Equal(fit, GradeFit.Of(a, b));
+        Assert.Equal(fit, GradeFit.Of(b, a));
+    }
+
     [Fact]
     public void Fit_is_the_best_over_the_qualifying_shared_variants()
     {
