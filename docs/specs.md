@@ -40,7 +40,7 @@ Rationale lives in decisions.md, not here.
   - S13.2 Bouldering grades use the Font scale; ice grades use the WI scale.
   - S13.3 Every grade is stored both as entered and as a position on one internal ordinal scale per discipline family. Rope grades are converted to that position through a single fixed conversion table.
   - S13.4 A grade is always shown to its owner exactly as they entered it.
-  - S13.5 Other climbers see a rope grade in their own chosen scale.
+  - S13.5 Other climbers see a rope grade in their own chosen scale. A grade that converts to several grades of that scale is shown as the highest of them.
 - S14. Grade never affects whether a candidate appears in a suggestion list; it affects only the order (see S4, S60.2).
 - S15. Home area is a four-digit Norwegian postcode. When a profile is created or its postcode is changed, a postcode that is not in the reference table, or is retired (S102), is rejected.
 - S16. The distance in S4.1 is the straight-line distance between the reference points (S99) of the two climbers' postcodes.

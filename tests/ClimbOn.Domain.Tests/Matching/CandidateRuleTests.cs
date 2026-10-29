@@ -28,6 +28,19 @@ public sealed class CandidateRuleTests
         Assert.Equal(candidate, CandidateRule.IsCandidate(a, b));
     }
 
+    // A point the haversine puts exactly 10 km from Oslo, so the boundary itself is tested.
+    [Fact]
+    [Trait("SpecPartial", "S4.1")]
+    [Trait("SpecPartial", "S16")]
+    public void Distance_equal_to_the_smaller_travel_distance_is_within_it()
+    {
+        var a = Climber(Draft with { MaxTravelKm = 10 });
+        var b = Climber(Draft with { MaxTravelKm = 30 }, new(60.003832027895044, 10.752278));
+
+        Assert.Equal(10.0, CandidateRule.DistanceKm(a, b));
+        Assert.True(CandidateRule.IsCandidate(a, b));
+    }
+
     [Theory]
     [Trait("SpecPartial", "S4.2")]
     [InlineData("female", null, "male", null, true)]

@@ -74,16 +74,22 @@ public sealed class CandidateComparerTests
     [Trait("SpecPartial", "S16")]
     public void Keys_are_taken_from_the_two_climbers()
     {
+        // Only the requester's own range meets the candidate's partner range, so the pair's fit is 1,
+        // while the requester's fit with itself is 2 and the candidate's is 0.
         var requester = Climber(Draft with { Windows = [new("tuesday", 18, 21), new("friday", 8, 10)] });
         var candidate = Climber(
-            Draft with { Windows = [new("tuesday", 19, 22), new("friday", 9, 12)] },
+            Draft with
+            {
+                Windows = [new("tuesday", 19, 22), new("friday", 9, 12)],
+                Disciplines = [new("bouldering", ["indoor"], Range("7A", "7B"), Range("5", "6A"))],
+            },
             NorthOfOslo(12.5),
             Noon.AddMinutes(-5));
 
         var key = CandidateKey.For(requester, candidate, new HashSet<Guid>());
 
         Assert.Equal(180, key.OverlapMinutes);
-        Assert.Equal(2, key.GradeFit);
+        Assert.Equal(1, key.GradeFit);
         Assert.False(key.SharesActiveGym);
         Assert.Equal(12.5, key.DistanceKm, 6);
         Assert.Equal(Noon.AddMinutes(-5), key.LastActivity);
