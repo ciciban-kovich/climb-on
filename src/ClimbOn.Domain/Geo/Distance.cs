@@ -17,6 +17,9 @@ public static class Distance
         return 2 * EarthRadiusKm * Math.Asin(Math.Sqrt(Math.Min(1, h)));
     }
 
+    // S52: whole km, halves up.
+    public static double WholeKilometres(double kilometres) => Math.Round(kilometres, MidpointRounding.AwayFromZero);
+
     private static double Radians(double degrees) => degrees * Math.PI / 180;
 
     private static double Square(double value) => value * value;

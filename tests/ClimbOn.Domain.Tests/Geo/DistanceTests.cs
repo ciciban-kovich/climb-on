@@ -45,6 +45,15 @@ public sealed class DistanceTests
         Assert.Equal(111.19, Distance.Kilometres(new GeoPoint(59, 10), new GeoPoint(60, 10)), 0.01);
 
     [Theory]
+    [Trait("SpecPartial", "S52")]
+    [InlineData(10.4, 10)]
+    [InlineData(10.5, 11)]
+    [InlineData(11.5, 12)]
+    [InlineData(1.49, 1)]
+    public void Distances_round_to_whole_km_halves_up(double km, double whole) =>
+        Assert.Equal(whole, Distance.WholeKilometres(km));
+
+    [Theory]
     [InlineData(-90.0001, 0)]
     [InlineData(90.0001, 0)]
     [InlineData(0, -180.0001)]

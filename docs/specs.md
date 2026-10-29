@@ -24,7 +24,7 @@ Rationale lives in decisions.md, not here.
 - S2. An account whose email address is not confirmed cannot send or receive invites.
 - S3. A profile holds: display name (trimmed and in Unicode NFC: 1 to 50 code points, at least one letter or digit, and no control or format characters); own sex (female, male or other); accepted partner sexes (one or more of those; default: any); per discipline variant: own grade range and acceptable partner grade range (grade ranges may be shared across the indoor and outdoor variants of one discipline); belay certification (none / Brattkort topptau / Brattkort led); own gear (yes/no); home area (postcode, S15); maximum travel distance in km (1 to 100); optional list of home gyms; one or more availability windows; optional profile photo (S55).
 - S4. Climber B appears in climber A's suggestion list if and only if all of the following hold:
-  - S4.1 The distance between their home areas is at most the smaller of A's and B's maximum travel distances.
+  - S4.1 The distance between their home areas, rounded to whole km as on a card (S52), is at most the smaller of A's and B's maximum travel distances.
   - S4.2 B's sex is in A's accepted set, and A's sex is in B's accepted set.
   - S4.3 There exists a discipline variant that both have in their profile and for which both meet the certification requirement in S12.
 - S5. A climber can send an invite to one or more candidates from their suggestion list.
@@ -40,7 +40,7 @@ Rationale lives in decisions.md, not here.
   - S13.2 Bouldering grades use the Font scale; ice grades use the WI scale.
   - S13.3 Every grade is stored both as entered and as a position on one internal ordinal scale per discipline family. Rope grades are converted to that position through a single fixed conversion table.
   - S13.4 A grade is always shown to its owner exactly as they entered it.
-  - S13.5 Other climbers see a rope grade in their own chosen scale.
+  - S13.5 Other climbers see a rope grade in their own chosen scale. A grade that converts to several grades of that scale is shown as the highest of them.
 - S14. Grade never affects whether a candidate appears in a suggestion list; it affects only the order (see S4, S60.2).
 - S15. Home area is a four-digit Norwegian postcode. When a profile is created or its postcode is changed, a postcode that is not in the reference table, or is retired (S102), is rejected.
 - S16. The distance in S4.1 is the straight-line distance between the reference points (S99) of the two climbers' postcodes.
@@ -86,7 +86,7 @@ Rationale lives in decisions.md, not here.
 - S49. If the provider supplies no email address, or one it does not mark as verified, the climber enters an address during registration and confirms it via a link sent to it.
 - S50. The registered email address is never shown to other climbers.
 - S51. A climber card shows: display name; own sex; discipline variants with grades (displayed per S13.5); belay certification labelled per S22; own gear; home gyms (inactive ones marked per S21); the window overlap with the viewing climber; distance per S52; the profile photo, if any.
-- S52. The distance on a card is the S16 distance rounded to whole km. Distances under 2 km are shown as "< 2 km".
+- S52. The distance on a card is the S16 distance rounded to whole km, halves up. Distances under 2 km are shown as "< 2 km".
 - S53. A card never shows date of birth, postcode, or accepted partner sexes. Email: see S50.
 - S54. The same card is used wherever one climber sees another: suggestion list, received invites, connections.
 - S55. A profile has at most one photo. All image metadata is removed before storage; the stored file contains no metadata.

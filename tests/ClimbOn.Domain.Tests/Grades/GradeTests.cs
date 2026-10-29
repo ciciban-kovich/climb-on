@@ -29,6 +29,22 @@ public sealed class GradeTests
     public void Each_scale_lists_its_grades_easiest_first(GradeScale scale) =>
         Assert.Equal(ExpectedGrades.For(scale), scale.Grades());
 
+    // A grade sits at the first row it appears in and spans every row up to its last.
+    [Theory]
+    [Trait("Spec", "S13.3")]
+    [InlineData(GradeScale.Norwegian, "7-", 10, 11)]
+    [InlineData(GradeScale.Norwegian, "7", 12, 12)]
+    [InlineData(GradeScale.Norwegian, "11+", 29, 30)]
+    [InlineData(GradeScale.French, "6a", 7, 8)]
+    [InlineData(GradeScale.French, "9c", 30, 30)]
+    [InlineData(GradeScale.Font, "6A", 5, 5)]
+    [InlineData(GradeScale.WaterIce, "WI3+", 3, 3)]
+    public void Grade_spans_the_rows_it_appears_in(GradeScale scale, string entered, int first, int last)
+    {
+        Assert.True(Grade.TryCreate(scale, entered, out var grade));
+        Assert.Equal((first, last), (grade.Position, grade.LastPosition));
+    }
+
     [Fact]
     [Trait("Spec", "S13.3")]
     public void Rope_conversion_table_has_every_row_at_its_position()
@@ -114,13 +130,13 @@ public sealed class GradeTests
 
     [Theory]
     [Trait("SpecPartial", "S13.5")]
-    [InlineData(GradeScale.Norwegian, "8", GradeScale.French, "7a+")]
-    [InlineData(GradeScale.Norwegian, "7-", GradeScale.French, "6b")]
+    [InlineData(GradeScale.Norwegian, "8", GradeScale.French, "7b")]
+    [InlineData(GradeScale.Norwegian, "7-", GradeScale.French, "6b+")]
     [InlineData(GradeScale.Norwegian, "6", GradeScale.French, "6a")]
-    [InlineData(GradeScale.Norwegian, "11+", GradeScale.French, "9b+")]
+    [InlineData(GradeScale.Norwegian, "11+", GradeScale.French, "9c")]
     [InlineData(GradeScale.French, "7b", GradeScale.Norwegian, "8")]
     [InlineData(GradeScale.French, "6b+", GradeScale.Norwegian, "7-")]
-    [InlineData(GradeScale.French, "6a", GradeScale.Norwegian, "6-")]
+    [InlineData(GradeScale.French, "6a", GradeScale.Norwegian, "6")]
     [InlineData(GradeScale.French, "9c", GradeScale.Norwegian, "11+")]
     [InlineData(GradeScale.Norwegian, "8", GradeScale.Norwegian, "8")]
     [InlineData(GradeScale.French, "6b+", GradeScale.French, "6b+")]
