@@ -10,9 +10,6 @@ public interface IProfileStore
     // The account's profile; null when it has none yet.
     Task<Profile?> FindAsync(Guid accountId, CancellationToken cancellationToken);
 
-    // The profiles of those accounts that have one, each read as one consistent snapshot.
-    Task<IReadOnlyDictionary<Guid, Profile>> FindManyAsync(IReadOnlyCollection<Guid> accountIds, CancellationToken cancellationToken);
-
     // Creates the account's profile or replaces all of it, in one transaction.
     Task SaveAsync(Guid accountId, Profile profile, CancellationToken cancellationToken);
 

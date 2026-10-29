@@ -10,14 +10,12 @@ using ClimbOn.Domain.Matching;
 
 namespace ClimbOn.Application.Matching;
 
-// An account the prefilter let through: its reference point (S99, retained when retired, S102.3) and last activity.
-public sealed record PrefilteredCandidate(Guid AccountId, GeoPoint ReferencePoint, DateTimeOffset LastActivity);
-
 public interface ICandidateStore
 {
     // Design §2 'Matching' step 1: every account other than the requester with a profile, a confirmed address
-    // (S116), a last activity at or after activeSince (S107) and a reference point inside box.
-    Task<IReadOnlyList<PrefilteredCandidate>> PrefilterAsync(
+    // (S116), a last activity at or after activeSince (S107) and a reference point (S99, retained when retired,
+    // S102.3) inside box. Each is read as one snapshot with its profile.
+    Task<IReadOnlyList<Climber>> PrefilterAsync(
         Guid requesterId, BoundingBox box, DateTimeOffset activeSince, CancellationToken cancellationToken);
 }
 
@@ -55,13 +53,7 @@ public sealed class GetSuggestions(
             BoundingBox.Around(requester.ReferencePoint, profile.MaxTravelKm + RoundingSlackKm),
             DormancyPolicy.ActiveIfLastActiveAtOrAfter(now),
             cancellationToken);
-        var foundProfiles = await profiles.FindManyAsync(found.Select(candidate => candidate.AccountId).ToList(), cancellationToken);
-        var climbers = found
-            .Where(candidate => foundProfiles.ContainsKey(candidate.AccountId))
-            .Select(candidate => new Climber(
-                candidate.AccountId, foundProfiles[candidate.AccountId], candidate.ReferencePoint, candidate.LastActivity))
-            .Where(candidate => CandidateRule.IsCandidate(requester, candidate))
-            .ToList();
+        var climbers = found.Where(candidate => CandidateRule.IsCandidate(requester, candidate)).ToList();
 
         var gyms = await profiles.FindGymsAsync(
             climbers.Append(requester).SelectMany(climber => climber.Profile.HomeGyms).Distinct().ToList(), cancellationToken);

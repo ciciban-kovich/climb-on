@@ -7,19 +7,24 @@ namespace ClimbOn.Infrastructure.Persistence.Profiles;
 
 public sealed class ProfileStore(ClimbOnDbContext db) : IProfileStore
 {
-    public async Task<Profile?> FindAsync(Guid accountId, CancellationToken cancellationToken) =>
-        (await FindManyAsync([accountId], cancellationToken)).GetValueOrDefault(accountId);
+    public async Task<Profile?> FindAsync(Guid accountId, CancellationToken cancellationToken)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
+        var profiles = await ReadAsync(db, [accountId], cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return profiles.GetValueOrDefault(accountId);
+    }
 
-    public async Task<IReadOnlyDictionary<Guid, Profile>> FindManyAsync(
-        IReadOnlyCollection<Guid> accountIds, CancellationToken cancellationToken)
+    // The profiles of those accounts that have one. Reads in the caller's transaction, which must be at least
+    // repeatable read: a save between two of these reads could otherwise pair a new rope scale with old grades.
+    internal static async Task<Dictionary<Guid, Profile>> ReadAsync(
+        ClimbOnDbContext db, IReadOnlyCollection<Guid> accountIds, CancellationToken cancellationToken)
     {
         if (accountIds.Count == 0)
         {
-            return new Dictionary<Guid, Profile>();
+            return [];
         }
 
-        // One snapshot: a save between two of these reads could otherwise pair a new rope scale with old grades.
-        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
         var profiles = await db.Profiles.AsNoTracking().Where(row => accountIds.Contains(row.AccountId)).ToListAsync(cancellationToken);
         var variants = (await db.DisciplineVariants.AsNoTracking().Where(row => accountIds.Contains(row.AccountId))
             .ToListAsync(cancellationToken)).ToLookup(row => row.AccountId);
@@ -27,7 +32,6 @@ public sealed class ProfileStore(ClimbOnDbContext db) : IProfileStore
             .ToListAsync(cancellationToken)).ToLookup(row => row.AccountId);
         var gyms = (await db.HomeGyms.AsNoTracking().Where(row => accountIds.Contains(row.AccountId))
             .OrderBy(row => row.Position).ToListAsync(cancellationToken)).ToLookup(row => row.AccountId, row => row.GymId);
-        await transaction.CommitAsync(cancellationToken);
 
         // Rebuilt through the same rules they were saved under, from the grades as entered; the postcode was
         // checked when it was chosen.

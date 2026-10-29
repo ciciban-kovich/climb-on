@@ -1,5 +1,8 @@
+using System.Data;
 using ClimbOn.Application.Matching;
 using ClimbOn.Domain.Geo;
+using ClimbOn.Domain.Matching;
+using ClimbOn.Infrastructure.Persistence.Profiles;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClimbOn.Infrastructure.Persistence.Matching;
@@ -8,9 +11,11 @@ namespace ClimbOn.Infrastructure.Persistence.Matching;
 // with invites and connections (task 19), blocks (S24.1) in M2.
 public sealed class CandidateStore(ClimbOnDbContext db) : ICandidateStore
 {
-    public async Task<IReadOnlyList<PrefilteredCandidate>> PrefilterAsync(
+    public async Task<IReadOnlyList<Climber>> PrefilterAsync(
         Guid requesterId, BoundingBox box, DateTimeOffset activeSince, CancellationToken cancellationToken)
     {
+        // One snapshot for the points and the profiles, so that a candidate's point is its profile's postcode's.
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
         var rows = await (
                 from account in db.Accounts.AsNoTracking()
                 join profile in db.Profiles.AsNoTracking() on account.Id equals profile.AccountId
@@ -22,7 +27,11 @@ public sealed class CandidateStore(ClimbOnDbContext db) : ICandidateStore
                     && postcode.Longitude >= box.West && postcode.Longitude <= box.East
                 select new { account.Id, account.LastActivityAt, postcode.Latitude, postcode.Longitude })
             .ToListAsync(cancellationToken);
-        return rows.Select(row => new PrefilteredCandidate(row.Id, new GeoPoint(row.Latitude, row.Longitude), row.LastActivityAt))
+        var profiles = await ProfileStore.ReadAsync(db, rows.Select(row => row.Id).ToList(), cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return rows.Select(row => new Climber(
+                row.Id, profiles[row.Id], new GeoPoint(row.Latitude, row.Longitude), row.LastActivityAt))
             .ToList();
     }
 }
