@@ -6,7 +6,7 @@ using Xunit;
 
 namespace ClimbOn.Domain.Tests.Geo;
 
-[Trait("SpecPartial", "S16")]
+[Trait("Spec", "S16")]
 public sealed class DistanceTests
 {
     private const double R = Distance.EarthRadiusKm;

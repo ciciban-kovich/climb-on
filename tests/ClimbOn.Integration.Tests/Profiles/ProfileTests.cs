@@ -224,16 +224,17 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         }
     }
 
-    // Positions: Font 6A+ is 6 and 7B is 13; Norwegian 7- is row 10, 8 row 15; French 6b+ row 11, 7b row 16; WI3 is 2, WI4 4.
-    // The partner range is the highest grade alone, so own and partner positions cannot be swapped unseen.
+    // Positions: Font 6A+ is 6 and 7B is 13; Norwegian 7- is rows 10-11, 8 rows 15-16; French 6b+ row 11, 7b row 16;
+    // WI3 is 2, WI4 4. A range runs from its lowest grade's first row to its highest grade's last row. The partner
+    // range is the highest grade alone, so own and partner positions cannot be swapped unseen.
     [Theory]
     [Trait("Spec", "S13.3")]
-    [InlineData("norwegian", "lead", "7-", 10, "8", 15)]
-    [InlineData("french", "lead", "6b+", 11, "7b", 16)]
-    [InlineData("norwegian", "bouldering", "6A+", 6, "7B", 13)]
-    [InlineData("norwegian", "ice", "WI3", 2, "WI4", 4)]
+    [InlineData("norwegian", "lead", "7-", 10, "8", 15, 16)]
+    [InlineData("french", "lead", "6b+", 11, "7b", 16, 16)]
+    [InlineData("norwegian", "bouldering", "6A+", 6, "7B", 13, 13)]
+    [InlineData("norwegian", "ice", "WI3", 2, "WI4", 4, 4)]
     public async Task Grades_are_stored_as_entered_and_as_internal_positions(
-        string scale, string discipline, string lowest, int lowestPosition, string highest, int highestPosition)
+        string scale, string discipline, string lowest, int lowestPosition, string highest, int highestFirst, int highestLast)
     {
         var (account, token) = await RegisterAndLogInAsync();
         var venue = discipline == "ice" ? "outdoor" : "indoor";
@@ -248,7 +249,7 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
 
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
         Assert.Equal(
-            [$"{lowest}:{lowestPosition}:{highest}:{highestPosition}:{highest}:{highestPosition}:{highest}:{highestPosition}"],
+            [$"{lowest}:{lowestPosition}:{highest}:{highestLast}:{highest}:{highestFirst}:{highest}:{highestLast}"],
             await VariantColumnAsync(
                 account,
                 "own_lowest || ':' || own_lowest_position || ':' || own_highest || ':' || own_highest_position || ':' || "
@@ -329,10 +330,10 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
     }
 
     // The profile chose 3089 while it was active; the table has since retired it. S102.3's distance
-    // clause becomes observable with cards (task 18).
+    // clause is SuggestionListTests.Retired_postcode_distance_uses_retained_point.
     [Fact]
-    [Trait("SpecPartial", "S102")]
-    [Trait("SpecPartial", "S102.3")]
+    [Trait("Spec", "S102")]
+    [Trait("Spec", "S102.3")]
     public async Task Retired_postcode_kept_when_other_fields_change()
     {
         Assert.True(FixturePostcodes.Get(FixturePostcodes.Retired).Retired);

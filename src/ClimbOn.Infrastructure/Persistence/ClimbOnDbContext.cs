@@ -193,6 +193,7 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             profile.Property(row => row.OwnGear).HasColumnName("own_gear");
             profile.Property(row => row.Postcode).HasColumnName("postcode").HasMaxLength(4);
             profile.Property(row => row.MaxTravelKm).HasColumnName("max_travel_km");
+            profile.HasIndex(row => row.Postcode).HasDatabaseName("ix_profiles_postcode");
             profile.HasOne<AccountRow>().WithOne().HasForeignKey<ProfileRow>(row => row.AccountId)
                 .HasConstraintName("fk_profiles_accounts").OnDelete(DeleteBehavior.Cascade);
         });

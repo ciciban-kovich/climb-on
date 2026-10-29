@@ -22,7 +22,8 @@ public sealed class Register(
     {
         var now = clock.UtcNow;
         var current = await legalDocuments.CurrentVersionsAsync(cancellationToken);
-        var account = Account.Register(Guid.CreateVersion7(now), registration, current, now, hasher.Hash);
+        // Random, so the ID a card carries reveals nothing about the climber (S51).
+        var account = Account.Register(Guid.NewGuid(), registration, current, now, hasher.Hash);
 
         // S49: the confirmation link, committed with the account.
         var token = LinkTokens.Create();

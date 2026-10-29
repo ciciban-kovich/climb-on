@@ -5,7 +5,7 @@ using static ClimbOn.Domain.Tests.Matching.Climbers;
 
 namespace ClimbOn.Domain.Tests.Matching;
 
-[Trait("SpecPartial", "S60.2")]
+[Trait("Spec", "S60.2")]
 public sealed class GradeFitTests
 {
     // A climbs 6A-6B and wants 6B-7A; B is given here. Direction 1: A's own meets B's partner range.

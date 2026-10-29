@@ -5,7 +5,7 @@ using static ClimbOn.Domain.Tests.Matching.Climbers;
 
 namespace ClimbOn.Domain.Tests.Matching;
 
-[Trait("SpecPartial", "S60")]
+[Trait("Spec", "S60")]
 public sealed class CandidateComparerTests
 {
     private static readonly Guid Low = new("00000000-0000-4000-8000-000000000001");
@@ -41,21 +41,21 @@ public sealed class CandidateComparerTests
     };
 
     [Theory]
-    [Trait("SpecPartial", "S60.1")]
-    [Trait("SpecPartial", "S60.2")]
-    [Trait("SpecPartial", "S60.3")]
-    [Trait("SpecPartial", "S60.4")]
-    [Trait("SpecPartial", "S60.5")]
+    [Trait("Spec", "S60.1")]
+    [Trait("Spec", "S60.2")]
+    [Trait("Spec", "S60.3")]
+    [Trait("Spec", "S60.4")]
+    [Trait("Spec", "S60.5")]
     [MemberData(nameof(AdjacentKeys))]
     public void Key_order_is_S60_order(string pair, CandidateKey first, CandidateKey second) =>
         AssertFirst(pair, first, second);
 
     [Theory]
-    [Trait("SpecPartial", "S60.1")]
-    [Trait("SpecPartial", "S60.2")]
-    [Trait("SpecPartial", "S60.3")]
-    [Trait("SpecPartial", "S60.4")]
-    [Trait("SpecPartial", "S60.5")]
+    [Trait("Spec", "S60.1")]
+    [Trait("Spec", "S60.2")]
+    [Trait("Spec", "S60.3")]
+    [Trait("Spec", "S60.4")]
+    [Trait("Spec", "S60.5")]
     [MemberData(nameof(EachKey))]
     public void Each_key_orders_in_its_direction(string key, CandidateKey first, CandidateKey second) =>
         AssertFirst(key, first, second);
@@ -68,10 +68,10 @@ public sealed class CandidateComparerTests
     }
 
     [Fact]
-    [Trait("SpecPartial", "S60.1")]
-    [Trait("SpecPartial", "S60.2")]
-    [Trait("SpecPartial", "S60.4")]
-    [Trait("SpecPartial", "S16")]
+    [Trait("Spec", "S60.1")]
+    [Trait("Spec", "S60.2")]
+    [Trait("Spec", "S60.4")]
+    [Trait("Spec", "S16")]
     public void Keys_are_taken_from_the_two_climbers()
     {
         // Only the requester's own range meets the candidate's partner range, so the pair's fit is 1,
@@ -97,7 +97,7 @@ public sealed class CandidateComparerTests
     }
 
     [Theory]
-    [Trait("SpecPartial", "S60.3")]
+    [Trait("Spec", "S60.3")]
     [InlineData(new[] { 0 }, new[] { 0 }, new[] { 0 }, true)]
     [InlineData(new[] { 0, 1 }, new[] { 1 }, new[] { 1 }, true)]
     [InlineData(new[] { 0 }, new[] { 0 }, new int[0], false)]

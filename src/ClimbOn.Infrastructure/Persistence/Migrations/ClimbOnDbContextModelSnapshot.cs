@@ -509,6 +509,9 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                     b.HasKey("AccountId")
                         .HasName("pk_profiles");
 
+                    b.HasIndex("Postcode")
+                        .HasDatabaseName("ix_profiles_postcode");
+
                     b.ToTable("profiles", null, t =>
                         {
                             t.HasCheckConstraint("ck_profiles_accepted_sexes", "cardinality(accepted_sexes) >= 1 AND accepted_sexes <@ ARRAY['female', 'male', 'other']::text[]");

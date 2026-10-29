@@ -7,6 +7,7 @@ using ClimbOn.Client.Api.Api.Climber.Login;
 using ClimbOn.Client.Api.Api.Climber.Logout;
 using ClimbOn.Client.Api.Api.Climber.Me;
 using ClimbOn.Client.Api.Api.Climber.Profile;
+using ClimbOn.Client.Api.Api.Climber.Suggestions;
 using Microsoft.Kiota.Abstractions.Extensions;
 using Microsoft.Kiota.Abstractions;
 using System.Collections.Generic;
@@ -55,6 +56,11 @@ namespace ClimbOn.Client.Api.Api.Climber
         public global::ClimbOn.Client.Api.Api.Climber.Profile.ProfileRequestBuilder Profile
         {
             get => new global::ClimbOn.Client.Api.Api.Climber.Profile.ProfileRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The suggestions property</summary>
+        public global::ClimbOn.Client.Api.Api.Climber.Suggestions.SuggestionsRequestBuilder Suggestions
+        {
+            get => new global::ClimbOn.Client.Api.Api.Climber.Suggestions.SuggestionsRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>
         /// Instantiates a new <see cref="global::ClimbOn.Client.Api.Api.Climber.ClimberRequestBuilder"/> and sets the default values.

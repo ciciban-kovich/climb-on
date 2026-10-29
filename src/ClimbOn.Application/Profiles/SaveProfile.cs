@@ -30,12 +30,12 @@ public sealed class SaveProfile(IProfileStore profiles, PostcodeValidator postco
         var gyms = await profiles.FindGymsAsync(added, cancellationToken);
         foreach (var gym in added)
         {
-            if (!gyms.TryGetValue(gym, out var active))
+            if (!gyms.TryGetValue(gym, out var found))
             {
                 throw new DomainError(GymUnknownCode);
             }
 
-            if (!active)
+            if (!found.Active)
             {
                 throw new DomainError(GymInactiveCode);
             }

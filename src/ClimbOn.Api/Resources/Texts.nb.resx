@@ -149,4 +149,10 @@ Hvis det ikke var deg, kan du se bort fra denne e-posten. Kontoen din er ikke en
   <data name="gym_inactive" xml:space="preserve">
     <value>Denne klatrehallen kan ikke velges lenger.</value>
   </data>
+  <data name="email_not_confirmed" xml:space="preserve">
+    <value>Du må bekrefte e-postadressen din først.</value>
+  </data>
+  <data name="card_certification_self_declared" xml:space="preserve">
+    <value>egenerklært</value>
+  </data>
 </root>

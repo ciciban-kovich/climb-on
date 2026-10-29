@@ -149,4 +149,10 @@ If it was not you, you can ignore this email. Your account has not been changed.
   <data name="gym_inactive" xml:space="preserve">
     <value>This climbing gym can no longer be chosen.</value>
   </data>
+  <data name="email_not_confirmed" xml:space="preserve">
+    <value>You must confirm your email address first.</value>
+  </data>
+  <data name="card_certification_self_declared" xml:space="preserve">
+    <value>self-declared</value>
+  </data>
 </root>

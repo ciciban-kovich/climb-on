@@ -71,7 +71,7 @@ public sealed class PostcodeImportTests(ApiFactory factory) : IntegrationTest(fa
     }
 
     [Fact]
-    [Trait("SpecPartial", "S102")]
+    [Trait("Spec", "S102")]
     [Trait("Spec", "S102.1")]
     [Trait("SpecPartial", "S101.3")]
     public async Task New_version_adds_changes_and_retires_keeping_the_last_point()
@@ -95,7 +95,7 @@ public sealed class PostcodeImportTests(ApiFactory factory) : IntegrationTest(fa
 
     [Fact]
     [Trait("Spec", "S102.2")]
-    [Trait("SpecPartial", "S102.3")]
+    [Trait("Spec", "S102.3")]
     public async Task Retired_postcode_cannot_be_chosen_and_keeps_its_point()
     {
         await using var table = await ClearAsync();

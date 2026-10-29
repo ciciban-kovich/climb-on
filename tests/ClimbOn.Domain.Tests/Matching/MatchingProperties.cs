@@ -107,10 +107,10 @@ public sealed class MatchingProperties
 
     [Property(MaxTest = 1000)]
     [Trait("SpecPartial", "S10")]
-    [Trait("SpecPartial", "S4")]
-    [Trait("SpecPartial", "S4.1")]
-    [Trait("SpecPartial", "S4.2")]
-    [Trait("SpecPartial", "S4.3")]
+    [Trait("Spec", "S4")]
+    [Trait("Spec", "S4.1")]
+    [Trait("Spec", "S4.2")]
+    [Trait("Spec", "S4.3")]
     public Property Candidate_rule_is_symmetric() =>
         Prop.ForAll(Arb.From(AnyPair), pair => CandidateRule.IsCandidate(pair.A, pair.B) == CandidateRule.IsCandidate(pair.B, pair.A));
 
@@ -131,7 +131,7 @@ public sealed class MatchingProperties
     }
 
     [Property(MaxTest = 1000)]
-    [Trait("SpecPartial", "S14")]
+    [Trait("Spec", "S14")]
     public Property Grades_never_change_candidacy() =>
         Prop.ForAll(AnyRegrading, entry =>
             CandidateRule.IsCandidate(entry.A, entry.B) == CandidateRule.IsCandidate(entry.A, entry.Regraded)
@@ -139,7 +139,7 @@ public sealed class MatchingProperties
 
     // Reflexive, antisymmetric, transitive, and equal only for one account: a total order on the candidates.
     [Property(MaxTest = 1000)]
-    [Trait("SpecPartial", "S60")]
+    [Trait("Spec", "S60")]
     public Property Comparer_is_total_order() =>
         Prop.ForAll(AnyList, list =>
         {
