@@ -86,7 +86,7 @@ Rationale lives in decisions.md, not here.
 - S49. If the provider supplies no email address, or one it does not mark as verified, the climber enters an address during registration and confirms it via a link sent to it.
 - S50. The registered email address is never shown to other climbers.
 - S51. A climber card shows: display name; own sex; discipline variants with grades (displayed per S13.5); belay certification labelled per S22; own gear; home gyms (inactive ones marked per S21); the window overlap with the viewing climber; distance per S52; the profile photo, if any.
-- S52. The distance on a card is the S16 distance rounded to whole km, halves up. Distances under 2 km are shown as "< 2 km".
+- S52. The distance on a card is the S16 distance rounded to whole km, halves up. A rounded distance under 2 km is shown as "< 2 km".
 - S53. A card never shows date of birth, postcode, or accepted partner sexes. Email: see S50.
 - S54. The same card is used wherever one climber sees another: suggestion list, received invites, connections.
 - S55. A profile has at most one photo. All image metadata is removed before storage; the stored file contains no metadata.
