@@ -48,9 +48,9 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
     }
 
     // Each pair is a little past a whole km apart, which rounds down to it (S52). 0150 and 0250 are 1.13 km apart,
-    // mostly east-west, so the prefilter's box must reach past 1 km at its edge for the pair to be listed. 1606 and
-    // 3700 are 75.47 km apart, so the box must reach about 0.47 km past 75 km: nearly all of the half km that
-    // rounding admits.
+    // mostly east-west, so the prefilter's box must reach past 1 km at its edge for the pair to be listed. 0150 and
+    // 1900 are 20.4992 km apart due east-west, so the box must reach 0.4992 km past 20 km; its edges round outward
+    // by under 6 m there, so an allowance under about 0.4936 km leaves the pair out.
     [Theory]
     [Trait("Spec", "S4.1")]
     [Trait("Spec", "S16")]
@@ -61,12 +61,12 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
     [InlineData("0560", "1300", 100, 13, false)]
     [InlineData("0150", "0250", 1, 100, true)]
     [InlineData("0150", "0250", 100, 1, true)]
-    [InlineData("1606", "3700", 75, 100, true)]
-    [InlineData("1606", "3700", 100, 75, true)]
+    [InlineData("0150", "1900", 20, 100, true)]
+    [InlineData("0150", "1900", 100, 20, true)]
     public async Task Edge_distance_is_included(string aPostcode, string bPostcode, int aMaxKm, int bMaxKm, bool listed)
     {
         var km = Distance.Kilometres(Point(aPostcode), Point(bPostcode));
-        Assert.InRange(km - Math.Floor(km), 0.1, 0.49);
+        Assert.InRange(km - Math.Floor(km), 0.1, 0.4999);
         Assert.Equal(listed, Math.Floor(km) <= Math.Min(aMaxKm, bMaxKm));
 
         var a = await ClimberAsync(aPostcode, profile => profile with { MaxTravelKm = aMaxKm });
@@ -474,6 +474,31 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
         var log = Assert.Single(
             await Factory.Telemetry.TakeAsync(),
             item => item.Signal == "log" && Equals(item.Field("eventName"), "CandidateProfileSkipped"));
+        Assert.Equal(broken, log.Field("attribute:AccountId"));
+        Assert.Equal(Profile.DisplayNameInvalidCode, log.Field("attribute:Code"));
+    }
+
+    // The same stored profile as the requester's own: still refused with its code, which they can fix, and logged
+    // the same way.
+    [Fact]
+    public async Task Invalid_stored_requester_is_refused_and_logged()
+    {
+        var a = await ClimberAsync();
+        var b = await ClimberAsync();
+        var broken = Assert.Single(await ListAsync(b)).AccountId;
+        await ExecuteAsync(
+            "UPDATE profiles SET display_name = @name FROM accounts WHERE accounts.id = profiles.account_id AND accounts.email = @email",
+            ("name", new string('x', Profile.MaximumDisplayNameLength + 1)),
+            ("email", a.Account.Email));
+        await Factory.Telemetry.TakeAsync();
+
+        using var response = await GetAsync(a.Token);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(Profile.DisplayNameInvalidCode, (await response.Content.ReadFromJsonAsync<ErrorBody>(Ct))?.Code);
+        var log = Assert.Single(
+            await Factory.Telemetry.TakeAsync(),
+            item => item.Signal == "log" && Equals(item.Field("eventName"), "RequesterProfileRefused"));
         Assert.Equal(broken, log.Field("attribute:AccountId"));
         Assert.Equal(Profile.DisplayNameInvalidCode, log.Field("attribute:Code"));
     }

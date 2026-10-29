@@ -26,7 +26,7 @@ public sealed class AccountStoreTests(MigratedDatabase database) : IClassFixture
         var dateOfBirth = new DateOnly(1990, 5, 17);
         await PublishTermsVersion2Async();
         var account = Account.Register(
-            Guid.CreateVersion7(Now),
+            Guid.NewGuid(),
             new EmailRegistration(email, password, dateOfBirth, language, TermsVersion: 2, PrivacyVersion: 1),
             new LegalVersions(Terms: 2, Privacy: 1),
             Now,
