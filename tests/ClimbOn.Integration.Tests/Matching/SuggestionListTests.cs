@@ -357,9 +357,11 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
         Assert.Equal("36 km", Assert.Single(await ListAsync(b)).Distance);
     }
 
+    // 0187 and 0661 are 1.94 km apart: the floor applies to the rounded distance, so they show "2 km".
     [Theory]
     [Trait("SpecPartial", "S52")]
     [InlineData("0150", "0250", "< 2 km")]
+    [InlineData("0187", "0661", "2 km")]
     [InlineData("0150", "0560", "2 km")]
     [InlineData("0150", "1300", "13 km")]
     [InlineData("0560", "1300", "14 km")]
