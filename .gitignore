@@ -23,3 +23,6 @@ StrykerOutput/
 *.tfplan
 crash.log
 *_override.tf
+
+# Review reports stay local
+docs/reviews/
