@@ -81,8 +81,8 @@ public sealed class TestEndpoints : IStartupFilter
             endpoints.MapGet($"{Prefix}/telemetry/query/{{value}}", () => Results.NoContent());
 
             // Postcodes (S15, S16) apart from a profile: the validation the profile endpoints use (task 16)
-            // and the point lookup until the suggestion list does (task 18); and the whole table for the
-            // import tests (task 08).
+            // and the point lookup the suggestion list uses (task 18); and the whole table for the import
+            // tests (task 08).
             endpoints.MapPost($"{Prefix}/postcodes/validate", async (ProbeValue probe, PostcodeValidator validator, CancellationToken cancellationToken) =>
             {
                 await validator.ValidateAsync(probe.Value, cancellationToken);

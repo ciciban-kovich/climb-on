@@ -21,7 +21,7 @@ public interface ICandidateStore
 
 // The requester's suggestion list (S4, S60), as climber cards.
 public sealed class GetSuggestions(
-    IAccountStore accounts, IProfileStore profiles, IPostcodeStore postcodes, ICandidateStore candidates, IClock clock)
+    IAccountStore accounts, IProfileStore profiles, PostcodeLookup postcodes, ICandidateStore candidates, IClock clock)
 {
     public const string EmailNotConfirmedCode = "email_not_confirmed";
 
@@ -65,6 +65,6 @@ public sealed class GetSuggestions(
     }
 
     private async Task<GeoPoint> PointOfAsync(string postcode, CancellationToken cancellationToken) =>
-        (await postcodes.FindAsync(postcode, cancellationToken))?.Point
+        await postcodes.FindPointAsync(postcode, cancellationToken)
             ?? throw new InvalidOperationException("A profile's postcode is not in the reference table.");
 }

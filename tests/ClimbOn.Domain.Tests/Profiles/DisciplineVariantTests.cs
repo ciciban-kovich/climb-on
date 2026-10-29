@@ -6,7 +6,7 @@ namespace ClimbOn.Domain.Tests.Profiles;
 
 public sealed class DisciplineVariantTests
 {
-    // S12, written out for every variant and certification. S12 stays partial until matching (task 17) uses it.
+    // S12, written out for every variant and certification.
     public static TheoryData<DisciplineVariant, BelayCertification, bool> Requirement
     {
         get

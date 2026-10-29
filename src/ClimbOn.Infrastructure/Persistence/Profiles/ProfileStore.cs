@@ -1,5 +1,6 @@
 using System.Data;
 using ClimbOn.Application.Profiles;
+using ClimbOn.Domain.Errors;
 using ClimbOn.Domain.Profiles;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,8 +18,12 @@ public sealed class ProfileStore(ClimbOnDbContext db) : IProfileStore
 
     // The profiles of those accounts that have one. Reads in the caller's transaction, which must be at least
     // repeatable read: a save between two of these reads could otherwise pair a new rope scale with old grades.
+    // A stored profile that today's rules refuse throws, or with invalid is reported to it and left out.
     internal static async Task<Dictionary<Guid, Profile>> ReadAsync(
-        ClimbOnDbContext db, IReadOnlyCollection<Guid> accountIds, CancellationToken cancellationToken)
+        ClimbOnDbContext db,
+        IReadOnlyCollection<Guid> accountIds,
+        CancellationToken cancellationToken,
+        Action<Guid, DomainError>? invalid = null)
     {
         if (accountIds.Count == 0)
         {
@@ -35,18 +40,31 @@ public sealed class ProfileStore(ClimbOnDbContext db) : IProfileStore
 
         // Rebuilt through the same rules they were saved under, from the grades as entered; the postcode was
         // checked when it was chosen.
-        return profiles.ToDictionary(profile => profile.AccountId, profile => Profile.Create(new ProfileDraft(
-            profile.DisplayName,
-            profile.Sex,
-            profile.AcceptedSexes,
-            profile.RopeScale,
-            Entries([.. variants[profile.AccountId]]),
-            profile.Certification,
-            profile.OwnGear,
-            profile.Postcode,
-            profile.MaxTravelKm,
-            [.. gyms[profile.AccountId]],
-            windows[profile.AccountId].Select(row => new WindowDraft(row.Day, row.StartHour, row.EndHour)).ToList())));
+        var read = new Dictionary<Guid, Profile>();
+        foreach (var profile in profiles)
+        {
+            try
+            {
+                read[profile.AccountId] = Profile.Create(new ProfileDraft(
+                    profile.DisplayName,
+                    profile.Sex,
+                    profile.AcceptedSexes,
+                    profile.RopeScale,
+                    Entries([.. variants[profile.AccountId]]),
+                    profile.Certification,
+                    profile.OwnGear,
+                    profile.Postcode,
+                    profile.MaxTravelKm,
+                    [.. gyms[profile.AccountId]],
+                    windows[profile.AccountId].Select(row => new WindowDraft(row.Day, row.StartHour, row.EndHour)).ToList()));
+            }
+            catch (DomainError error) when (invalid is not null)
+            {
+                invalid(profile.AccountId, error);
+            }
+        }
+
+        return read;
     }
 
     public async Task SaveAsync(Guid accountId, Profile profile, CancellationToken cancellationToken)
@@ -79,11 +97,11 @@ public sealed class ProfileStore(ClimbOnDbContext db) : IProfileStore
             OwnLowest = entry.Own.Lowest.Entered,
             OwnLowestPosition = entry.Own.Lowest.Position,
             OwnHighest = entry.Own.Highest.Entered,
-            OwnHighestPosition = entry.Own.Highest.Position,
+            OwnHighestPosition = entry.Own.Highest.LastPosition,
             PartnerLowest = entry.Partner.Lowest.Entered,
             PartnerLowestPosition = entry.Partner.Lowest.Position,
             PartnerHighest = entry.Partner.Highest.Entered,
-            PartnerHighestPosition = entry.Partner.Highest.Position,
+            PartnerHighestPosition = entry.Partner.Highest.LastPosition,
         })));
         db.AvailabilityWindows.AddRange(profile.Windows.Select(window => new AvailabilityWindowRow
         {

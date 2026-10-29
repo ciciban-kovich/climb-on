@@ -9,6 +9,7 @@ using ClimbOn.Application.Cards;
 using ClimbOn.Application.Matching;
 using ClimbOn.Domain.Accounts;
 using ClimbOn.Domain.Geo;
+using ClimbOn.Domain.Profiles;
 using ClimbOn.Integration.Tests.Harness;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Net.Http.Headers;
@@ -47,7 +48,9 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
     }
 
     // Each pair is a little past a whole km apart, which rounds down to it (S52). 0150 and 0250 are 1.13 km apart,
-    // mostly east-west, so the prefilter's box must reach past 1 km at its edge for the pair to be listed.
+    // mostly east-west, so the prefilter's box must reach past 1 km at its edge for the pair to be listed. 1606 and
+    // 3700 are 75.47 km apart, so the box must reach about 0.47 km past 75 km: nearly all of the half km that
+    // rounding admits.
     [Theory]
     [Trait("Spec", "S4.1")]
     [Trait("Spec", "S16")]
@@ -58,10 +61,12 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
     [InlineData("0560", "1300", 100, 13, false)]
     [InlineData("0150", "0250", 1, 100, true)]
     [InlineData("0150", "0250", 100, 1, true)]
+    [InlineData("1606", "3700", 75, 100, true)]
+    [InlineData("1606", "3700", 100, 75, true)]
     public async Task Edge_distance_is_included(string aPostcode, string bPostcode, int aMaxKm, int bMaxKm, bool listed)
     {
         var km = Distance.Kilometres(Point(aPostcode), Point(bPostcode));
-        Assert.InRange(km - Math.Floor(km), 0.1, 0.4);
+        Assert.InRange(km - Math.Floor(km), 0.1, 0.49);
         Assert.Equal(listed, Math.Floor(km) <= Math.Min(aMaxKm, bMaxKm));
 
         var a = await ClimberAsync(aPostcode, profile => profile with { MaxTravelKm = aMaxKm });
@@ -170,6 +175,19 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
     }
 
     [Fact]
+    [Trait("SpecPartial", "S116")]
+    public async Task Unconfirmed_requester_without_a_profile_is_refused()
+    {
+        var account = Factory.Data.Account();
+        await RegisterAsync(account);
+
+        using var response = await GetAsync(await LogInAsync(account));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(GetSuggestions.EmailNotConfirmedCode, (await response.Content.ReadFromJsonAsync<ErrorBody>(Ct))?.Code);
+    }
+
+    [Fact]
     public async Task Only_a_logged_in_climber_has_a_list()
     {
         using var response = await GetAsync(token: null);
@@ -202,7 +220,7 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
         var a = await ClimberAsync();
         var b = await ClimberAsync();
 
-        Factory.Clock.Advance(DormancyPolicy.After);
+        Factory.Clock.Advance(TimeSpan.FromDays(60));
         Assert.Equal([b.Name], Names(await ListAsync(a with { Token = await LogInAsync(a.Account) })));
 
         Factory.Clock.Advance(TimeSpan.FromSeconds(1));
@@ -434,6 +452,41 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
             JsonValueKind.Array => element.EnumerateArray().SelectMany(Properties),
             _ => [],
         };
+    }
+
+    // A stored profile that today's rules refuse, as a later tightening of a rule would leave it, is arranged below
+    // the API: it is skipped and logged by account ID and code (C32), and the list is still served.
+    [Fact]
+    public async Task Invalid_stored_candidate_is_skipped_and_logged()
+    {
+        var a = await ClimberAsync();
+        var b = await ClimberAsync();
+        var c = await LaterAsync(() => ClimberAsync());
+        var broken = (await ListAsync(a)).Single(card => card.DisplayName == b.Name).AccountId;
+        await ExecuteAsync(
+            "UPDATE profiles SET display_name = @name FROM accounts WHERE accounts.id = profiles.account_id AND accounts.email = @email",
+            ("name", new string('x', Profile.MaximumDisplayNameLength + 1)),
+            ("email", b.Account.Email));
+        await Factory.Telemetry.TakeAsync();
+
+        Assert.Equal([c.Name], Names(await ListAsync(a)));
+
+        var log = Assert.Single(
+            await Factory.Telemetry.TakeAsync(),
+            item => item.Signal == "log" && Equals(item.Field("eventName"), "CandidateProfileSkipped"));
+        Assert.Equal(broken, log.Field("attribute:AccountId"));
+        Assert.Equal(Profile.DisplayNameInvalidCode, log.Field("attribute:Code"));
+    }
+
+    // A random ID, so no card tells when its climber registered.
+    [Fact]
+    [Trait("SpecPartial", "S51")]
+    public async Task Card_handle_is_random()
+    {
+        var a = await ClimberAsync();
+        await ClimberAsync();
+
+        Assert.Equal(4, Assert.Single(await ListAsync(a)).AccountId.Version);
     }
 
     // C46 checks the two files agree; this checks the codes are among their keys.
