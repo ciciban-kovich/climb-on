@@ -1,3 +1,4 @@
+using ClimbOn.Domain.Geo;
 using ClimbOn.Domain.Matching;
 using ClimbOn.Domain.Profiles;
 using Xunit;
@@ -16,10 +17,12 @@ public sealed class CandidateRuleTests
     [Trait("SpecPartial", "S4.1")]
     [Trait("SpecPartial", "S16")]
     [InlineData(10, 30, 9.9, true)]
-    [InlineData(10, 30, 10.1, false)]
-    [InlineData(30, 10, 10.1, false)]
-    [InlineData(30, 30, 29.9, true)]
-    public void Distance_is_at_most_the_smaller_travel_distance(int aKm, int bKm, double apartKm, bool candidate)
+    [InlineData(10, 30, 10.4, true)]
+    [InlineData(10, 30, 10.6, false)]
+    [InlineData(30, 10, 10.6, false)]
+    [InlineData(30, 30, 30.4, true)]
+    [InlineData(30, 30, 30.6, false)]
+    public void Rounded_distance_is_at_most_the_smaller_travel_distance(int aKm, int bKm, double apartKm, bool candidate)
     {
         var a = Climber(Draft with { MaxTravelKm = aKm });
         var b = Climber(Draft with { MaxTravelKm = bKm }, NorthOfOslo(apartKm));
@@ -28,18 +31,14 @@ public sealed class CandidateRuleTests
         Assert.Equal(candidate, CandidateRule.IsCandidate(a, b));
     }
 
-    // A point the haversine puts exactly 10 km from Oslo, so the boundary itself is tested.
-    [Fact]
-    [Trait("SpecPartial", "S4.1")]
-    [Trait("SpecPartial", "S16")]
-    public void Distance_equal_to_the_smaller_travel_distance_is_within_it()
-    {
-        var a = Climber(Draft with { MaxTravelKm = 10 });
-        var b = Climber(Draft with { MaxTravelKm = 30 }, new(60.003832027895044, 10.752278));
-
-        Assert.Equal(10.0, CandidateRule.DistanceKm(a, b));
-        Assert.True(CandidateRule.IsCandidate(a, b));
-    }
+    [Theory]
+    [Trait("SpecPartial", "S52")]
+    [InlineData(10.4, 10)]
+    [InlineData(10.5, 11)]
+    [InlineData(11.5, 12)]
+    [InlineData(1.49, 1)]
+    public void Distances_round_to_whole_km_halves_up(double km, double whole) =>
+        Assert.Equal(whole, Distance.WholeKilometres(km));
 
     [Theory]
     [Trait("SpecPartial", "S4.2")]

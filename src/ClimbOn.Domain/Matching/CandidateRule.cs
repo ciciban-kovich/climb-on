@@ -17,9 +17,9 @@ public static class CandidateRule
         return IsWithinTravel(a, b) && AcceptEachOther(a.Profile, b.Profile) && SharedVariants(a.Profile, b.Profile).Any();
     }
 
-    // S4.1 with S16.
+    // S4.1 with S16 and S52.
     public static bool IsWithinTravel(Climber a, Climber b) =>
-        DistanceKm(a, b) <= Math.Min(a.Profile.MaxTravelKm, b.Profile.MaxTravelKm);
+        Distance.WholeKilometres(DistanceKm(a, b)) <= Math.Min(a.Profile.MaxTravelKm, b.Profile.MaxTravelKm);
 
     // S4.2
     public static bool AcceptEachOther(Profile a, Profile b) =>
