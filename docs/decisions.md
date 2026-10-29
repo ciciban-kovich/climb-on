@@ -34,6 +34,7 @@ Rationale behind specs and constraints. Not input to the critic: only specs.md, 
 - D30. The "< 2 km" floor on a card (S52) applies to the rounded distance, so a climber 1.5 to 2 km away is shown as "2 km" (2026-10-29). The owner's view: "2 km in a city as big as Oslo is too much for anyone to go and stalk other climbers, and in smaller cities everyone who climbs knows other climbers anyway."
 - D31. A climber without a profile gets an empty suggestion list (S4), and a card shows only the climber's own grade ranges (S53) (2026-10-29). The owner's view: "an empty list is the honest answer before a profile exists", and "what someone accepts in a partner stays private, as S53 already does for sexes".
 - D32. A card carries an opaque handle rather than a time-ordered account ID (S51) (2026-10-29). Account IDs were UUIDv7, so any viewer could read a climber's registration time from a card. The owner's view: "not a leak but honestly I don't see the reason to show UUIDv7 on the card. not user-friendly thing", and "leave it as a opaque value/handle. no harm in having it if some other task requires it and it doesn't clutter climber card visually." Account IDs are now random, so the account ID itself is the handle and invites can keep using it. The S60.5 tiebreak by account ID still gives a fixed order, which is no longer registration order.
+- D33. S53 means "not displayed", not "not inferable" (2026-10-29). A climber who keeps changing their own profile and watching the list could work out some of what S53 hides: another climber's postcode from whole-km distances and the S60.4 order, partner grade ranges from S60.2, and full windows. The owner's ruling: S53 means "not displayed", not "not inferable", accepted for now, with a rate limit on postcode changes to come later.
 
 ## Legal review before launch
 
@@ -51,3 +52,7 @@ Rationale behind specs and constraints. Not input to the critic: only specs.md, 
 - Rate-limit registration per address and per client (from the m1/registration review, 2026-10-20).
 - Cap S87 taken-address notices per address, like S80.3 (from the m1/email-collisions review, 2026-10-27).
 - Cap the size of climber request bodies and of the lists in a profile (home gyms, windows, accepted sexes); today the only limit is the server's 30 MB default body size (from the m1/profile review, 2026-10-28).
+
+## Known risks
+
+- The suggestion-list prefilter's real query plan and cost are unmeasured; measure them (`EXPLAIN (ANALYZE, BUFFERS)`) once there are real users. `profiles(postcode)` is indexed (from the m1/suggestions review, 2026-10-29).
