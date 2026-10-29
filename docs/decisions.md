@@ -52,6 +52,7 @@ Rationale behind specs and constraints. Not input to the critic: only specs.md, 
 - Rate-limit registration per address and per client (from the m1/registration review, 2026-10-20).
 - Cap S87 taken-address notices per address, like S80.3 (from the m1/email-collisions review, 2026-10-27).
 - Cap the size of climber request bodies and of the lists in a profile (home gyms, windows, accepted sexes); today the only limit is the server's 30 MB default body size (from the m1/profile review, 2026-10-28).
+- Rate-limit postcode changes in a profile, so that a climber cannot locate another by moving their own postcode and watching the list (D33; from the m1/suggestions review, 2026-10-29).
 
 ## Known risks
 
