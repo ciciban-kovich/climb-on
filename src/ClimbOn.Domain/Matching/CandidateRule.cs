@@ -19,7 +19,10 @@ public static class CandidateRule
 
     // S4.1 with S16 and S52.
     public static bool IsWithinTravel(Climber a, Climber b) =>
-        Distance.WholeKilometres(DistanceKm(a, b)) <= Math.Min(a.Profile.MaxTravelKm, b.Profile.MaxTravelKm);
+        IsWithinTravel(DistanceKm(a, b), a.Profile.MaxTravelKm, b.Profile.MaxTravelKm);
+
+    public static bool IsWithinTravel(double km, int maxA, int maxB) =>
+        Distance.WholeKilometres(km) <= Math.Min(maxA, maxB);
 
     // S4.2
     public static bool AcceptEachOther(Profile a, Profile b) =>

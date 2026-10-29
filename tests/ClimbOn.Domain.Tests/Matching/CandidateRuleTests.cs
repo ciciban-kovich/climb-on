@@ -1,4 +1,3 @@
-using ClimbOn.Domain.Geo;
 using ClimbOn.Domain.Matching;
 using ClimbOn.Domain.Profiles;
 using Xunit;
@@ -32,13 +31,14 @@ public sealed class CandidateRuleTests
     }
 
     [Theory]
+    [Trait("SpecPartial", "S4.1")]
     [Trait("SpecPartial", "S52")]
-    [InlineData(10.4, 10)]
-    [InlineData(10.5, 11)]
-    [InlineData(11.5, 12)]
-    [InlineData(1.49, 1)]
-    public void Distances_round_to_whole_km_halves_up(double km, double whole) =>
-        Assert.Equal(whole, Distance.WholeKilometres(km));
+    [InlineData(10.4, 10, 30, true)]
+    [InlineData(10.5, 10, 30, false)]
+    [InlineData(10.5, 30, 10, false)]
+    [InlineData(11.5, 12, 30, true)]
+    public void Distance_rounds_halves_up_before_the_travel_limit(double km, int maxA, int maxB, bool within) =>
+        Assert.Equal(within, CandidateRule.IsWithinTravel(km, maxA, maxB));
 
     [Theory]
     [Trait("SpecPartial", "S4.2")]
