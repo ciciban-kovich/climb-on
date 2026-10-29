@@ -4,7 +4,7 @@ using Xunit;
 
 namespace ClimbOn.Domain.Tests.Matching;
 
-[Trait("SpecPartial", "S60.1")]
+[Trait("Spec", "S60.1")]
 public sealed class WindowOverlapTests
 {
     // The specs glossary's example.

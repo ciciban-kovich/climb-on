@@ -79,7 +79,7 @@ public sealed class KartverketSourceTests
 
     // Imported, an empty dataset would retire every postcode (S102).
     [Theory]
-    [Trait("SpecPartial", "S102")]
+    [Trait("Spec", "S102")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task Dataset_without_any_area_is_refused(bool withAreaLessFeature)

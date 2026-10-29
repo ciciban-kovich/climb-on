@@ -5,7 +5,7 @@ using static ClimbOn.Domain.Tests.Matching.Climbers;
 
 namespace ClimbOn.Domain.Tests.Matching;
 
-[Trait("SpecPartial", "S4")]
+[Trait("Spec", "S4")]
 public sealed class CandidateRuleTests
 {
     [Fact]
@@ -13,8 +13,8 @@ public sealed class CandidateRuleTests
         Assert.True(CandidateRule.IsCandidate(Climber(), Climber()));
 
     [Theory]
-    [Trait("SpecPartial", "S4.1")]
-    [Trait("SpecPartial", "S16")]
+    [Trait("Spec", "S4.1")]
+    [Trait("Spec", "S16")]
     [InlineData(10, 30, 9.9, true)]
     [InlineData(10, 30, 10.4, true)]
     [InlineData(10, 30, 10.6, false)]
@@ -31,7 +31,7 @@ public sealed class CandidateRuleTests
     }
 
     [Theory]
-    [Trait("SpecPartial", "S4.1")]
+    [Trait("Spec", "S4.1")]
     [Trait("SpecPartial", "S52")]
     [InlineData(10.4, 10, 30, true)]
     [InlineData(10.5, 10, 30, false)]
@@ -41,7 +41,7 @@ public sealed class CandidateRuleTests
         Assert.Equal(within, CandidateRule.IsWithinTravel(km, maxA, maxB));
 
     [Theory]
-    [Trait("SpecPartial", "S4.2")]
+    [Trait("Spec", "S4.2")]
     [InlineData("female", null, "male", null, true)]
     [InlineData("female", new[] { "male" }, "male", new[] { "female" }, true)]
     [InlineData("female", new[] { "female" }, "male", null, false)]
@@ -56,8 +56,8 @@ public sealed class CandidateRuleTests
     }
 
     [Theory]
-    [Trait("SpecPartial", "S4.3")]
-    [Trait("SpecPartial", "S12")]
+    [Trait("Spec", "S4.3")]
+    [Trait("Spec", "S12")]
     [InlineData("top-rope", "indoor", "brattkort-topptau", "brattkort-led", true)]
     [InlineData("top-rope", "indoor", "none", "brattkort-led", false)]
     [InlineData("lead", "indoor", "brattkort-led", "brattkort-led", true)]
@@ -75,7 +75,7 @@ public sealed class CandidateRuleTests
     }
 
     [Fact]
-    [Trait("SpecPartial", "S4.3")]
+    [Trait("Spec", "S4.3")]
     public void Variants_of_one_discipline_at_other_venues_are_not_shared()
     {
         var a = Climber(Draft with { Disciplines = [new("bouldering", ["outdoor"], Range("5", "6B"), Range("5", "6B"))] });
@@ -85,8 +85,8 @@ public sealed class CandidateRuleTests
 
     // One variant fails S12 for B; the other is shared and needs nothing.
     [Fact]
-    [Trait("SpecPartial", "S4.3")]
-    [Trait("SpecPartial", "S12")]
+    [Trait("Spec", "S4.3")]
+    [Trait("Spec", "S12")]
     public void One_qualifying_shared_variant_is_enough()
     {
         DisciplineEntryDraft[] both =
@@ -102,7 +102,7 @@ public sealed class CandidateRuleTests
     }
 
     [Fact]
-    [Trait("SpecPartial", "S14")]
+    [Trait("Spec", "S14")]
     public void Grade_ranges_that_never_meet_do_not_prevent_candidacy()
     {
         var a = Climber(Draft with { Disciplines = [new("bouldering", ["indoor"], Range("3", "4"), Range("3", "4"))] });

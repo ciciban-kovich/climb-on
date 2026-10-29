@@ -31,13 +31,13 @@ public sealed class DisciplineVariantTests
     }
 
     [Theory]
-    [Trait("SpecPartial", "S12")]
+    [Trait("Spec", "S12")]
     [MemberData(nameof(Requirement))]
     public void Certification_requirement_per_variant(DisciplineVariant variant, BelayCertification certification, bool met) =>
         Assert.Equal(met, variant.IsMetBy(certification));
 
     [Fact]
-    [Trait("SpecPartial", "S12")]
+    [Trait("Spec", "S12")]
     public void Undefined_certification_or_variant_is_refused()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => DisciplineVariant.LeadIndoor.IsMetBy((BelayCertification)3));

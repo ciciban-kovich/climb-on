@@ -1,3 +1,4 @@
+using System.Data;
 using ClimbOn.Application.Profiles;
 using ClimbOn.Domain.Profiles;
 using Microsoft.EntityFrameworkCore;
@@ -6,32 +7,42 @@ namespace ClimbOn.Infrastructure.Persistence.Profiles;
 
 public sealed class ProfileStore(ClimbOnDbContext db) : IProfileStore
 {
-    public async Task<Profile?> FindAsync(Guid accountId, CancellationToken cancellationToken)
+    public async Task<Profile?> FindAsync(Guid accountId, CancellationToken cancellationToken) =>
+        (await FindManyAsync([accountId], cancellationToken)).GetValueOrDefault(accountId);
+
+    public async Task<IReadOnlyDictionary<Guid, Profile>> FindManyAsync(
+        IReadOnlyCollection<Guid> accountIds, CancellationToken cancellationToken)
     {
-        var profile = await db.Profiles.AsNoTracking().SingleOrDefaultAsync(row => row.AccountId == accountId, cancellationToken);
-        if (profile is null)
+        if (accountIds.Count == 0)
         {
-            return null;
+            return new Dictionary<Guid, Profile>();
         }
 
-        var variants = await db.DisciplineVariants.AsNoTracking().Where(row => row.AccountId == accountId).ToListAsync(cancellationToken);
-        var windows = await db.AvailabilityWindows.AsNoTracking().Where(row => row.AccountId == accountId).ToListAsync(cancellationToken);
-        var gyms = await db.HomeGyms.AsNoTracking().Where(row => row.AccountId == accountId)
-            .OrderBy(row => row.Position).Select(row => row.GymId).ToListAsync(cancellationToken);
+        // One snapshot: a save between two of these reads could otherwise pair a new rope scale with old grades.
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
+        var profiles = await db.Profiles.AsNoTracking().Where(row => accountIds.Contains(row.AccountId)).ToListAsync(cancellationToken);
+        var variants = (await db.DisciplineVariants.AsNoTracking().Where(row => accountIds.Contains(row.AccountId))
+            .ToListAsync(cancellationToken)).ToLookup(row => row.AccountId);
+        var windows = (await db.AvailabilityWindows.AsNoTracking().Where(row => accountIds.Contains(row.AccountId))
+            .ToListAsync(cancellationToken)).ToLookup(row => row.AccountId);
+        var gyms = (await db.HomeGyms.AsNoTracking().Where(row => accountIds.Contains(row.AccountId))
+            .OrderBy(row => row.Position).ToListAsync(cancellationToken)).ToLookup(row => row.AccountId, row => row.GymId);
+        await transaction.CommitAsync(cancellationToken);
 
-        // Rebuilt through the same rules it was saved under; the postcode was checked when it was chosen.
-        return Profile.Create(new ProfileDraft(
+        // Rebuilt through the same rules they were saved under, from the grades as entered; the postcode was
+        // checked when it was chosen.
+        return profiles.ToDictionary(profile => profile.AccountId, profile => Profile.Create(new ProfileDraft(
             profile.DisplayName,
             profile.Sex,
             profile.AcceptedSexes,
             profile.RopeScale,
-            Entries(variants),
+            Entries([.. variants[profile.AccountId]]),
             profile.Certification,
             profile.OwnGear,
             profile.Postcode,
             profile.MaxTravelKm,
-            gyms,
-            windows.Select(row => new WindowDraft(row.Day, row.StartHour, row.EndHour)).ToList()));
+            [.. gyms[profile.AccountId]],
+            windows[profile.AccountId].Select(row => new WindowDraft(row.Day, row.StartHour, row.EndHour)).ToList())));
     }
 
     public async Task SaveAsync(Guid accountId, Profile profile, CancellationToken cancellationToken)
@@ -88,10 +99,11 @@ public sealed class ProfileStore(ClimbOnDbContext db) : IProfileStore
         db.ChangeTracker.Clear();
     }
 
-    public async Task<IReadOnlyDictionary<Guid, bool>> FindGymsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
+    public async Task<IReadOnlyDictionary<Guid, Gym>> FindGymsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken) =>
         ids.Count == 0
-            ? new Dictionary<Guid, bool>()
-            : await db.Gyms.AsNoTracking().Where(gym => ids.Contains(gym.Id)).ToDictionaryAsync(gym => gym.Id, gym => gym.Active, cancellationToken);
+            ? new Dictionary<Guid, Gym>()
+            : await db.Gyms.AsNoTracking().Where(gym => ids.Contains(gym.Id))
+                .ToDictionaryAsync(gym => gym.Id, gym => new Gym(gym.Id, gym.Name, gym.Active), cancellationToken);
 
     // Shared variants of one discipline are one entry, as they were entered (S3).
     private static List<DisciplineEntryDraft?> Entries(List<DisciplineVariantRow> rows) =>

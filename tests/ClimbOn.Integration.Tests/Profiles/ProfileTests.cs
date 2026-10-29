@@ -329,10 +329,10 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
     }
 
     // The profile chose 3089 while it was active; the table has since retired it. S102.3's distance
-    // clause becomes observable with cards (task 18).
+    // clause is SuggestionListTests.Retired_postcode_distance_uses_retained_point.
     [Fact]
-    [Trait("SpecPartial", "S102")]
-    [Trait("SpecPartial", "S102.3")]
+    [Trait("Spec", "S102")]
+    [Trait("Spec", "S102.3")]
     public async Task Retired_postcode_kept_when_other_fields_change()
     {
         Assert.True(FixturePostcodes.Get(FixturePostcodes.Retired).Retired);

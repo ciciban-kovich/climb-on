@@ -30,7 +30,7 @@ public sealed class PostcodeDiffTests
     }
 
     [Fact]
-    [Trait("SpecPartial", "S102")]
+    [Trait("Spec", "S102")]
     [Trait("Spec", "S102.1")]
     public void Missing_postcode_is_retired_keeping_its_last_point()
     {
@@ -42,7 +42,7 @@ public sealed class PostcodeDiffTests
 
     // The table's state every month after a postcode has gone: it is neither written nor counted again.
     [Fact]
-    [Trait("SpecPartial", "S102")]
+    [Trait("Spec", "S102")]
     [Trait("Spec", "S101.1")]
     public void Postcode_already_retired_and_still_missing_is_left_alone()
     {

@@ -571,10 +571,163 @@
           }
         }
       }
+    },
+    "/api/climber/suggestions": {
+      "get": {
+        "tags": [
+          "Suggestions"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionListResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "CardDisciplineResponse": {
+        "required": [
+          "discipline",
+          "venues",
+          "grades"
+        ],
+        "type": "object",
+        "properties": {
+          "discipline": {
+            "type": "string"
+          },
+          "venues": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "grades": {
+            "$ref": "#/components/schemas/GradeRangeResponse"
+          }
+        }
+      },
+      "CardGymResponse": {
+        "required": [
+          "name",
+          "active"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ClimberCardResponse": {
+        "required": [
+          "accountId",
+          "displayName",
+          "sex",
+          "disciplines",
+          "certification",
+          "certificationLabel",
+          "ownGear",
+          "homeGyms",
+          "overlap",
+          "distance"
+        ],
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "sex": {
+            "type": "string"
+          },
+          "disciplines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CardDisciplineResponse"
+            }
+          },
+          "certification": {
+            "type": "string"
+          },
+          "certificationLabel": {
+            "type": "string"
+          },
+          "ownGear": {
+            "type": "boolean"
+          },
+          "homeGyms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CardGymResponse"
+            }
+          },
+          "overlap": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WindowResponse"
+            }
+          },
+          "distance": {
+            "type": "string"
+          }
+        }
+      },
       "DisciplineEntryRequest": {
         "required": [
           "discipline",
@@ -1046,6 +1199,20 @@
           }
         }
       },
+      "SuggestionListResponse": {
+        "required": [
+          "candidates"
+        ],
+        "type": "object",
+        "properties": {
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClimberCardResponse"
+            }
+          }
+        }
+      },
       "WindowRequest": {
         "required": [
           "day",
@@ -1120,6 +1287,9 @@
     },
     {
       "name": "Profile"
+    },
+    {
+      "name": "Suggestions"
     }
   ]
 }
