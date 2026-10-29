@@ -23,7 +23,7 @@ Rationale lives in decisions.md, not here.
 - S1. A climber can register with Google, Facebook or Apple SSO, or with an email address.
 - S2. An account whose email address is not confirmed cannot send or receive invites.
 - S3. A profile holds: display name (trimmed and in Unicode NFC: 1 to 50 code points, at least one letter or digit, and no control or format characters); own sex (female, male or other); accepted partner sexes (one or more of those; default: any); per discipline variant: own grade range and acceptable partner grade range (grade ranges may be shared across the indoor and outdoor variants of one discipline); belay certification (none / Brattkort topptau / Brattkort led); own gear (yes/no); home area (postcode, S15); maximum travel distance in km (1 to 100); optional list of home gyms; one or more availability windows; optional profile photo (S55).
-- S4. Climber B appears in climber A's suggestion list if and only if all of the following hold. A climber without a profile gets an empty suggestion list, not an error.
+- S4. Climber B appears in climber A's suggestion list if and only if all of the following hold (a climber without a profile therefore gets an empty suggestion list, not an error):
   - S4.1 The distance between their home areas, rounded to whole km as on a card (S52), is at most the smaller of A's and B's maximum travel distances.
   - S4.2 B's sex is in A's accepted set, and A's sex is in B's accepted set.
   - S4.3 There exists a discipline variant that both have in their profile and for which both meet the certification requirement in S12.
