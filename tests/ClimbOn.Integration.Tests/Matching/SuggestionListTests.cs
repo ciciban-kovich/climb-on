@@ -179,6 +179,7 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
     }
 
     [Fact]
+    [Trait("Spec", "S4")]
     public async Task Climber_without_a_profile_has_an_empty_list()
     {
         await ClimberAsync();
