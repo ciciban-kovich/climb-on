@@ -1,4 +1,5 @@
 using ClimbOn.Application.Abstractions;
+using ClimbOn.Application.Accounts;
 using ClimbOn.Application.Matching;
 using ClimbOn.Domain.Errors;
 using ClimbOn.Domain.Invites;
@@ -6,7 +7,7 @@ using ClimbOn.Domain.Invites;
 namespace ClimbOn.Application.Invites;
 
 // The recipient accepts a pending invite, which creates a connection, or declines it (S7).
-public sealed class AnswerInvite(IInviteStore invites, IClock clock)
+public sealed class AnswerInvite(IAccountStore accounts, IInviteStore invites, IClock clock)
 {
     public const string NotFoundCode = "invite_not_found";
 
@@ -21,7 +22,12 @@ public sealed class AnswerInvite(IInviteStore invites, IClock clock)
 
     private async Task AnswerAsync(Guid recipientId, Guid inviteId, bool accept, CancellationToken cancellationToken)
     {
-        // S23, an account gate like sending's: accepting needs the acknowledgement, declining does not.
+        // The account gates, in sending's order: S2, then S23, which gates accepting but not declining.
+        if (await accounts.FindOwnAsync(recipientId, cancellationToken) is not { EmailConfirmed: true })
+        {
+            throw new DomainError(GetSuggestions.EmailNotConfirmedCode, DomainErrorKind.Forbidden);
+        }
+
         if (accept && await invites.FindSafetyAcknowledgementAsync(recipientId, cancellationToken) is null)
         {
             throw new DomainError(SafetyNotice.NotAcknowledgedCode, DomainErrorKind.Forbidden);
@@ -36,7 +42,7 @@ public sealed class AnswerInvite(IInviteStore invites, IClock clock)
         var now = clock.UtcNow;
         await using var pair = await invites.LockPairAsync(recipientId, found.SenderId, PairAction.Answer, now, cancellationToken);
 
-        // S2, under the locks: an unconfirmed account cannot receive an invite, so none to it is pending.
+        // Both accounts' state again, under the locks.
         if (pair.Actor is not { EmailConfirmed: true })
         {
             throw new DomainError(GetSuggestions.EmailNotConfirmedCode, DomainErrorKind.Forbidden);

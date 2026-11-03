@@ -77,12 +77,14 @@ public sealed partial class GetSuggestions(
     }
 
     // Design §2 'Invite validation order' step 3: whether the candidate is in the requester's list as computed without
-    // S117. The same path as the list, for one candidate; false when either has no profile today's rules accept.
+    // S117. The same path as the list, for one candidate: false when either has no profile, or the candidate's is one
+    // today's rules refuse; the requester's own refused profile is refused with its code, as on the list.
     public async Task<bool> IsCandidateAsync(Guid requesterId, Guid candidateId, CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
         if ((await candidates.FindAsync([requesterId], cancellationToken)).SingleOrDefault() is not { } requester)
         {
+            _ = await OwnProfileAsync(requesterId, cancellationToken);
             return false;
         }
 
@@ -103,7 +105,7 @@ public sealed partial class GetSuggestions(
 
     // A stored profile that today's rules refuse is still the requester's error to fix, with its code, but it is
     // logged as a refused candidate is.
-    private async Task<Profile?> OwnProfileAsync(Guid requesterId, CancellationToken cancellationToken)
+    public async Task<Profile?> OwnProfileAsync(Guid requesterId, CancellationToken cancellationToken)
     {
         try
         {

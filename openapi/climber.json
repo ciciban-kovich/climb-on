@@ -1704,6 +1704,7 @@
           "id",
           "sentAt",
           "state",
+          "displayName",
           "recipient"
         ],
         "type": "object",
@@ -1719,8 +1720,18 @@
           "state": {
             "type": "string"
           },
+          "displayName": {
+            "type": "string"
+          },
           "recipient": {
-            "$ref": "#/components/schemas/ClimberCardResponse"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ClimberCardResponse"
+              }
+            ]
           }
         }
       },

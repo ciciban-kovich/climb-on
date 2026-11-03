@@ -14,6 +14,14 @@ namespace ClimbOn.Client.Api.Models
     {
         /// <summary>Stores additional data not described in the OpenAPI description found when deserializing. Can be used for serialization as well.</summary>
         public IDictionary<string, object> AdditionalData { get; set; }
+        /// <summary>The displayName property</summary>
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+        public string? DisplayName { get; set; }
+#nullable restore
+#else
+        public string DisplayName { get; set; }
+#endif
         /// <summary>The id property</summary>
         public Guid? Id { get; set; }
         /// <summary>The recipient property</summary>
@@ -59,6 +67,7 @@ namespace ClimbOn.Client.Api.Models
         {
             return new Dictionary<string, Action<IParseNode>>
             {
+                { "displayName", n => { DisplayName = n.GetStringValue(); } },
                 { "id", n => { Id = n.GetGuidValue(); } },
                 { "recipient", n => { Recipient = n.GetObjectValue<global::ClimbOn.Client.Api.Models.ClimberCardResponse>(global::ClimbOn.Client.Api.Models.ClimberCardResponse.CreateFromDiscriminatorValue); } },
                 { "sentAt", n => { SentAt = n.GetDateTimeOffsetValue(); } },
@@ -72,6 +81,7 @@ namespace ClimbOn.Client.Api.Models
         public virtual void Serialize(ISerializationWriter writer)
         {
             if(ReferenceEquals(writer, null)) throw new ArgumentNullException(nameof(writer));
+            writer.WriteStringValue("displayName", DisplayName);
             writer.WriteGuidValue("id", Id);
             writer.WriteObjectValue<global::ClimbOn.Client.Api.Models.ClimberCardResponse>("recipient", Recipient);
             writer.WriteDateTimeOffsetValue("sentAt", SentAt);

@@ -8,6 +8,7 @@ using ClimbOn.Application.Invites;
 using ClimbOn.Application.Matching;
 using ClimbOn.Domain.Accounts;
 using ClimbOn.Domain.Invites;
+using ClimbOn.Domain.Profiles;
 using ClimbOn.Integration.Tests.Harness;
 using Xunit;
 
@@ -39,7 +40,8 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
         var sent = (await climbers.ListAsync(a)).Sent;
         Assert.Equal([toC.InviteId!.Value, toB.InviteId!.Value], sent.Select(invite => invite.Id));
         Assert.All(sent, invite => Assert.Equal("pending", invite.State));
-        Assert.Equal([c.Name, b.Name], sent.Select(invite => invite.Recipient.DisplayName));
+        Assert.Equal([c.Name, b.Name], sent.Select(invite => invite.DisplayName));
+        Assert.Equal([c.Name, b.Name], sent.Select(invite => invite.Recipient?.DisplayName));
         var received = Assert.Single((await climbers.ListAsync(b)).Received);
         Assert.Equal(toB.InviteId, received.Id);
         Assert.Equal(a.Name, received.Sender.DisplayName);
@@ -88,6 +90,35 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(GetSuggestions.EmailNotConfirmedCode, await InviteClimbers.CodeAsync(sent));
         Assert.Equal(InvitePolicy.NotCandidateCode, await climbers.RefusedAsync(a, unconfirmed.Id));
         Assert.Equal(0, await climbers.PendingAsync(a, unconfirmed));
+
+        // Answering runs the same account gate first, before the invite is looked up.
+        foreach (var answer in new[] { climbers.AcceptAsync, climbers.DeclineAsync })
+        {
+            using var response = await answer(unconfirmed, Guid.NewGuid());
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+            Assert.Equal(GetSuggestions.EmailNotConfirmedCode, await InviteClimbers.CodeAsync(response));
+        }
+    }
+
+    // The climber's own stored profile that today's rules refuse is refused with its code, as on the suggestion
+    // list, rather than shown as an empty invite list or a refused candidate.
+    [Fact]
+    public async Task Own_invalid_stored_profile_is_refused_with_its_code()
+    {
+        var a = await climbers.ClimberAsync();
+        var b = await climbers.ClimberAsync();
+        var c = await climbers.ClimberAsync();
+        await climbers.InvitedAsync(b, a);
+        await climbers.RefuseProfileAsync(a);
+
+        using (var list = await climbers.GetListAsync(a))
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, list.StatusCode);
+            Assert.Equal(Profile.DisplayNameInvalidCode, await InviteClimbers.CodeAsync(list));
+        }
+
+        Assert.Equal(Profile.DisplayNameInvalidCode, await climbers.RefusedAsync(a, c.Id));
+        Assert.Equal(0, await climbers.PendingAsync(a, c));
     }
 
     [Fact]
@@ -279,6 +310,42 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(state == "accepted" ? 1 : 0, await climbers.ConnectionsAsync(a, b));
     }
 
+    // The sender sees the recipient's card only while the invite is pending; once it has ended, only the recipient's
+    // display name and the state.
+    [Theory]
+    [Trait("SpecPartial", "S35")]
+    [InlineData("accepted")]
+    [InlineData("declined")]
+    [InlineData("expired")]
+    public async Task Sender_sees_the_recipient_card_only_while_pending(string state)
+    {
+        var a = await climbers.ClimberAsync();
+        var b = await climbers.ClimberAsync();
+        var invite = (await climbers.InvitedAsync(a, b)).InviteId!.Value;
+
+        var pending = Assert.Single((await climbers.ListAsync(a)).Sent);
+        Assert.Equal(b.Name, pending.DisplayName);
+        Assert.Equal(b.Name, pending.Recipient?.DisplayName);
+
+        switch (state)
+        {
+            case "accepted":
+                (await climbers.AcceptAsync(b, invite)).Dispose();
+                break;
+            case "declined":
+                (await climbers.DeclineAsync(b, invite)).Dispose();
+                break;
+            default:
+                Factory.Clock.Advance(Invite.Lifetime);
+                break;
+        }
+
+        var ended = Assert.Single((await climbers.ListAsync(a)).Sent);
+        Assert.NotEqual("pending", ended.State);
+        Assert.Equal(b.Name, ended.DisplayName);
+        Assert.Null(ended.Recipient);
+    }
+
     // Only the recipient answers an invite; to anyone else it does not exist.
     [Fact]
     [Trait("SpecPartial", "S7")]
@@ -344,6 +411,7 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
         var sent = (await climbers.ListAsync(a)).Sent;
         Assert.Equal(2, sent.Count);
         Assert.All(sent, invite => Assert.Equal("not-accepted", invite.State));
+        Assert.All(sent, invite => Assert.Null(invite.Recipient));
     }
 
     [Fact]
@@ -473,6 +541,24 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(0, await climbers.PendingAsync(a, b));
         Assert.Empty((await climbers.ListAsync(a)).Sent);
         Assert.Equal("accepted", Assert.Single((await climbers.ListAsync(b)).Sent).State);
+    }
+
+    // S34 comes before the candidate check: b's pending invite connects the pair even once b no longer accepts a, so
+    // that a's invite would otherwise be refused as not a candidate.
+    [Fact]
+    [Trait("Spec", "S34")]
+    public async Task Reverse_invite_connects_even_when_no_longer_a_candidate()
+    {
+        var a = await climbers.ClimberAsync();
+        var b = await climbers.ClimberAsync();
+        await climbers.InvitedAsync(b, a);
+        await climbers.SaveProfileAsync(b, profile => profile with { AcceptedSexes = ["male"] });
+
+        var result = await climbers.InvitedAsync(a, b);
+
+        Assert.Equal(InviteEndpoints.Connected, result.Outcome);
+        Assert.Equal(1, await climbers.ConnectionsAsync(a, b));
+        Assert.Equal(0, await climbers.PendingAsync(a, b));
     }
 
     // Each step is checked against a state that every later step would also refuse, so the code shows which one

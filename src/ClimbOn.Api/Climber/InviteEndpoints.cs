@@ -20,8 +20,10 @@ public sealed record InviteResultResponse(string Outcome, Guid? InviteId);
 
 public sealed record ReceivedInviteResponse(Guid Id, DateTimeOffset SentAt, DateTimeOffset ExpiresAt, ClimberCardResponse Sender);
 
-// State is pending, accepted or not-accepted (S35).
-public sealed record SentInviteResponse(Guid Id, DateTimeOffset SentAt, string State, ClimberCardResponse Recipient);
+// State is pending, accepted or not-accepted (S35). Recipient is the recipient's card while State is pending, and
+// null once the invite has ended.
+public sealed record SentInviteResponse(
+    Guid Id, DateTimeOffset SentAt, string State, string DisplayName, ClimberCardResponse? Recipient);
 
 // Received holds the pending invites to the climber, Sent every invite they sent; both newest first.
 public sealed record InviteListResponse(IReadOnlyList<ReceivedInviteResponse> Received, IReadOnlyList<SentInviteResponse> Sent);
@@ -101,7 +103,11 @@ public static class InviteEndpoints
             invites.Received.Select(invite => new ReceivedInviteResponse(
                 invite.Id, invite.SentAt, invite.ExpiresAt, SuggestionEndpoints.ToResponse(invite.Sender, session.Language))).ToList(),
             invites.Sent.Select(invite => new SentInviteResponse(
-                invite.Id, invite.SentAt, WireName(invite.State), SuggestionEndpoints.ToResponse(invite.Recipient, session.Language))).ToList()));
+                invite.Id,
+                invite.SentAt,
+                WireName(invite.State),
+                invite.DisplayName,
+                invite.Recipient is { } card ? SuggestionEndpoints.ToResponse(card, session.Language) : null)).ToList()));
     }
 
     private static async Task<Ok<InviteResultResponse>> SendAsync(

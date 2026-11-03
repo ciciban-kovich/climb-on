@@ -159,7 +159,7 @@ Hvis det ikke var deg, kan du se bort fra denne e-posten. Kontoen din er ikke en
     <value>Sikkerhet først: hver klatrer har selv ansvar for å sjekke at makkeren kan sikre før dere klatrer sammen, både inne og ute. Sertifiseringer i appen er egenerklærte.</value>
   </data>
   <data name="safety_notice_not_acknowledged" xml:space="preserve">
-    <value>Les og bekreft sikkerhetsvarselet før du sender en invitasjon.</value>
+    <value>Les og bekreft sikkerhetsvarselet før du sender eller godtar en invitasjon.</value>
   </data>
   <data name="invite_not_candidate" xml:space="preserve">
     <value>Du kan bare invitere klatrere fra forslagslisten din.</value>

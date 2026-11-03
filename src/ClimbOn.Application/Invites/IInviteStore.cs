@@ -53,8 +53,8 @@ public interface IInviteStore
 
     Task<Invite?> FindAsync(Guid inviteId, CancellationToken cancellationToken);
 
-    // Every invite the account sent or received.
-    Task<IReadOnlyList<Invite>> ListAsync(Guid accountId, CancellationToken cancellationToken);
+    // Every invite the account sent, and those it received that are still pending at now.
+    Task<IReadOnlyList<Invite>> ListAsync(Guid accountId, DateTimeOffset now, CancellationToken cancellationToken);
 
     // S23: when the account acknowledged the safety notice; null when it has not.
     Task<DateTimeOffset?> FindSafetyAcknowledgementAsync(Guid accountId, CancellationToken cancellationToken);

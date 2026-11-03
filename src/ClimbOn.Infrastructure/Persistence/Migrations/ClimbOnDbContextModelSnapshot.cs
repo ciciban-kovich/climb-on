@@ -200,6 +200,9 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                     b.HasIndex("PairHigh")
                         .HasDatabaseName("ix_connections_pair_high");
 
+                    b.HasIndex("PairLow")
+                        .HasDatabaseName("ix_connections_pair_low");
+
                     b.HasIndex("PairLow", "PairHigh")
                         .IsUnique()
                         .HasDatabaseName("ix_connections_live_pair")

@@ -159,7 +159,7 @@ If it was not you, you can ignore this email. Your account has not been changed.
     <value>Safety first: every climber is responsible for checking their partner's belay competence before climbing together, indoors and outdoors. Certifications shown in the app are self-declared.</value>
   </data>
   <data name="safety_notice_not_acknowledged" xml:space="preserve">
-    <value>Read and acknowledge the safety notice before you send an invite.</value>
+    <value>Read and acknowledge the safety notice before you send or accept an invite.</value>
   </data>
   <data name="invite_not_candidate" xml:space="preserve">
     <value>You can only invite climbers from your suggestion list.</value>

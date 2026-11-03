@@ -117,6 +117,11 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                 column: "pair_high");
 
             migrationBuilder.CreateIndex(
+                name: "ix_connections_pair_low",
+                table: "connections",
+                column: "pair_low");
+
+            migrationBuilder.CreateIndex(
                 name: "ix_invites_pending_pair",
                 table: "invites",
                 columns: new[] { "sender_id", "recipient_id" },

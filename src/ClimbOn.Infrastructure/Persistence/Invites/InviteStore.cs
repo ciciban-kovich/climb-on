@@ -51,12 +51,16 @@ public sealed class InviteStore(ClimbOnDbContext db) : IInviteStore
     public async Task<Invite?> FindAsync(Guid inviteId, CancellationToken cancellationToken) =>
         (await db.Invites.AsNoTracking().SingleOrDefaultAsync(row => row.Id == inviteId, cancellationToken))?.ToInvite();
 
-    public async Task<IReadOnlyList<Invite>> ListAsync(Guid accountId, CancellationToken cancellationToken) =>
-        (await db.Invites.AsNoTracking()
-            .Where(row => row.SenderId == accountId || row.RecipientId == accountId)
-            .ToListAsync(cancellationToken))
-        .Select(row => row.ToInvite())
-        .ToList();
+    public async Task<IReadOnlyList<Invite>> ListAsync(Guid accountId, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var sentAfter = now - Invite.Lifetime;
+        return (await db.Invites.AsNoTracking()
+                .Where(row => row.SenderId == accountId
+                    || (row.RecipientId == accountId && row.State == InviteNames.Pending && row.SentAt > sentAfter))
+                .ToListAsync(cancellationToken))
+            .Select(row => row.ToInvite())
+            .ToList();
+    }
 
     public async Task<DateTimeOffset?> FindSafetyAcknowledgementAsync(Guid accountId, CancellationToken cancellationToken) =>
         await db.SafetyAcknowledgements.AsNoTracking()

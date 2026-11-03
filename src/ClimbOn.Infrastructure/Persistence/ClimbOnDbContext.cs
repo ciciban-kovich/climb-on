@@ -329,6 +329,8 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
                 .HasConstraintName("fk_connections_invites").OnDelete(DeleteBehavior.Cascade);
             connection.HasIndex(row => new { row.PairLow, row.PairHigh }).IsUnique().HasDatabaseName(LiveConnectionIndex)
                 .HasFilter("state IN ('active', 'paused')");
+            // Full indexes for the two account foreign keys: the live-pair index above is partial, so it serves neither.
+            connection.HasIndex(row => row.PairLow).HasDatabaseName("ix_connections_pair_low");
             connection.HasIndex(row => row.PairHigh).HasDatabaseName("ix_connections_pair_high");
             connection.HasIndex(row => row.InviteId).IsUnique().HasDatabaseName("ix_connections_invite_id");
         });

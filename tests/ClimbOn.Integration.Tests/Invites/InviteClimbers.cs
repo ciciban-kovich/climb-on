@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using ClimbOn.Api.Climber;
 using ClimbOn.Api.Errors;
 using ClimbOn.Api.Middleware;
+using ClimbOn.Domain.Profiles;
 using ClimbOn.Integration.Tests.Harness;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Net.Http.Headers;
@@ -124,11 +125,26 @@ public sealed class InviteClimbers(ApiFactory factory)
     public Task<HttpResponseMessage> DeclineAsync(InviteClimber climber, Guid invite) =>
         SendAsync(new HttpRequestMessage(HttpMethod.Post, $"{InvitesRoute}/{invite}/decline"), climber.Token);
 
+    public Task<HttpResponseMessage> GetListAsync(InviteClimber climber) =>
+        SendAsync(new HttpRequestMessage(HttpMethod.Get, InvitesRoute), climber.Token);
+
     public async Task<InviteListResponse> ListAsync(InviteClimber climber)
     {
-        using var response = await SendAsync(new HttpRequestMessage(HttpMethod.Get, InvitesRoute), climber.Token);
+        using var response = await GetListAsync(climber);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         return (await response.Content.ReadFromJsonAsync<InviteListResponse>(Ct))!;
+    }
+
+    // A stored profile that today's rules refuse, as a later tightening of a rule would leave it, arranged below the
+    // API as the suggestion-list tests arrange it: a display name past the maximum length.
+    public async Task RefuseProfileAsync(InviteClimber climber)
+    {
+        await using var connection = new NpgsqlConnection(factory.ConnectionString);
+        await connection.OpenAsync(Ct);
+        await using var command = new NpgsqlCommand("UPDATE profiles SET display_name = @name WHERE account_id = @id", connection);
+        command.Parameters.AddWithValue("name", new string('x', Profile.MaximumDisplayNameLength + 1));
+        command.Parameters.AddWithValue("id", climber.Id);
+        Assert.Equal(1, await command.ExecuteNonQueryAsync(Ct));
     }
 
     public async Task<List<string>> SuggestionsAsync(InviteClimber climber)

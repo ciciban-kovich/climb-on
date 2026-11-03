@@ -8,11 +8,19 @@ namespace ClimbOn.Infrastructure.Persistence.Profiles;
 
 public sealed class ProfileStore(ClimbOnDbContext db) : IProfileStore
 {
+    // Reads in the caller's transaction when there is one, as ICandidateStore does, which then holds the profile row
+    // FOR SHARE (IInviteStore.LockPairAsync).
     public async Task<Profile?> FindAsync(Guid accountId, CancellationToken cancellationToken)
     {
-        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken);
+        await using var transaction = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
+            : null;
         var profiles = await ReadAsync(db, [accountId], cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+
         return profiles.GetValueOrDefault(accountId);
     }
 
