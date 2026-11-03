@@ -66,7 +66,7 @@ Rationale lives in decisions.md, not here.
 - S32. While an invite from A to B is pending, A cannot send B another invite.
 - S33. After an invite from A to B is declined or expires, A cannot invite B for 30 days. B is not restricted by this. An invite that expires because of S37 does not start this period, in either direction.
 - S34. If A invites B while an invite from B to A is pending, A's action accepts B's invite: one connection is created and no new invite exists. S34 is evaluated before S31–S33, so it is never rejected by them.
-- S35. The sender sees a declined invite and an expired invite identically, as "not accepted".
+- S35. The sender sees a declined invite and an expired invite identically, as "not accepted". The recipient's card is shown only while the invite is pending; after that, the recipient's display name and the state only: "accepted" or "not accepted".
 - S36. A climber can request deletion of their account in the app at any time.
 - S37. Deletion request, immediate effect: the account becomes deactivated and appears in no suggestion list. It cannot log in except as in S39. Its active connections become paused (S42). Its pending invites, incoming and outgoing, become expired. No data is erased at this point.
 - S38. 30 days after the request, the account is erased: profile, preferences, availability windows, date of birth, login identity, and all messages the climber wrote. In the other party's history, each erased message is replaced by a placeholder without content, and the climber is shown as "deleted climber". The climber's paused connections become ended.
@@ -88,7 +88,7 @@ Rationale lives in decisions.md, not here.
 - S51. A climber card shows: display name; own sex; discipline variants with grades (displayed per S13.5); belay certification labelled per S22; own gear; home gyms (inactive ones marked per S21); the window overlap with the viewing climber; distance per S52; the profile photo, if any. The card also carries an opaque handle for the climber, which reveals nothing about them, including when they registered.
 - S52. The distance on a card is the S16 distance rounded to whole km, halves up. A rounded distance under 2 km is shown as "< 2 km".
 - S53. A card never shows date of birth, postcode, accepted partner sexes, or acceptable partner grade ranges; its grades are the climber's own ranges only. Email: see S50.
-- S54. The same card is used wherever one climber sees another: suggestion list, received invites, connections.
+- S54. The same card is used wherever one climber sees another: suggestion list, received invites, sent invites while pending (S35), connections.
 - S55. A profile has at most one photo. All image metadata is removed before storage; the stored file contains no metadata.
 - S56. The admin can remove a climber's profile photo without changing the rest of the profile.
 - S57. When a profile is reported, a copy of the reported climber's card (S51) as it appears to the reporting climber at that moment, including the photo, is attached to the report. Retention per S40.
