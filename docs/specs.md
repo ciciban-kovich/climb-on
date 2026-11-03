@@ -50,7 +50,7 @@ Rationale lives in decisions.md, not here.
 - S20. The admin role is an app role in Microsoft Entra ID and is assigned only in Entra. The app never grants it.
 - S21. A deactivated gym disappears from the selectable list and no longer counts toward S60.3. Profiles that listed it keep it, marked as inactive.
 - S22. A climber's belay certification is shown to other climbers with the label "self-declared".
-- S23. An invite request is rejected until the climber has acknowledged the safety notice through the API. The acknowledgement is stored with a timestamp; after it, invites are no longer subject to this check. The API returns the notice text, which states that each climber is responsible for checking their partner's belay competence, indoor and outdoor.
+- S23. An invite request or accepting an invite is rejected until the climber has acknowledged the safety notice through the API. The acknowledgement is stored with a timestamp; after it, invites are no longer subject to this check. The API returns the notice text, which states that each climber is responsible for checking their partner's belay competence, indoor and outdoor.
 - S24. A climber can block any other climber. The block takes effect immediately and is mutual:
   - S24.1 Neither appears in the other's suggestion list.
   - S24.2 Pending invites between them become expired.
