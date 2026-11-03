@@ -137,6 +137,53 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(0, await climbers.ConnectionsAsync(a, b));
     }
 
+    // S23 gates accepting as it gates sending; the invite waits, and the same accept succeeds once acknowledged.
+    [Fact]
+    [Trait("Spec", "S23")]
+    [Trait("SpecPartial", "S7")]
+    public async Task Accept_is_refused_until_the_safety_notice_is_acknowledged()
+    {
+        var a = await climbers.ClimberAsync();
+        var b = await climbers.ClimberAsync(acknowledge: false);
+        var invite = (await climbers.InvitedAsync(a, b)).InviteId!.Value;
+
+        using (var refused = await climbers.AcceptAsync(b, invite))
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+            Assert.Equal(SafetyNotice.NotAcknowledgedCode, await InviteClimbers.CodeAsync(refused));
+        }
+
+        Assert.Equal(1, await climbers.PendingAsync(a, b));
+        Assert.Equal(0, await climbers.ConnectionsAsync(a, b));
+        Assert.Equal(invite, Assert.Single((await climbers.ListAsync(b)).Received).Id);
+
+        (await climbers.AcknowledgeAsync(b)).Dispose();
+        using (var accepted = await climbers.AcceptAsync(b, invite))
+        {
+            Assert.Equal(HttpStatusCode.NoContent, accepted.StatusCode);
+        }
+
+        Assert.Equal(1, await climbers.ConnectionsAsync(a, b));
+    }
+
+    // Declining needs no acknowledgement.
+    [Fact]
+    [Trait("Spec", "S23")]
+    [Trait("SpecPartial", "S7")]
+    public async Task Decline_needs_no_safety_notice_acknowledgement()
+    {
+        var a = await climbers.ClimberAsync();
+        var b = await climbers.ClimberAsync(acknowledge: false);
+        var invite = (await climbers.InvitedAsync(a, b)).InviteId!.Value;
+
+        using (var declined = await climbers.DeclineAsync(b, invite))
+        {
+            Assert.Equal(HttpStatusCode.NoContent, declined.StatusCode);
+        }
+
+        Assert.Equal("not-accepted", Assert.Single((await climbers.ListAsync(a)).Sent).State);
+    }
+
     // The notice is in the account's stored language (S105), which registration set to nb.
     [Fact]
     [Trait("Spec", "S23")]

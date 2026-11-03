@@ -10,7 +10,8 @@ public sealed class AnswerInvite(IInviteStore invites, IClock clock)
 {
     public const string NotFoundCode = "invite_not_found";
 
-    public static IReadOnlyList<string> Codes { get; } = [NotFoundCode, Invite.NotPendingCode, GetSuggestions.EmailNotConfirmedCode];
+    public static IReadOnlyList<string> Codes { get; } =
+        [NotFoundCode, Invite.NotPendingCode, GetSuggestions.EmailNotConfirmedCode, SafetyNotice.NotAcknowledgedCode];
 
     public Task AcceptAsync(Guid recipientId, Guid inviteId, CancellationToken cancellationToken) =>
         AnswerAsync(recipientId, inviteId, accept: true, cancellationToken);
@@ -20,6 +21,12 @@ public sealed class AnswerInvite(IInviteStore invites, IClock clock)
 
     private async Task AnswerAsync(Guid recipientId, Guid inviteId, bool accept, CancellationToken cancellationToken)
     {
+        // S23, an account gate like sending's: accepting needs the acknowledgement, declining does not.
+        if (accept && await invites.FindSafetyAcknowledgementAsync(recipientId, cancellationToken) is null)
+        {
+            throw new DomainError(SafetyNotice.NotAcknowledgedCode, DomainErrorKind.Forbidden);
+        }
+
         // Only its recipient can answer an invite; to anyone else it does not exist.
         if (await invites.FindAsync(inviteId, cancellationToken) is not { } found || found.RecipientId != recipientId)
         {

@@ -554,6 +554,11 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
         var b = await ClimberAsync();
         var c = await ClimberAsync();
         var invite = await InviteAsync(a, b);
+        using (var acknowledged = await PostAsync("/api/climber/safety-notice/acknowledgement", b.Token))
+        {
+            Assert.Equal(HttpStatusCode.OK, acknowledged.StatusCode);
+        }
+
         using (var accepted = await PostAsync($"/api/climber/invites/{invite}/accept", b.Token))
         {
             Assert.Equal(HttpStatusCode.NoContent, accepted.StatusCode);
