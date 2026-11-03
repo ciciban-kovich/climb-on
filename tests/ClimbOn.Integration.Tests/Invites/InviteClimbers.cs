@@ -147,6 +147,16 @@ public sealed class InviteClimbers(ApiFactory factory)
         Assert.Equal(1, await command.ExecuteNonQueryAsync(Ct));
     }
 
+    // Leaves the stored profile one today's rules refuse (windows_required) while its display name still passes.
+    public async Task RefuseProfileKeepingNameAsync(InviteClimber climber)
+    {
+        await using var connection = new NpgsqlConnection(factory.ConnectionString);
+        await connection.OpenAsync(Ct);
+        await using var command = new NpgsqlCommand("DELETE FROM availability_windows WHERE account_id = @id", connection);
+        command.Parameters.AddWithValue("id", climber.Id);
+        Assert.True(await command.ExecuteNonQueryAsync(Ct) > 0);
+    }
+
     public async Task<List<string>> SuggestionsAsync(InviteClimber climber)
     {
         using var response = await SendAsync(new HttpRequestMessage(HttpMethod.Get, "/api/climber/suggestions"), climber.Token);

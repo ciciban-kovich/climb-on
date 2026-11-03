@@ -331,6 +331,31 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
 
     // The profile chose 3089 while it was active; the table has since retired it. S102.3's distance
     // clause is SuggestionListTests.Retired_postcode_distance_uses_retained_point.
+    // A stored profile that today's rules refuse is refused with its code until the climber replaces it.
+    [Fact]
+    [Trait("SpecPartial", "S3")]
+    public async Task Refused_stored_profile_can_be_replaced()
+    {
+        var (account, token) = await RegisterAndLogInAsync();
+        using (var created = await PutAsync(token, Factory.Data.Profile(account)))
+        {
+            Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        }
+
+        await ExecuteAsync("UPDATE profiles SET display_name = @name", ("name", string.Empty));
+        using (var refused = await GetAsync(token))
+        {
+            await AssertRejectedAsync(refused, Profile.DisplayNameInvalidCode);
+        }
+
+        var replacement = Factory.Data.Profile(account);
+        using var saved = await PutAsync(token, replacement);
+        using var read = await GetAsync(token);
+
+        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        AssertProfile(Expected(replacement), await read.Content.ReadFromJsonAsync<ProfileResponse>(Ct));
+    }
+
     [Fact]
     [Trait("Spec", "S102")]
     [Trait("Spec", "S102.3")]

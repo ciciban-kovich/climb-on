@@ -24,6 +24,32 @@ public sealed class ProfileStore(ClimbOnDbContext db) : IProfileStore
         return profiles.GetValueOrDefault(accountId);
     }
 
+    public async Task<IReadOnlyDictionary<Guid, StoredProfile>> FindStoredAsync(
+        IReadOnlyCollection<Guid> accountIds, CancellationToken cancellationToken)
+    {
+        if (accountIds.Count == 0)
+        {
+            return new Dictionary<Guid, StoredProfile>();
+        }
+
+        await using var transaction = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.RepeatableRead, cancellationToken)
+            : null;
+        var profiles = await db.Profiles.AsNoTracking().Where(row => accountIds.Contains(row.AccountId))
+            .Select(row => new { row.AccountId, row.DisplayName, row.Postcode })
+            .ToListAsync(cancellationToken);
+        var gyms = (await db.HomeGyms.AsNoTracking().Where(row => accountIds.Contains(row.AccountId))
+            .OrderBy(row => row.Position).ToListAsync(cancellationToken)).ToLookup(row => row.AccountId, row => row.GymId);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+
+        return profiles.ToDictionary(
+            row => row.AccountId,
+            row => new StoredProfile(row.DisplayName, row.Postcode, [.. gyms[row.AccountId]]));
+    }
+
     // The profiles of those accounts that have one. Reads in the caller's transaction, which must be at least
     // repeatable read or hold these profile rows FOR SHARE: a save between two of these reads could otherwise pair a
     // new rope scale with old grades.

@@ -84,7 +84,8 @@ public sealed partial class GetSuggestions(
         var now = clock.UtcNow;
         if ((await candidates.FindAsync([requesterId], cancellationToken)).SingleOrDefault() is not { } requester)
         {
-            _ = await OwnProfileAsync(requesterId, cancellationToken);
+            // ICandidateStore has logged a refused one.
+            _ = await profiles.FindAsync(requesterId, cancellationToken);
             return false;
         }
 

@@ -182,4 +182,7 @@ Hvis det ikke var deg, kan du se bort fra denne e-posten. Kontoen din er ikke en
   <data name="invite_not_found" xml:space="preserve">
     <value>Fant ikke invitasjonen.</value>
   </data>
+  <data name="invite_recipient_unnamed" xml:space="preserve">
+    <value>En klatrer</value>
+  </data>
 </root>

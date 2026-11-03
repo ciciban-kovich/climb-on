@@ -171,6 +171,19 @@ public sealed class Profile
         var family => GradeScales.For(family).Single(),
     };
 
+    // S3: the display name in NFC and trimmed when today's rules accept it on its own, otherwise null.
+    public static string? ValidDisplayName(string? value)
+    {
+        try
+        {
+            return EnsureDisplayName(value);
+        }
+        catch (DomainError)
+        {
+            return null;
+        }
+    }
+
     // S3: in NFC and trimmed, 1 to 50 code points, at least one of them a letter or digit, none a control or
     // format character.
     private static string EnsureDisplayName(string? value)

@@ -100,6 +100,20 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
         }
     }
 
+    // The account gates run in one order on every path: S2, then S23.
+    [Fact]
+    [Trait("SpecPartial", "S2")]
+    public async Task Email_confirmation_is_checked_before_the_safety_notice()
+    {
+        var a = await climbers.ClimberAsync();
+        var unconfirmed = await climbers.ClimberAsync(confirm: false, acknowledge: false);
+
+        using var sent = await climbers.InviteAsync(unconfirmed, a.Id);
+        Assert.Equal(GetSuggestions.EmailNotConfirmedCode, await InviteClimbers.CodeAsync(sent));
+        using var accepted = await climbers.AcceptAsync(unconfirmed, Guid.NewGuid());
+        Assert.Equal(GetSuggestions.EmailNotConfirmedCode, await InviteClimbers.CodeAsync(accepted));
+    }
+
     // The climber's own stored profile that today's rules refuse is refused with its code, as on the suggestion
     // list, rather than shown as an empty invite list or a refused candidate.
     [Fact]
@@ -110,6 +124,7 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
         var c = await climbers.ClimberAsync();
         await climbers.InvitedAsync(b, a);
         await climbers.RefuseProfileAsync(a);
+        await Factory.Telemetry.TakeAsync();
 
         using (var list = await climbers.GetListAsync(a))
         {
@@ -117,8 +132,15 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
             Assert.Equal(Profile.DisplayNameInvalidCode, await InviteClimbers.CodeAsync(list));
         }
 
+        Assert.Single(await Factory.Telemetry.TakeAsync(), IsProfileRefusal);
         Assert.Equal(Profile.DisplayNameInvalidCode, await climbers.RefusedAsync(a, c.Id));
+        Assert.Single(await Factory.Telemetry.TakeAsync(), IsProfileRefusal);
         Assert.Equal(0, await climbers.PendingAsync(a, c));
+
+        // Logged once per request, by whichever read refused it first.
+        static bool IsProfileRefusal(TelemetryItem item) =>
+            item.Signal == "log"
+            && (Equals(item.Field("eventName"), "CandidateProfileSkipped") || Equals(item.Field("eventName"), "RequesterProfileRefused"));
     }
 
     [Fact]
@@ -344,6 +366,36 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.NotEqual("pending", ended.State);
         Assert.Equal(b.Name, ended.DisplayName);
         Assert.Null(ended.Recipient);
+    }
+
+    // A sent invite is never dropped from the sender's list. A recipient whose stored profile today's rules refuse is
+    // named as stored when the display name alone passes them, otherwise by a neutral placeholder, with the state and
+    // never a card.
+    [Fact]
+    [Trait("SpecPartial", "S35")]
+    public async Task Sent_invite_to_a_refused_profile_stays_listed()
+    {
+        var a = await climbers.ClimberAsync();
+        var named = await climbers.ClimberAsync();
+        var unnamed = await climbers.ClimberAsync();
+        var declined = await climbers.ClimberAsync();
+        var toNamed = (await climbers.InvitedAsync(a, named)).InviteId!.Value;
+        var toUnnamed = (await climbers.InvitedAsync(a, unnamed)).InviteId!.Value;
+        var toDeclined = (await climbers.InvitedAsync(a, declined)).InviteId!.Value;
+        (await climbers.DeclineAsync(declined, toDeclined)).Dispose();
+        await climbers.RefuseProfileKeepingNameAsync(named);
+        await climbers.RefuseProfileAsync(unnamed);
+        await climbers.RefuseProfileAsync(declined);
+
+        var sent = (await climbers.ListAsync(a)).Sent.ToDictionary(invite => invite.Id);
+
+        var placeholder = Texts.Get(ListInvites.UnnamedRecipientKey, Language.Bokmal);
+        Assert.Equal(3, sent.Count);
+        Assert.Equal(("pending", named.Name), (sent[toNamed].State, sent[toNamed].DisplayName));
+        Assert.Equal(("pending", placeholder), (sent[toUnnamed].State, sent[toUnnamed].DisplayName));
+        Assert.Equal(("not-accepted", placeholder), (sent[toDeclined].State, sent[toDeclined].DisplayName));
+        Assert.All(sent.Values, invite => Assert.Null(invite.Recipient));
+        Assert.NotEqual(placeholder, named.Name);
     }
 
     // Only the recipient answers an invite; to anyone else it does not exist.

@@ -20,8 +20,8 @@ public sealed record InviteResultResponse(string Outcome, Guid? InviteId);
 
 public sealed record ReceivedInviteResponse(Guid Id, DateTimeOffset SentAt, DateTimeOffset ExpiresAt, ClimberCardResponse Sender);
 
-// State is pending, accepted or not-accepted (S35). Recipient is the recipient's card while State is pending, and
-// null once the invite has ended.
+// State is pending, accepted or not-accepted (S35). Recipient is the recipient's card while State is pending and
+// their profile is valid, otherwise null. DisplayName is a neutral placeholder when the stored one is refused.
 public sealed record SentInviteResponse(
     Guid Id, DateTimeOffset SentAt, string State, string DisplayName, ClimberCardResponse? Recipient);
 
@@ -106,7 +106,7 @@ public static class InviteEndpoints
                 invite.Id,
                 invite.SentAt,
                 WireName(invite.State),
-                invite.DisplayName,
+                invite.DisplayName ?? Texts.Get(ListInvites.UnnamedRecipientKey, session.Language),
                 invite.Recipient is { } card ? SuggestionEndpoints.ToResponse(card, session.Language) : null)).ToList()));
     }
 

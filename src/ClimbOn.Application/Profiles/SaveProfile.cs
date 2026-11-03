@@ -16,7 +16,8 @@ public sealed class SaveProfile(IProfileStore profiles, PostcodeValidator postco
     public async Task<Profile> RunAsync(Guid accountId, ProfileDraft draft, CancellationToken cancellationToken)
     {
         var profile = Profile.Create(draft);
-        var stored = await profiles.FindAsync(accountId, cancellationToken);
+        // As stored, so that a profile today's rules refuse can still be replaced.
+        var stored = (await profiles.FindStoredAsync([accountId], cancellationToken)).GetValueOrDefault(accountId);
 
         // S15, S102.2: checked against the table only on create or change, so an unchanged
         // retired postcode is kept (S102.3).

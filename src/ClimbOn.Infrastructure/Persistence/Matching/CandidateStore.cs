@@ -92,6 +92,6 @@ public sealed partial class CandidateStore(ClimbOnDbContext db, ILogger<Candidat
     [LoggerMessage(
         EventName = "CandidateProfileSkipped",
         Level = LogLevel.Warning,
-        Message = "Skipped the stored profile of account {AccountId} as a candidate: {Code}")]
+        Message = "Skipped the stored profile of account {AccountId}, which today's rules refuse: {Code}")]
     private partial void LogProfileSkipped(Guid accountId, string code);
 }
