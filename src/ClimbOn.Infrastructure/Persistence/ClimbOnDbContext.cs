@@ -1,4 +1,5 @@
 using ClimbOn.Infrastructure.Persistence.Accounts;
+using ClimbOn.Infrastructure.Persistence.Invites;
 using ClimbOn.Infrastructure.Persistence.Outbox;
 using ClimbOn.Infrastructure.Persistence.Profiles;
 using ClimbOn.Infrastructure.Persistence.Sessions;
@@ -13,6 +14,12 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
 
     // S84: one account per normalised address.
     public const string AccountEmailIndex = "ix_accounts_email_normalised";
+
+    // S32: one pending invite per sender and recipient.
+    public const string PendingInviteIndex = "ix_invites_pending_pair";
+
+    // One active or paused connection per pair (design §2 'Concurrency for pair and count rules').
+    public const string LiveConnectionIndex = "ix_connections_live_pair";
 
     public DbSet<Postcode> Postcodes => Set<Postcode>();
 
@@ -37,6 +44,12 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
     public DbSet<AvailabilityWindowRow> AvailabilityWindows => Set<AvailabilityWindowRow>();
 
     public DbSet<HomeGymRow> HomeGyms => Set<HomeGymRow>();
+
+    public DbSet<InviteRow> Invites => Set<InviteRow>();
+
+    public DbSet<ConnectionRow> Connections => Set<ConnectionRow>();
+
+    public DbSet<SafetyAcknowledgementRow> SafetyAcknowledgements => Set<SafetyAcknowledgementRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -259,6 +272,75 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             home.HasOne<GymRow>().WithMany().HasForeignKey(row => row.GymId)
                 .HasConstraintName("fk_home_gyms_gyms").OnDelete(DeleteBehavior.Restrict);
             home.HasIndex(row => row.GymId).HasDatabaseName("ix_home_gyms_gym_id");
+        });
+
+        modelBuilder.Entity<InviteRow>(invite =>
+        {
+            invite.ToTable("invites", table =>
+            {
+                table.HasCheckConstraint("ck_invites_state", "state IN ('pending', 'accepted', 'declined', 'expired')");
+                table.HasCheckConstraint(
+                    "ck_invites_expiry_cause",
+                    "CASE WHEN state = 'expired' THEN expiry_cause IS NOT NULL AND expiry_cause IN ('timeout', 'deletion', "
+                    + "'block', 'suspension') ELSE expiry_cause IS NULL END");
+                table.HasCheckConstraint(
+                    "ck_invites_ended_at", "(ended_at IS NULL) = (state = 'pending')");
+                table.HasCheckConstraint("ck_invites_pair", "sender_id <> recipient_id");
+            });
+            invite.HasKey(row => row.Id).HasName("pk_invites");
+            invite.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
+            invite.Property(row => row.SenderId).HasColumnName("sender_id");
+            invite.Property(row => row.RecipientId).HasColumnName("recipient_id");
+            invite.Property(row => row.SentAt).HasColumnName("sent_at");
+            invite.Property(row => row.State).HasColumnName("state").HasMaxLength(8);
+            invite.Property(row => row.ExpiryCause).HasColumnName("expiry_cause").HasMaxLength(16);
+            invite.Property(row => row.EndedAt).HasColumnName("ended_at");
+            invite.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.SenderId)
+                .HasConstraintName("fk_invites_accounts_sender").OnDelete(DeleteBehavior.Cascade);
+            invite.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.RecipientId)
+                .HasConstraintName("fk_invites_accounts_recipient").OnDelete(DeleteBehavior.Cascade);
+
+            // Leads with sender_id, so it also serves S31's count and the S117 prefilter.
+            invite.HasIndex(row => new { row.SenderId, row.RecipientId }).IsUnique().HasDatabaseName(PendingInviteIndex)
+                .HasFilter("state = 'pending'");
+            invite.HasIndex(row => row.SenderId).HasDatabaseName("ix_invites_sender_id");
+            invite.HasIndex(row => row.RecipientId).HasDatabaseName("ix_invites_recipient_id");
+        });
+
+        modelBuilder.Entity<ConnectionRow>(connection =>
+        {
+            connection.ToTable("connections", table =>
+            {
+                table.HasCheckConstraint("ck_connections_state", "state IN ('active', 'paused', 'ended')");
+                table.HasCheckConstraint("ck_connections_pair", "pair_low < pair_high");
+            });
+            connection.HasKey(row => row.Id).HasName("pk_connections");
+            connection.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
+            connection.Property(row => row.PairLow).HasColumnName("pair_low");
+            connection.Property(row => row.PairHigh).HasColumnName("pair_high");
+            connection.Property(row => row.State).HasColumnName("state").HasMaxLength(8);
+            connection.Property(row => row.CreatedAt).HasColumnName("created_at");
+            connection.Property(row => row.InviteId).HasColumnName("invite_id");
+            connection.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.PairLow)
+                .HasConstraintName("fk_connections_accounts_low").OnDelete(DeleteBehavior.Cascade);
+            connection.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.PairHigh)
+                .HasConstraintName("fk_connections_accounts_high").OnDelete(DeleteBehavior.Cascade);
+            connection.HasOne<InviteRow>().WithOne().HasForeignKey<ConnectionRow>(row => row.InviteId)
+                .HasConstraintName("fk_connections_invites").OnDelete(DeleteBehavior.Cascade);
+            connection.HasIndex(row => new { row.PairLow, row.PairHigh }).IsUnique().HasDatabaseName(LiveConnectionIndex)
+                .HasFilter("state IN ('active', 'paused')");
+            connection.HasIndex(row => row.PairHigh).HasDatabaseName("ix_connections_pair_high");
+            connection.HasIndex(row => row.InviteId).IsUnique().HasDatabaseName("ix_connections_invite_id");
+        });
+
+        modelBuilder.Entity<SafetyAcknowledgementRow>(acknowledgement =>
+        {
+            acknowledgement.ToTable("safety_acknowledgements");
+            acknowledgement.HasKey(row => row.AccountId).HasName("pk_safety_acknowledgements");
+            acknowledgement.Property(row => row.AccountId).HasColumnName("account_id");
+            acknowledgement.Property(row => row.AcknowledgedAt).HasColumnName("acknowledged_at");
+            acknowledgement.HasOne<AccountRow>().WithOne().HasForeignKey<SafetyAcknowledgementRow>(row => row.AccountId)
+                .HasConstraintName("fk_safety_acknowledgements_accounts").OnDelete(DeleteBehavior.Cascade);
         });
     }
 

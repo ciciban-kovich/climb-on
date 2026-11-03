@@ -162,6 +162,132 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Invites.ConnectionRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("InviteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("invite_id");
+
+                    b.Property<Guid>("PairHigh")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pair_high");
+
+                    b.Property<Guid>("PairLow")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pair_low");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("state");
+
+                    b.HasKey("Id")
+                        .HasName("pk_connections");
+
+                    b.HasIndex("InviteId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_connections_invite_id");
+
+                    b.HasIndex("PairHigh")
+                        .HasDatabaseName("ix_connections_pair_high");
+
+                    b.HasIndex("PairLow", "PairHigh")
+                        .IsUnique()
+                        .HasDatabaseName("ix_connections_live_pair")
+                        .HasFilter("state IN ('active', 'paused')");
+
+                    b.ToTable("connections", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_connections_pair", "pair_low < pair_high");
+
+                            t.HasCheckConstraint("ck_connections_state", "state IN ('active', 'paused', 'ended')");
+                        });
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Invites.InviteRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("EndedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at");
+
+                    b.Property<string>("ExpiryCause")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("expiry_cause");
+
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("recipient_id");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sender_id");
+
+                    b.Property<DateTimeOffset>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)")
+                        .HasColumnName("state");
+
+                    b.HasKey("Id")
+                        .HasName("pk_invites");
+
+                    b.HasIndex("RecipientId")
+                        .HasDatabaseName("ix_invites_recipient_id");
+
+                    b.HasIndex("SenderId")
+                        .HasDatabaseName("ix_invites_sender_id");
+
+                    b.HasIndex("SenderId", "RecipientId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_invites_pending_pair")
+                        .HasFilter("state = 'pending'");
+
+                    b.ToTable("invites", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_invites_ended_at", "(ended_at IS NULL) = (state = 'pending')");
+
+                            t.HasCheckConstraint("ck_invites_expiry_cause", "CASE WHEN state = 'expired' THEN expiry_cause IS NOT NULL AND expiry_cause IN ('timeout', 'deletion', 'block', 'suspension') ELSE expiry_cause IS NULL END");
+
+                            t.HasCheckConstraint("ck_invites_pair", "sender_id <> recipient_id");
+
+                            t.HasCheckConstraint("ck_invites_state", "state IN ('pending', 'accepted', 'declined', 'expired')");
+                        });
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Invites.SafetyAcknowledgementRow", b =>
+                {
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<DateTimeOffset>("AcknowledgedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("acknowledged_at");
+
+                    b.HasKey("AccountId")
+                        .HasName("pk_safety_acknowledgements");
+
+                    b.ToTable("safety_acknowledgements", (string)null);
+                });
+
             modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Outbox.LinkTokenRow", b =>
                 {
                     b.Property<byte[]>("TokenHash")
@@ -573,6 +699,57 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_legal_acknowledgements_legal_documents");
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Invites.ConnectionRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Invites.InviteRow", null)
+                        .WithOne()
+                        .HasForeignKey("ClimbOn.Infrastructure.Persistence.Invites.ConnectionRow", "InviteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_connections_invites");
+
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("PairHigh")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_connections_accounts_high");
+
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("PairLow")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_connections_accounts_low");
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Invites.InviteRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_invites_accounts_recipient");
+
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_invites_accounts_sender");
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Invites.SafetyAcknowledgementRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithOne()
+                        .HasForeignKey("ClimbOn.Infrastructure.Persistence.Invites.SafetyAcknowledgementRow", "AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_safety_acknowledgements_accounts");
                 });
 
             modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Outbox.LinkTokenRow", b =>

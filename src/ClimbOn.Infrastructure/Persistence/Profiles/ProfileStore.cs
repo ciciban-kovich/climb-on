@@ -17,7 +17,8 @@ public sealed class ProfileStore(ClimbOnDbContext db) : IProfileStore
     }
 
     // The profiles of those accounts that have one. Reads in the caller's transaction, which must be at least
-    // repeatable read: a save between two of these reads could otherwise pair a new rope scale with old grades.
+    // repeatable read or hold these profile rows FOR SHARE: a save between two of these reads could otherwise pair a
+    // new rope scale with old grades.
     // A stored profile that today's rules refuse throws, or with invalid is reported to it and left out.
     internal static async Task<Dictionary<Guid, Profile>> ReadAsync(
         ClimbOnDbContext db,

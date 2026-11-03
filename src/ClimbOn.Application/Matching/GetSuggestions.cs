@@ -12,14 +12,23 @@ using Microsoft.Extensions.Logging;
 
 namespace ClimbOn.Application.Matching;
 
+// Which accounts PrefilterAsync considers. Only, when set, restricts it to that one account. PairTermsAt, when set,
+// applies S117 at that time; the candidate check of an invite leaves S117 out (design §2 'Invite validation order').
+public sealed record PrefilterScope(Guid? Only, DateTimeOffset? PairTermsAt);
+
 public interface ICandidateStore
 {
     // Design §2 'Matching' step 1: every account other than the requester with a profile, a confirmed address
-    // (S116), a last activity at or after activeSince (S107) and a reference point (S99, retained when retired,
-    // S102.3) inside box. Each is read as one snapshot with its profile; one whose stored profile today's rules
-    // refuse is left out and logged.
+    // (S116), a last activity at or after activeSince (S107), a reference point (S99, retained when retired,
+    // S102.3) inside box, and within scope. Each is read as one snapshot with its profile; one whose stored profile
+    // today's rules refuse is left out and logged. Reads in the caller's transaction when there is one, which then
+    // holds the profile rows it reads FOR SHARE (IInviteStore.LockPairAsync).
     Task<IReadOnlyList<Climber>> PrefilterAsync(
-        Guid requesterId, BoundingBox box, DateTimeOffset activeSince, CancellationToken cancellationToken);
+        Guid requesterId, BoundingBox box, DateTimeOffset activeSince, PrefilterScope scope, CancellationToken cancellationToken);
+
+    // Those of these accounts that have a profile today's rules accept, whatever their state, read as
+    // PrefilterAsync reads them.
+    Task<IReadOnlyList<Climber>> FindAsync(IReadOnlyCollection<Guid> accountIds, CancellationToken cancellationToken);
 }
 
 // The requester's suggestion list (S4, S60), as climber cards.
@@ -56,12 +65,7 @@ public sealed partial class GetSuggestions(
         }
 
         var requester = new Climber(requesterId, profile, await PointOfAsync(profile.Postcode, cancellationToken), now);
-        var found = await candidates.PrefilterAsync(
-            requesterId,
-            BoundingBox.Around(requester.ReferencePoint, profile.MaxTravelKm + RoundingSlackKm),
-            DormancyPolicy.ActiveIfLastActiveAtOrAfter(now),
-            cancellationToken);
-        var climbers = found.Where(candidate => CandidateRule.IsCandidate(requester, candidate)).ToList();
+        var climbers = await CandidatesAsync(requester, new PrefilterScope(null, now), now, cancellationToken);
 
         var gyms = await profiles.FindGymsAsync(
             climbers.Append(requester).SelectMany(climber => climber.Profile.HomeGyms).Distinct().ToList(), cancellationToken);
@@ -70,6 +74,31 @@ public sealed partial class GetSuggestions(
             .OrderBy(candidate => CandidateKey.For(requester, candidate, activeGyms), CandidateComparer.Instance)
             .Select(candidate => CardBuilder.For(requester, candidate, gyms))
             .ToList();
+    }
+
+    // Design §2 'Invite validation order' step 3: whether the candidate is in the requester's list as computed without
+    // S117. The same path as the list, for one candidate; false when either has no profile today's rules accept.
+    public async Task<bool> IsCandidateAsync(Guid requesterId, Guid candidateId, CancellationToken cancellationToken)
+    {
+        var now = clock.UtcNow;
+        if ((await candidates.FindAsync([requesterId], cancellationToken)).SingleOrDefault() is not { } requester)
+        {
+            return false;
+        }
+
+        return (await CandidatesAsync(requester, new PrefilterScope(candidateId, null), now, cancellationToken)).Count == 1;
+    }
+
+    private async Task<List<Climber>> CandidatesAsync(
+        Climber requester, PrefilterScope scope, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var found = await candidates.PrefilterAsync(
+            requester.AccountId,
+            BoundingBox.Around(requester.ReferencePoint, requester.Profile.MaxTravelKm + RoundingSlackKm),
+            DormancyPolicy.ActiveIfLastActiveAtOrAfter(now),
+            scope,
+            cancellationToken);
+        return found.Where(candidate => CandidateRule.IsCandidate(requester, candidate)).ToList();
     }
 
     // A stored profile that today's rules refuse is still the requester's error to fix, with its code, but it is

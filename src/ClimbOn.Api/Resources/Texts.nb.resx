@@ -155,4 +155,31 @@ Hvis det ikke var deg, kan du se bort fra denne e-posten. Kontoen din er ikke en
   <data name="card_certification_self_declared" xml:space="preserve">
     <value>egenerklært</value>
   </data>
+  <data name="safety_notice_text" xml:space="preserve">
+    <value>Sikkerhet først: hver klatrer har selv ansvar for å sjekke at makkeren kan sikre før dere klatrer sammen, både inne og ute. Sertifiseringer i appen er egenerklærte.</value>
+  </data>
+  <data name="safety_notice_not_acknowledged" xml:space="preserve">
+    <value>Les og bekreft sikkerhetsvarselet før du sender en invitasjon.</value>
+  </data>
+  <data name="invite_not_candidate" xml:space="preserve">
+    <value>Du kan bare invitere klatrere fra forslagslisten din.</value>
+  </data>
+  <data name="invite_already_connected" xml:space="preserve">
+    <value>Du er allerede koblet til denne klatreren.</value>
+  </data>
+  <data name="invite_already_pending" xml:space="preserve">
+    <value>Du har allerede invitert denne klatreren.</value>
+  </data>
+  <data name="invite_cooldown" xml:space="preserve">
+    <value>Du kan ikke invitere denne klatreren igjen ennå.</value>
+  </data>
+  <data name="invite_limit_reached" xml:space="preserve">
+    <value>Du har for mange invitasjoner som venter på svar. Vent på svar før du inviterer flere klatrere.</value>
+  </data>
+  <data name="invite_not_pending" xml:space="preserve">
+    <value>Denne invitasjonen kan ikke besvares lenger.</value>
+  </data>
+  <data name="invite_not_found" xml:space="preserve">
+    <value>Fant ikke invitasjonen.</value>
+  </data>
 </root>

@@ -155,4 +155,31 @@ If it was not you, you can ignore this email. Your account has not been changed.
   <data name="card_certification_self_declared" xml:space="preserve">
     <value>self-declared</value>
   </data>
+  <data name="safety_notice_text" xml:space="preserve">
+    <value>Safety first: every climber is responsible for checking their partner's belay competence before climbing together, indoors and outdoors. Certifications shown in the app are self-declared.</value>
+  </data>
+  <data name="safety_notice_not_acknowledged" xml:space="preserve">
+    <value>Read and acknowledge the safety notice before you send an invite.</value>
+  </data>
+  <data name="invite_not_candidate" xml:space="preserve">
+    <value>You can only invite climbers from your suggestion list.</value>
+  </data>
+  <data name="invite_already_connected" xml:space="preserve">
+    <value>You are already connected with this climber.</value>
+  </data>
+  <data name="invite_already_pending" xml:space="preserve">
+    <value>You have already invited this climber.</value>
+  </data>
+  <data name="invite_cooldown" xml:space="preserve">
+    <value>You cannot invite this climber again yet.</value>
+  </data>
+  <data name="invite_limit_reached" xml:space="preserve">
+    <value>You have too many invites waiting for an answer. Wait for an answer before you invite more climbers.</value>
+  </data>
+  <data name="invite_not_pending" xml:space="preserve">
+    <value>This invite can no longer be answered.</value>
+  </data>
+  <data name="invite_not_found" xml:space="preserve">
+    <value>The invite was not found.</value>
+  </data>
 </root>

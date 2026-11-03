@@ -2,11 +2,13 @@
 #pragma warning disable CS0618
 using ClimbOn.Client.Api.Api.Climber.Accounts;
 using ClimbOn.Client.Api.Api.Climber.EmailConfirmations;
+using ClimbOn.Client.Api.Api.Climber.Invites;
 using ClimbOn.Client.Api.Api.Climber.Language;
 using ClimbOn.Client.Api.Api.Climber.Login;
 using ClimbOn.Client.Api.Api.Climber.Logout;
 using ClimbOn.Client.Api.Api.Climber.Me;
 using ClimbOn.Client.Api.Api.Climber.Profile;
+using ClimbOn.Client.Api.Api.Climber.SafetyNotice;
 using ClimbOn.Client.Api.Api.Climber.Suggestions;
 using Microsoft.Kiota.Abstractions.Extensions;
 using Microsoft.Kiota.Abstractions;
@@ -32,6 +34,11 @@ namespace ClimbOn.Client.Api.Api.Climber
         {
             get => new global::ClimbOn.Client.Api.Api.Climber.EmailConfirmations.EmailConfirmationsRequestBuilder(PathParameters, RequestAdapter);
         }
+        /// <summary>The invites property</summary>
+        public global::ClimbOn.Client.Api.Api.Climber.Invites.InvitesRequestBuilder Invites
+        {
+            get => new global::ClimbOn.Client.Api.Api.Climber.Invites.InvitesRequestBuilder(PathParameters, RequestAdapter);
+        }
         /// <summary>The language property</summary>
         public global::ClimbOn.Client.Api.Api.Climber.Language.LanguageRequestBuilder Language
         {
@@ -56,6 +63,11 @@ namespace ClimbOn.Client.Api.Api.Climber
         public global::ClimbOn.Client.Api.Api.Climber.Profile.ProfileRequestBuilder Profile
         {
             get => new global::ClimbOn.Client.Api.Api.Climber.Profile.ProfileRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The safetyNotice property</summary>
+        public global::ClimbOn.Client.Api.Api.Climber.SafetyNotice.SafetyNoticeRequestBuilder SafetyNotice
+        {
+            get => new global::ClimbOn.Client.Api.Api.Climber.SafetyNotice.SafetyNoticeRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>The suggestions property</summary>
         public global::ClimbOn.Client.Api.Api.Climber.Suggestions.SuggestionsRequestBuilder Suggestions
