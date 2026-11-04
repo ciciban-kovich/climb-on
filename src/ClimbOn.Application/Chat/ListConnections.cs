@@ -1,4 +1,5 @@
 using ClimbOn.Application.Cards;
+using ClimbOn.Application.Invites;
 using ClimbOn.Application.Matching;
 using ClimbOn.Application.Profiles;
 using ClimbOn.Domain.Profiles;
@@ -11,13 +12,13 @@ namespace ClimbOn.Application.Chat;
 public sealed record ConnectionEntry(Connection Connection, string? DisplayName, ClimberCard? Partner);
 
 // The viewer's connections, newest first.
-public sealed class ListConnections(IChatStore chat, ICandidateStore climbers, IProfileStore profiles, GetSuggestions suggestions)
+public sealed class ListConnections(IConnectionStore store, ICandidateStore climbers, IProfileStore profiles, GetSuggestions suggestions)
 {
     public const string UnnamedPartnerKey = "connection_partner_unnamed";
 
     public async Task<IReadOnlyList<ConnectionEntry>> RunAsync(Guid viewerId, CancellationToken cancellationToken)
     {
-        var connections = (await chat.ListConnectionsAsync(viewerId, cancellationToken))
+        var connections = (await store.ListAsync(viewerId, cancellationToken))
             .OrderByDescending(connection => connection.CreatedAt)
             .ToList();
         if (connections.Count == 0)

@@ -8,8 +8,10 @@ using ClimbOn.Application.Cards;
 using ClimbOn.Application.Chat;
 using ClimbOn.Domain.Accounts;
 using ClimbOn.Domain.Chat;
+using ClimbOn.Domain.Profiles;
 using ClimbOn.Integration.Tests.Harness;
 using ClimbOn.Integration.Tests.Invites;
+using Npgsql;
 using Xunit;
 
 namespace ClimbOn.Integration.Tests.Chat;
@@ -45,7 +47,9 @@ public sealed class ChatTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(sent.Id, (await MessagesAsync(b, connection))[0].Id);
     }
 
-    // Messages sent at the same instant keep the order they were sent in.
+    // Messages sent at the same instant keep the order they were sent in, also once the rows no longer lie in that
+    // order on disk, as after a table rewrite by maintenance. That layout is state neither the API nor a job
+    // produces, so it is arranged below the API (C21.1): the table is rewritten in sender order.
     [Fact]
     [Trait("SpecPartial", "S9")]
     public async Task Messages_keep_their_order_at_one_instant()
@@ -58,6 +62,15 @@ public sealed class ChatTests(ApiFactory factory) : IntegrationTest(factory)
         foreach (var (text, index) in texts.Select((text, index) => (text, index)))
         {
             await SentAsync(index % 2 == 0 ? a : b, connection, text);
+        }
+
+        Assert.Equal(texts, (await MessagesAsync(b, connection)).Select(message => message.Text));
+
+        await using (var database = new NpgsqlConnection(Factory.ConnectionString))
+        {
+            await database.OpenAsync(Ct);
+            await using var command = new NpgsqlCommand("CLUSTER messages USING ix_messages_sender_id", database);
+            await command.ExecuteNonQueryAsync(Ct);
         }
 
         Assert.Equal(texts, (await MessagesAsync(b, connection)).Select(message => message.Text));
@@ -121,8 +134,9 @@ public sealed class ChatTests(ApiFactory factory) : IntegrationTest(factory)
         }
     }
 
-    // The bounds the owner set for task 20: not blank, at most 4000 code points, text PostgreSQL can store.
+    // S119: not blank, at most 4000 code points, text PostgreSQL can store.
     [Fact]
+    [Trait("Spec", "S119")]
     public async Task Blank_overlong_or_unstorable_message_rejected()
     {
         var a = await climbers.ClimberAsync();
@@ -263,13 +277,16 @@ public sealed class ChatTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.False(JsonSerializer.Deserialize<ClimberCardResponse>(cardOfC, JsonSerializerOptions.Web)!.OwnGear);
     }
 
-    // A partner whose stored profile today's rules refuse, as a later tightening of a rule would leave it (arranged
-    // below the API), keeps the connection and its chat; they are shown by name, or the placeholder, without a card.
+    // S54's exception: a partner whose stored profile today's rules refuse, as a later tightening of a rule would
+    // leave it (arranged below the API), keeps the connection and its chat; they are shown by name, or the
+    // placeholder, without a card. The placeholder is in the viewer's stored language, here not the default.
     [Fact]
+    [Trait("Spec", "S54")]
     [Trait("SpecPartial", "S9")]
+    [Trait("SpecPartial", "S105")]
     public async Task Partner_with_refused_profile_keeps_connection()
     {
-        var a = await climbers.ClimberAsync();
+        var a = await climbers.ClimberAsync(language: "en");
         var b = await climbers.ClimberAsync();
         var c = await climbers.ClimberAsync();
         var toB = await ConnectAsync(a, b);
@@ -281,10 +298,33 @@ public sealed class ChatTests(ApiFactory factory) : IntegrationTest(factory)
         var list = await ConnectionsAsync(a);
 
         Assert.Equal(
-            [(toC, Texts.Get(ListConnections.UnnamedPartnerKey, Language.Bokmal)), (toB, b.Name)],
+            [(toC, Texts.Get(ListConnections.UnnamedPartnerKey, Language.English)), (toB, b.Name)],
             list.Select(entry => (entry.Id, entry.DisplayName)));
         Assert.All(list, entry => Assert.Null(entry.Partner));
         await SentAsync(a, toC, Factory.Data.Message());
+    }
+
+    // D37: the viewer's own stored profile that today's rules refuse is refused with its code, as on the suggestion
+    // list and the invite list, rather than shown as a list of connections.
+    [Fact]
+    public async Task Own_invalid_stored_profile_is_refused_with_its_code()
+    {
+        var a = await climbers.ClimberAsync();
+        var b = await climbers.ClimberAsync();
+        await ConnectAsync(a, b);
+        await climbers.RefuseProfileAsync(a);
+        await Factory.Telemetry.TakeAsync();
+
+        using (var list = await climbers.SendAsync(new HttpRequestMessage(HttpMethod.Get, ConnectionsRoute), a.Token))
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, list.StatusCode);
+            Assert.Equal(Profile.DisplayNameInvalidCode, await InviteClimbers.CodeAsync(list));
+        }
+
+        // Logged once per request, as on the suggestion list.
+        Assert.Single(
+            await Factory.Telemetry.TakeAsync(),
+            item => item.Signal == "log" && Equals(item.Field("eventName"), "RequesterProfileRefused"));
     }
 
     [Fact]

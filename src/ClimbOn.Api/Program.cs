@@ -65,6 +65,7 @@ builder.Services.AddScoped<SafetyNotice>();
 builder.Services.AddScoped<SendInvite>();
 builder.Services.AddScoped<AnswerInvite>();
 builder.Services.AddScoped<ListInvites>();
+builder.Services.AddScoped<IConnectionStore, ConnectionStore>();
 builder.Services.AddScoped<IChatStore, ChatStore>();
 builder.Services.AddScoped<Messages>();
 builder.Services.AddScoped<ListConnections>();

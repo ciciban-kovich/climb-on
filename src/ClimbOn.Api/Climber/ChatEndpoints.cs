@@ -3,6 +3,7 @@ using ClimbOn.Api.Middleware;
 using ClimbOn.Api.Resources;
 using ClimbOn.Application.Chat;
 using ClimbOn.Domain.Chat;
+using ClimbOn.Domain.Invites;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace ClimbOn.Api.Climber;

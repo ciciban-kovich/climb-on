@@ -21,7 +21,7 @@ public sealed record Message(Guid Id, Guid ConnectionId, Guid SenderId, string T
     public static Message Write(Guid id, Guid connectionId, Guid senderId, string? text, DateTimeOffset now) =>
         new(id, connectionId, senderId, Ensure(text), now);
 
-    // Blank text is refused; so is text PostgreSQL cannot store as text: a lone surrogate or a NUL.
+    // S119: blank text is refused; so is text PostgreSQL cannot store as text: a lone surrogate or a NUL.
     private static string Ensure(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))

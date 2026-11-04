@@ -4,19 +4,21 @@ using Xunit;
 
 namespace ClimbOn.Domain.Tests.Chat;
 
-// The bounds the owner set for task 20, below the JSON layer, which refuses a lone surrogate itself.
+// S119's bounds, below the JSON layer, which refuses a lone surrogate itself.
 public sealed class MessageTests
 {
     private static readonly DateTimeOffset Now = new(2026, 6, 1, 12, 0, 0, TimeSpan.Zero);
 
     // A fact, not a theory: test data with a lone surrogate does not survive serialisation by the runner.
     [Fact]
+    [Trait("Spec", "S119")]
     public void Unstorable_text_is_refused() =>
         Assert.All(
             new[] { "x \ud800 y", "x \udc00 y", "x \udc00\ud800 y", "\ud800", "x\0" },
             text => Assert.Equal(Message.InvalidCode, Assert.Throws<DomainError>(() => Write(text)).Code));
 
     [Theory]
+    [Trait("Spec", "S119")]
     [InlineData(null)]
     [InlineData("")]
     [InlineData(" \r\n\t  ")]
@@ -25,6 +27,7 @@ public sealed class MessageTests
 
     // Counted in code points: an astral character is one, though it is two UTF-16 units.
     [Fact]
+    [Trait("Spec", "S119")]
     public void Length_is_counted_in_code_points()
     {
         var astral = string.Concat(Enumerable.Repeat("\U0001F9D7", Message.MaximumLength));

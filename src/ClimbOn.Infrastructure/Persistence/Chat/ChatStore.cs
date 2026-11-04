@@ -7,21 +7,6 @@ namespace ClimbOn.Infrastructure.Persistence.Chat;
 
 public sealed class ChatStore(ClimbOnDbContext db) : IChatStore
 {
-    public async Task<IReadOnlyList<Connection>> ListConnectionsAsync(Guid accountId, CancellationToken cancellationToken) =>
-        (await db.Connections.AsNoTracking()
-            .Where(row => row.PairLow == accountId || row.PairHigh == accountId)
-            .ToListAsync(cancellationToken))
-        .Select(row => ToConnection(row, accountId))
-        .ToList();
-
-    public async Task<Connection?> FindConnectionAsync(Guid accountId, Guid connectionId, CancellationToken cancellationToken) =>
-        await db.Connections.AsNoTracking()
-            .SingleOrDefaultAsync(
-                row => row.Id == connectionId && (row.PairLow == accountId || row.PairHigh == accountId), cancellationToken)
-            is { } found
-            ? ToConnection(found, accountId)
-            : null;
-
     public async Task<IReadOnlyList<Message>> ListMessagesAsync(Guid connectionId, CancellationToken cancellationToken) =>
         (await db.Messages.AsNoTracking()
             .Where(row => row.ConnectionId == connectionId)
@@ -34,10 +19,7 @@ public sealed class ChatStore(ClimbOnDbContext db) : IChatStore
     {
         // READ COMMITTED: after waiting on a change of the row, the lock reads the row as that change committed it.
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        var active = await db.Database.SqlQuery<Guid>(
-                $"""SELECT id AS "Value" FROM connections WHERE id = {message.ConnectionId} AND state = {InviteNames.ConnectionActive} FOR SHARE""")
-            .ToListAsync(cancellationToken);
-        if (active.Count == 0)
+        if (!await ConnectionLocks.ShareIfActiveAsync(db, message.ConnectionId, cancellationToken))
         {
             return false;
         }
@@ -62,16 +44,4 @@ public sealed class ChatStore(ClimbOnDbContext db) : IChatStore
         await transaction.CommitAsync(cancellationToken);
         return true;
     }
-
-    private static Connection ToConnection(ConnectionRow row, Guid accountId) => new(
-        row.Id,
-        row.PairLow == accountId ? row.PairHigh : row.PairLow,
-        row.State switch
-        {
-            InviteNames.ConnectionActive => ConnectionState.Active,
-            InviteNames.ConnectionPaused => ConnectionState.Paused,
-            InviteNames.ConnectionEnded => ConnectionState.Ended,
-            _ => throw new InvalidOperationException("Unknown connection state."),
-        },
-        row.CreatedAt);
 }

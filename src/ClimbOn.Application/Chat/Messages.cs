@@ -1,4 +1,5 @@
 using ClimbOn.Application.Abstractions;
+using ClimbOn.Application.Invites;
 using ClimbOn.Domain.Chat;
 using ClimbOn.Domain.Errors;
 
@@ -6,7 +7,7 @@ namespace ClimbOn.Application.Chat;
 
 // Sending and reading the messages of a connection (S9, S115). Only its two climbers can do either; to anyone else
 // the connection does not exist.
-public sealed class Messages(IChatStore chat, IClock clock)
+public sealed class Messages(IChatStore chat, IConnectionStore connections, IClock clock)
 {
     public const string ConnectionNotFoundCode = "connection_not_found";
     public const string ConnectionNotActiveCode = "connection_not_active";
@@ -35,7 +36,7 @@ public sealed class Messages(IChatStore chat, IClock clock)
 
     private async Task FindAsync(Guid accountId, Guid connectionId, CancellationToken cancellationToken)
     {
-        if (await chat.FindConnectionAsync(accountId, connectionId, cancellationToken) is null)
+        if (await connections.FindAsync(accountId, connectionId, cancellationToken) is null)
         {
             throw new DomainError(ConnectionNotFoundCode, DomainErrorKind.NotFound);
         }
