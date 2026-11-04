@@ -65,7 +65,7 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
 
     // The candidate check is the list's own path, so a dormant climber, absent from the list, cannot be invited.
     [Fact]
-    [Trait("SpecPartial", "S107")]
+    [Trait("Spec", "S107")]
     [Trait("Spec", "S5")]
     public async Task Dormant_climber_cannot_be_invited()
     {

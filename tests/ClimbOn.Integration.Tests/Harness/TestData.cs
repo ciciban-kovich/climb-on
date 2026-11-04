@@ -58,6 +58,17 @@ public sealed class TestData(FixtureValues fixtures)
         return password;
     }
 
+    // A chat message text, unique to this call: prefix, then an ID. The whole text is registered, and so is the ID on
+    // its own, so that any fragment of the message that carries it is caught.
+    public string Message(string prefix = "Melding")
+    {
+        var id = Guid.NewGuid().ToString("N");
+        var text = $"{prefix} {id}";
+        fixtures.Register("message", text);
+        fixtures.Register("message", id);
+        return text;
+    }
+
     // A postcode a test sends as a climber's home area (S15); see FixturePostcodes.
     public string Postcode(string code)
     {

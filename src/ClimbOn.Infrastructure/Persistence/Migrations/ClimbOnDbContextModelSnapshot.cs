@@ -162,6 +162,49 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Chat.MessageRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ConnectionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("connection_id");
+
+                    b.Property<long>("Position")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("position");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<long>("Position"));
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sender_id");
+
+                    b.Property<DateTimeOffset>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id")
+                        .HasName("pk_messages");
+
+                    b.HasIndex("SenderId")
+                        .HasDatabaseName("ix_messages_sender_id");
+
+                    b.HasIndex("ConnectionId", "Position")
+                        .IsUnique()
+                        .HasDatabaseName("ix_messages_connection_position");
+
+                    b.ToTable("messages", (string)null);
+                });
+
             modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Invites.ConnectionRow", b =>
                 {
                     b.Property<Guid>("Id")
@@ -702,6 +745,23 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_legal_acknowledgements_legal_documents");
+                });
+
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Chat.MessageRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Invites.ConnectionRow", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_messages_connections");
+
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_messages_accounts_sender");
                 });
 
             modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Invites.ConnectionRow", b =>

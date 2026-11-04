@@ -28,7 +28,7 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
 
     [Fact]
     [Trait("Spec", "S4")]
-    [Trait("SpecPartial", "S54")]
+    [Trait("Spec", "S54")]
     public async Task Climbers_meeting_every_criterion_see_each_other()
     {
         var a = await ClimberAsync();
@@ -214,7 +214,7 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
     // Dormant is a last activity more than 60 days ago (specs glossary); sessions last 30 days (S82), so the
     // requester logs in again each time.
     [Fact]
-    [Trait("SpecPartial", "S107")]
+    [Trait("Spec", "S107")]
     public async Task Dormant_climber_hidden_until_active()
     {
         var a = await ClimberAsync();
@@ -333,8 +333,8 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
     }
 
     [Fact]
-    [Trait("SpecPartial", "S13.5")]
-    [Trait("SpecPartial", "S54")]
+    [Trait("Spec", "S13.5")]
+    [Trait("Spec", "S54")]
     public async Task Grades_in_viewer_scale()
     {
         var lead = new DisciplineEntryRequest("lead", ["indoor"], new GradeRangeRequest("7-", "8"), new GradeRangeRequest("6", "8"));
@@ -394,8 +394,8 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
 
     [Fact]
     [Trait("SpecPartial", "S51")]
-    [Trait("SpecPartial", "S22")]
-    [Trait("SpecPartial", "S54")]
+    [Trait("Spec", "S22")]
+    [Trait("Spec", "S54")]
     public async Task Card_shows_the_climber()
     {
         var a = await ClimberAsync(change: Windows(19, 22));

@@ -185,4 +185,22 @@ Hvis det ikke var deg, kan du se bort fra denne e-posten. Kontoen din er ikke en
   <data name="invite_recipient_unnamed" xml:space="preserve">
     <value>En klatrer</value>
   </data>
+  <data name="connection_not_found" xml:space="preserve">
+    <value>Denne forbindelsen finnes ikke.</value>
+  </data>
+  <data name="connection_not_active" xml:space="preserve">
+    <value>Meldinger kan bare sendes i en aktiv forbindelse.</value>
+  </data>
+  <data name="message_empty" xml:space="preserve">
+    <value>Skriv en melding før du sender den.</value>
+  </data>
+  <data name="message_too_long" xml:space="preserve">
+    <value>En melding kan være på høyst 4000 tegn.</value>
+  </data>
+  <data name="message_invalid" xml:space="preserve">
+    <value>Meldingen inneholder tegn som ikke kan sendes.</value>
+  </data>
+  <data name="connection_partner_unnamed" xml:space="preserve">
+    <value>En klatrer</value>
+  </data>
 </root>

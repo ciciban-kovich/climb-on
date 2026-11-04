@@ -1,4 +1,5 @@
 using ClimbOn.Infrastructure.Persistence.Accounts;
+using ClimbOn.Infrastructure.Persistence.Chat;
 using ClimbOn.Infrastructure.Persistence.Invites;
 using ClimbOn.Infrastructure.Persistence.Outbox;
 using ClimbOn.Infrastructure.Persistence.Profiles;
@@ -50,6 +51,8 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
     public DbSet<ConnectionRow> Connections => Set<ConnectionRow>();
 
     public DbSet<SafetyAcknowledgementRow> SafetyAcknowledgements => Set<SafetyAcknowledgementRow>();
+
+    public DbSet<MessageRow> Messages => Set<MessageRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -343,6 +346,26 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             acknowledgement.Property(row => row.AcknowledgedAt).HasColumnName("acknowledged_at");
             acknowledgement.HasOne<AccountRow>().WithOne().HasForeignKey<SafetyAcknowledgementRow>(row => row.AccountId)
                 .HasConstraintName("fk_safety_acknowledgements_accounts").OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Neither foreign key cascades: removing an account or a connection never takes the other climber's
+        // messages with it (S9, S38); erasure scrubs the account instead.
+        modelBuilder.Entity<MessageRow>(message =>
+        {
+            message.ToTable("messages");
+            message.HasKey(row => row.Id).HasName("pk_messages");
+            message.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
+            message.Property(row => row.Position).HasColumnName("position").UseIdentityAlwaysColumn();
+            message.Property(row => row.ConnectionId).HasColumnName("connection_id");
+            message.Property(row => row.SenderId).HasColumnName("sender_id");
+            message.Property(row => row.Text).HasColumnName("text");
+            message.Property(row => row.SentAt).HasColumnName("sent_at");
+            message.HasOne<ConnectionRow>().WithMany().HasForeignKey(row => row.ConnectionId)
+                .HasConstraintName("fk_messages_connections").OnDelete(DeleteBehavior.Restrict);
+            message.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.SenderId)
+                .HasConstraintName("fk_messages_accounts_sender").OnDelete(DeleteBehavior.Restrict);
+            message.HasIndex(row => new { row.ConnectionId, row.Position }).IsUnique().HasDatabaseName("ix_messages_connection_position");
+            message.HasIndex(row => row.SenderId).HasDatabaseName("ix_messages_sender_id");
         });
     }
 
