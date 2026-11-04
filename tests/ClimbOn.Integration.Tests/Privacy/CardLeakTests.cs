@@ -78,8 +78,9 @@ public sealed class CardLeakTests(ApiFactory factory) : IntegrationTest(factory)
                     .Select(_ => $"{route}: email of {climber.Name}"));
                 leaks.AddRange(values.Where(value => value.Contains(birth, StringComparison.Ordinal))
                     .Select(_ => $"{route}: date of birth of {climber.Name}"));
+                // A whole token, as the C33 scan matches a postcode: generated names and texts carry hex runs.
                 leaks.AddRange(values.Where(value => !Guid.TryParse(value, out var _)
-                        && Regex.IsMatch(value, $"(?<![0-9]){postcode}(?![0-9])", RegexOptions.CultureInvariant))
+                        && Regex.IsMatch(value, $"(?<![0-9A-Za-z]){postcode}(?![0-9A-Za-z])", RegexOptions.CultureInvariant))
                     .Select(_ => $"{route}: postcode of {climber.Name}"));
                 Assert.NotEqual(AllSexes, accepted);
             }
