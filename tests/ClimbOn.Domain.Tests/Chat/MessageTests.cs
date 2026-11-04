@@ -37,6 +37,31 @@ public sealed class MessageTests
         Assert.Equal(Message.TooLongCode, Assert.Throws<DomainError>(() => Write(new string('x', Message.MaximumLength + 1))).Code);
     }
 
+    // Counted exactly as written: trailing whitespace is not trimmed away and a combining accent is not composed
+    // first, so each refused text below would fit if it were trimmed or normalised.
+    [Theory]
+    [Trait("Spec", "S119")]
+    [InlineData(" ")]
+    [InlineData("\r\n")]
+    public void Trailing_whitespace_is_counted(string tail)
+    {
+        var fits = new string('x', Message.MaximumLength - tail.Length) + tail;
+
+        Assert.Equal(fits, Write(fits).Text);
+        Assert.Equal(Message.TooLongCode, Assert.Throws<DomainError>(() => Write(new string('x', Message.MaximumLength) + tail)).Code);
+    }
+
+    [Fact]
+    [Trait("Spec", "S119")]
+    public void Combining_accent_is_counted_as_written()
+    {
+        // "e" + U+0301 is two code points; in NFC it is one, so the refused 4001 code points would be 2001 if normalised.
+        var fits = string.Concat(Enumerable.Repeat("e\u0301", Message.MaximumLength / 2));
+
+        Assert.Equal(fits, Write(fits).Text);
+        Assert.Equal(Message.TooLongCode, Assert.Throws<DomainError>(() => Write(fits + "x")).Code);
+    }
+
     // S115: kept exactly, a real U+FFFD and surrounding whitespace included.
     [Fact]
     [Trait("SpecPartial", "S115")]

@@ -1,4 +1,3 @@
-using ClimbOn.Domain.Invites;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClimbOn.Infrastructure.Persistence.Invites;
@@ -11,6 +10,6 @@ internal static class ConnectionLocks
     // before the caller's transaction does. False when it is not active.
     public static async Task<bool> ShareIfActiveAsync(ClimbOnDbContext db, Guid connectionId, CancellationToken cancellationToken) =>
         (await db.Database.SqlQuery<Guid>(
-                $"""SELECT id AS "Value" FROM connections WHERE id = {connectionId} AND state = {InviteNames.Of(ConnectionState.Active)} FOR SHARE""")
+                $"""SELECT id AS "Value" FROM connections WHERE id = {connectionId} AND state = {InviteNames.ConnectionActive} FOR SHARE""")
             .ToListAsync(cancellationToken)).Count == 1;
 }

@@ -12,7 +12,7 @@ public sealed record Message(Guid Id, Guid ConnectionId, Guid SenderId, string T
     public const string TooLongCode = "message_too_long";
     public const string InvalidCode = "message_invalid";
 
-    // In code points, as a display name is counted (S3).
+    // In code points, counted exactly as written, without trimming or normalising (S119).
     public const int MaximumLength = 4000;
 
     public static IReadOnlyList<string> Codes { get; } = [EmptyCode, TooLongCode, InvalidCode];

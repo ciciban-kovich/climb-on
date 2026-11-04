@@ -304,14 +304,19 @@ public sealed class ChatTests(ApiFactory factory) : IntegrationTest(factory)
         await SentAsync(a, toC, Factory.Data.Message());
     }
 
-    // D37: the viewer's own stored profile that today's rules refuse is refused with its code, as on the suggestion
-    // list and the invite list, rather than shown as a list of connections.
-    [Fact]
-    public async Task Own_invalid_stored_profile_is_refused_with_its_code()
+    // The viewer's own stored profile that today's rules refuse is refused with its code, as on the suggestion list
+    // and the invite list, rather than shown as a list of connections, also when there are none.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Own_invalid_stored_profile_is_refused_with_its_code(bool connected)
     {
         var a = await climbers.ClimberAsync();
-        var b = await climbers.ClimberAsync();
-        await ConnectAsync(a, b);
+        if (connected)
+        {
+            await ConnectAsync(a, await climbers.ClimberAsync());
+        }
+
         await climbers.RefuseProfileAsync(a);
         await Factory.Telemetry.TakeAsync();
 

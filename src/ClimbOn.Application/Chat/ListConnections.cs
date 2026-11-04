@@ -18,6 +18,10 @@ public sealed class ListConnections(IConnectionStore store, ICandidateStore clim
 
     public async Task<IReadOnlyList<ConnectionEntry>> RunAsync(Guid viewerId, CancellationToken cancellationToken)
     {
+        // The viewer's own stored profile that today's rules refuse is refused with its code, as on the suggestion
+        // list and the invite list, whether or not they have connections. A partner is read whatever their state,
+        // dormant included (S107).
+        var viewer = await suggestions.RequesterAsync(viewerId, cancellationToken);
         var connections = (await store.ListAsync(viewerId, cancellationToken))
             .OrderByDescending(connection => connection.CreatedAt)
             .ToList();
@@ -26,9 +30,6 @@ public sealed class ListConnections(IConnectionStore store, ICandidateStore clim
             return [];
         }
 
-        // The viewer's own stored profile that today's rules refuse is refused with its code, as on the suggestion
-        // list and the invite list. A partner is read whatever their state, dormant included (S107).
-        var viewer = await suggestions.RequesterAsync(viewerId, cancellationToken);
         var partnerIds = connections.Select(connection => connection.PartnerId).ToHashSet();
         var cards = new Dictionary<Guid, ClimberCard>();
         if (viewer is not null)
