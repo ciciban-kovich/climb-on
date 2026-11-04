@@ -37,18 +37,31 @@ public sealed class MessageTests
         Assert.Equal(Message.TooLongCode, Assert.Throws<DomainError>(() => Write(new string('x', Message.MaximumLength + 1))).Code);
     }
 
-    // Counted exactly as written: trailing whitespace is not trimmed away and a combining accent is not composed
-    // first, so each refused text below would fit if it were trimmed or normalised.
+    // Counted exactly as written: leading and trailing whitespace is not trimmed away and a combining accent is not
+    // composed first, so each refused text below would fit if it were trimmed or normalised.
     [Theory]
     [Trait("Spec", "S119")]
-    [InlineData(" ")]
-    [InlineData("\r\n")]
-    public void Trailing_whitespace_is_counted(string tail)
+    [InlineData(" ", false)]
+    [InlineData("\r\n", false)]
+    [InlineData(" ", true)]
+    [InlineData("\r\n", true)]
+    public void Surrounding_whitespace_is_counted(string space, bool leading)
     {
-        var fits = new string('x', Message.MaximumLength - tail.Length) + tail;
+        string With(int letters) => leading ? space + new string('x', letters) : new string('x', letters) + space;
+
+        Assert.Equal(With(Message.MaximumLength - space.Length), Write(With(Message.MaximumLength - space.Length)).Text);
+        Assert.Equal(Message.TooLongCode, Assert.Throws<DomainError>(() => Write(With(Message.MaximumLength))).Code);
+    }
+
+    // A precomposed "é" (U+00E9) is one code point; decomposed to NFD it would be two, so this text would not fit.
+    [Fact]
+    [Trait("Spec", "S119")]
+    public void Precomposed_letter_is_counted_as_written()
+    {
+        var fits = new string('é', Message.MaximumLength);
 
         Assert.Equal(fits, Write(fits).Text);
-        Assert.Equal(Message.TooLongCode, Assert.Throws<DomainError>(() => Write(new string('x', Message.MaximumLength) + tail)).Code);
+        Assert.Equal(Message.TooLongCode, Assert.Throws<DomainError>(() => Write(fits + "x")).Code);
     }
 
     [Fact]
