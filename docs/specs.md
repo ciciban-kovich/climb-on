@@ -88,7 +88,7 @@ Rationale lives in decisions.md, not here.
 - S51. A climber card shows: display name; own sex; discipline variants with grades (displayed per S13.5); belay certification labelled per S22; own gear; home gyms (inactive ones marked per S21); the window overlap with the viewing climber; distance per S52; the profile photo, if any. The card also carries an opaque handle for the climber, which reveals nothing about them, including when they registered.
 - S52. The distance on a card is the S16 distance rounded to whole km, halves up. A rounded distance under 2 km is shown as "< 2 km".
 - S53. A card never shows date of birth, postcode, accepted partner sexes, or acceptable partner grade ranges; its grades are the climber's own ranges only. Email: see S50.
-- S54. The same card is used wherever one climber sees another: suggestion list, received invites, sent invites while pending (S35), connections.
+- S54. The same card is used wherever one climber sees another: suggestion list, received invites, sent invites while pending (S35), connections. Exception: a connection partner whose stored profile today's rules refuse is shown as for invites (S35): their display name if it passes today's rules, otherwise "A climber", and no card.
 - S55. A profile has at most one photo. All image metadata is removed before storage; the stored file contains no metadata.
 - S56. The admin can remove a climber's profile photo without changing the rest of the profile.
 - S57. When a profile is reported, a copy of the reported climber's card (S51) as it appears to the reporting climber at that moment, including the photo, is attached to the report. Retention per S40.
@@ -180,3 +180,4 @@ Rationale lives in decisions.md, not here.
 - S115. A chat message is stored and returned exactly as written, as plain text. The API never returns message content as HTML.
 - S116. An account whose email address is not confirmed appears in no suggestion list. Its own suggestion-list request is rejected with an error stating that the email address must be confirmed.
 - S117. B does not appear in A's suggestion list while an invite between them is pending, in either direction, or while a connection between them is active or paused.
+- S118. Chat messages are paged: the API returns the newest 10 messages and lets the client fetch older ones page by page; the client loads older messages when the climber scrolls up (lazy loading).
