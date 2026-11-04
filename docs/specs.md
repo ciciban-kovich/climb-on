@@ -181,3 +181,4 @@ Rationale lives in decisions.md, not here.
 - S116. An account whose email address is not confirmed appears in no suggestion list. Its own suggestion-list request is rejected with an error stating that the email address must be confirmed.
 - S117. B does not appear in A's suggestion list while an invite between them is pending, in either direction, or while a connection between them is active or paused.
 - S118. Chat messages are paged: the API returns the newest 10 messages and lets the client fetch older ones page by page; the client loads older messages when the climber scrolls up (lazy loading).
+- S119. A chat message holds at least one character that is not whitespace and at most 4000 characters, counted as a display name is (S3). A message containing a character that cannot be stored is refused. Otherwise it is stored exactly as written (S115).
