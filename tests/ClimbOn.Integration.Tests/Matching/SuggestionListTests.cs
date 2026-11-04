@@ -514,6 +514,62 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
         Assert.Equal(4, Assert.Single(await ListAsync(a)).AccountId.Version);
     }
 
+    // S117, both directions: a pending invite hides each from the other, and the pair returns once it is no longer
+    // pending, declined or timed out alike.
+    [Theory]
+    [Trait("SpecPartial", "S117")]
+    [InlineData("declined")]
+    [InlineData("expired")]
+    public async Task Pending_invite_hides_pair(string ended)
+    {
+        var a = await ClimberAsync();
+        var b = await ClimberAsync();
+        var c = await ClimberAsync();
+        var invite = await InviteAsync(a, b);
+
+        Assert.Equal([c.Name], Names(await ListAsync(a)));
+        Assert.Equal([c.Name], Names(await ListAsync(b)));
+        Assert.Equal(new[] { a.Name, b.Name }.Order(), Names(await ListAsync(c)).Order());
+
+        if (ended == "declined")
+        {
+            using var declined = await PostAsync($"/api/climber/invites/{invite}/decline", b.Token);
+            Assert.Equal(HttpStatusCode.NoContent, declined.StatusCode);
+        }
+        else
+        {
+            Factory.Clock.Advance(TimeSpan.FromDays(7));
+        }
+
+        Assert.Equal(new[] { b.Name, c.Name }.Order(), Names(await ListAsync(a)).Order());
+        Assert.Equal(new[] { a.Name, c.Name }.Order(), Names(await ListAsync(b)).Order());
+    }
+
+    // S117: an active connection hides the pair; pausing (S42) arrives with deletion in M2.
+    [Fact]
+    [Trait("SpecPartial", "S117")]
+    public async Task Connection_hides_pair()
+    {
+        var a = await ClimberAsync();
+        var b = await ClimberAsync();
+        var c = await ClimberAsync();
+        var invite = await InviteAsync(a, b);
+        using (var acknowledged = await PostAsync("/api/climber/safety-notice/acknowledgement", b.Token))
+        {
+            Assert.Equal(HttpStatusCode.OK, acknowledged.StatusCode);
+        }
+
+        using (var accepted = await PostAsync($"/api/climber/invites/{invite}/accept", b.Token))
+        {
+            Assert.Equal(HttpStatusCode.NoContent, accepted.StatusCode);
+        }
+
+        Factory.Clock.Advance(TimeSpan.FromDays(8));
+
+        Assert.Equal([c.Name], Names(await ListAsync(a)));
+        Assert.Equal([c.Name], Names(await ListAsync(b)));
+    }
+
     // C46 checks the two files agree; this checks the codes are among their keys.
     [Fact]
     public void Every_suggestion_text_exists_in_both_languages() =>
@@ -633,6 +689,31 @@ public sealed class SuggestionListTests(ApiFactory factory) : IntegrationTest(fa
         }
 
         return await Client().SendAsync(request, Ct);
+    }
+
+    // An invite from one climber to another through the API, once the sender has acknowledged the safety notice (S23);
+    // returns its ID.
+    private async Task<Guid> InviteAsync(TestClimber from, TestClimber to)
+    {
+        using (var acknowledged = await PostAsync("/api/climber/safety-notice/acknowledgement", from.Token))
+        {
+            Assert.Equal(HttpStatusCode.OK, acknowledged.StatusCode);
+        }
+
+        var recipient = (await ListAsync(from)).Single(card => card.DisplayName == to.Name).AccountId;
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/climber/invites")
+        {
+            Content = JsonContent.Create(new InviteRequest(recipient)),
+        };
+        using var response = await SendAsync(request, from.Token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return (await response.Content.ReadFromJsonAsync<InviteResultResponse>(Ct))!.InviteId!.Value;
+    }
+
+    private async Task<HttpResponseMessage> PostAsync(string path, string token)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, path);
+        return await SendAsync(request, token);
     }
 
     // S21's deactivation is M2, so a profile that lists an inactive gym is arranged below the API.
