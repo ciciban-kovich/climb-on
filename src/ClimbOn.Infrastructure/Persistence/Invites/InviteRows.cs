@@ -80,9 +80,20 @@ public static class InviteNames
         _ => throw new ArgumentOutOfRangeException(nameof(cause), cause, null),
     };
 
+    public static string Of(ConnectionState state) => state switch
+    {
+        ConnectionState.Active => ConnectionActive,
+        ConnectionState.Paused => ConnectionPaused,
+        ConnectionState.Ended => ConnectionEnded,
+        _ => throw new ArgumentOutOfRangeException(nameof(state), state, null),
+    };
+
     public static InviteState ParseState(string state) =>
         Enum.GetValues<InviteState>().Single(value => Of(value) == state);
 
     public static ExpiryCause ParseCause(string cause) =>
         Enum.GetValues<ExpiryCause>().Single(value => Of(value) == cause);
+
+    public static ConnectionState ParseConnectionState(string state) =>
+        Enum.GetValues<ConnectionState>().Single(value => Of(value) == state);
 }

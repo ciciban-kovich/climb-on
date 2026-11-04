@@ -129,7 +129,7 @@ public sealed class GradeTests
     }
 
     [Theory]
-    [Trait("SpecPartial", "S13.5")]
+    [Trait("Spec", "S13.5")]
     [InlineData(GradeScale.Norwegian, "8", GradeScale.French, "7b")]
     [InlineData(GradeScale.Norwegian, "7-", GradeScale.French, "6b+")]
     [InlineData(GradeScale.Norwegian, "6", GradeScale.French, "6a")]
@@ -151,7 +151,7 @@ public sealed class GradeTests
     }
 
     [Theory]
-    [Trait("SpecPartial", "S13.5")]
+    [Trait("Spec", "S13.5")]
     [InlineData(GradeScale.Norwegian, "7", GradeScale.Font)]
     [InlineData(GradeScale.Norwegian, "7", GradeScale.WaterIce)]
     [InlineData(GradeScale.Font, "7A", GradeScale.Font)]

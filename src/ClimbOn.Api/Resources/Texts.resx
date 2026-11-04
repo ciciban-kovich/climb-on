@@ -185,4 +185,22 @@ If it was not you, you can ignore this email. Your account has not been changed.
   <data name="invite_recipient_unnamed" xml:space="preserve">
     <value>A climber</value>
   </data>
+  <data name="connection_not_found" xml:space="preserve">
+    <value>This connection does not exist.</value>
+  </data>
+  <data name="connection_not_active" xml:space="preserve">
+    <value>Messages can only be sent in an active connection.</value>
+  </data>
+  <data name="message_empty" xml:space="preserve">
+    <value>Write a message before sending it.</value>
+  </data>
+  <data name="message_too_long" xml:space="preserve">
+    <value>A message can be at most 4000 characters.</value>
+  </data>
+  <data name="message_invalid" xml:space="preserve">
+    <value>The message contains characters that cannot be sent.</value>
+  </data>
+  <data name="connection_partner_unnamed" xml:space="preserve">
+    <value>A climber</value>
+  </data>
 </root>

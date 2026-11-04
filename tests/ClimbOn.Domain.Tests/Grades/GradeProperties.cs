@@ -48,7 +48,7 @@ public sealed class GradeProperties
 
     [Property(MaxTest = 1000)]
     [Trait("Spec", "S13.3")]
-    [Trait("SpecPartial", "S13.5")]
+    [Trait("Spec", "S13.5")]
     public Property Rope_conversion_is_monotonic() =>
         Prop.ForAll(AdjacentRopeGrades, step =>
         {

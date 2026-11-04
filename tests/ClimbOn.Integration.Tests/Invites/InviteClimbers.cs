@@ -230,7 +230,8 @@ public sealed class InviteClimbers(ApiFactory factory)
         return token;
     }
 
-    private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, string token)
+    // The request with the session cookie for token; disposes the request.
+    public async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, string token)
     {
         using (request)
         {
