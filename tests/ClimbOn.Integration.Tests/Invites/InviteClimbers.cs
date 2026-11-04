@@ -33,15 +33,15 @@ public sealed class InviteClimbers(ApiFactory factory)
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
-    // Registered, confirmed unless confirm is false, logged in, with TestData.Profile changed by change, and the
-    // safety notice acknowledged unless acknowledge is false.
+    // Registered in language, confirmed unless confirm is false, logged in, with TestData.Profile changed by change,
+    // and the safety notice acknowledged unless acknowledge is false.
     public async Task<InviteClimber> ClimberAsync(
-        Func<ProfileRequest, ProfileRequest>? change = null, bool confirm = true, bool acknowledge = true)
+        Func<ProfileRequest, ProfileRequest>? change = null, bool confirm = true, bool acknowledge = true, string language = "nb")
     {
         var account = factory.Data.Account();
         using (var response = await Client().PostAsJsonAsync(
             "/api/climber/accounts",
-            new RegistrationRequest(account.Email, account.Password, account.DateOfBirth, "nb", TermsVersion: 1, PrivacyVersion: 1),
+            new RegistrationRequest(account.Email, account.Password, account.DateOfBirth, language, TermsVersion: 1, PrivacyVersion: 1),
             Ct))
         {
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);

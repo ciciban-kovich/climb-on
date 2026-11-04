@@ -329,8 +329,6 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal("9008", (await changed.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.Postcode);
     }
 
-    // The profile chose 3089 while it was active; the table has since retired it. S102.3's distance
-    // clause is SuggestionListTests.Retired_postcode_distance_uses_retained_point.
     // A stored profile that today's rules refuse is refused with its code until the climber replaces it.
     [Fact]
     [Trait("SpecPartial", "S3")]
@@ -356,6 +354,8 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         AssertProfile(Expected(replacement), await read.Content.ReadFromJsonAsync<ProfileResponse>(Ct));
     }
 
+    // The profile chose 3089 while it was active; the table has since retired it. S102.3's distance
+    // clause is SuggestionListTests.Retired_postcode_distance_uses_retained_point.
     [Fact]
     [Trait("Spec", "S102")]
     [Trait("Spec", "S102.3")]

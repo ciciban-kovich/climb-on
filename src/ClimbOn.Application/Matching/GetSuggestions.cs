@@ -59,12 +59,11 @@ public sealed partial class GetSuggestions(
 
         // Without a profile no S4 criterion can hold.
         var now = clock.UtcNow;
-        if (await OwnProfileAsync(requesterId, cancellationToken) is not { } profile)
+        if (await RequesterAsync(requesterId, cancellationToken) is not { } requester)
         {
             return [];
         }
 
-        var requester = new Climber(requesterId, profile, await PointOfAsync(profile.Postcode, cancellationToken), now);
         var climbers = await CandidatesAsync(requester, new PrefilterScope(null, now), now, cancellationToken);
 
         var gyms = await profiles.FindGymsAsync(
@@ -82,14 +81,32 @@ public sealed partial class GetSuggestions(
     public async Task<bool> IsCandidateAsync(Guid requesterId, Guid candidateId, CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
-        if ((await candidates.FindAsync([requesterId], cancellationToken)).SingleOrDefault() is not { } requester)
+        if (await RequesterAsync(requesterId, cancellationToken) is not { } requester)
         {
-            // ICandidateStore has logged a refused one.
-            _ = await profiles.FindAsync(requesterId, cancellationToken);
             return false;
         }
 
         return (await CandidatesAsync(requester, new PrefilterScope(candidateId, null), now, cancellationToken)).Count == 1;
+    }
+
+    // The requester as a climber, or null without a profile. A stored profile that today's rules refuse is still the
+    // requester's error to fix, with its code, and is logged as RequesterProfileRefused on every path that reads it.
+    public async Task<Climber?> RequesterAsync(Guid requesterId, CancellationToken cancellationToken)
+    {
+        Profile? profile;
+        try
+        {
+            profile = await profiles.FindAsync(requesterId, cancellationToken);
+        }
+        catch (DomainError error)
+        {
+            LogOwnProfileRefused(requesterId, error.Code);
+            throw;
+        }
+
+        return profile is null
+            ? null
+            : new Climber(requesterId, profile, await PointOfAsync(profile.Postcode, cancellationToken), clock.UtcNow);
     }
 
     private async Task<List<Climber>> CandidatesAsync(
@@ -102,21 +119,6 @@ public sealed partial class GetSuggestions(
             scope,
             cancellationToken);
         return found.Where(candidate => CandidateRule.IsCandidate(requester, candidate)).ToList();
-    }
-
-    // A stored profile that today's rules refuse is still the requester's error to fix, with its code, but it is
-    // logged as a refused candidate is.
-    public async Task<Profile?> OwnProfileAsync(Guid requesterId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await profiles.FindAsync(requesterId, cancellationToken);
-        }
-        catch (DomainError error)
-        {
-            LogOwnProfileRefused(requesterId, error.Code);
-            throw;
-        }
     }
 
     private async Task<GeoPoint> PointOfAsync(string postcode, CancellationToken cancellationToken) =>

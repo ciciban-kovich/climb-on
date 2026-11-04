@@ -137,10 +137,9 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Single(await Factory.Telemetry.TakeAsync(), IsProfileRefusal);
         Assert.Equal(0, await climbers.PendingAsync(a, c));
 
-        // Logged once per request, by whichever read refused it first.
+        // Logged once per request, as on the suggestion list.
         static bool IsProfileRefusal(TelemetryItem item) =>
-            item.Signal == "log"
-            && (Equals(item.Field("eventName"), "CandidateProfileSkipped") || Equals(item.Field("eventName"), "RequesterProfileRefused"));
+            item.Signal == "log" && Equals(item.Field("eventName"), "RequesterProfileRefused");
     }
 
     [Fact]
@@ -370,12 +369,13 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
 
     // A sent invite is never dropped from the sender's list. A recipient whose stored profile today's rules refuse is
     // named as stored when the display name alone passes them, otherwise by a neutral placeholder, with the state and
-    // never a card.
+    // never a card. The placeholder is in the sender's stored language, here not the default.
     [Fact]
     [Trait("SpecPartial", "S35")]
+    [Trait("SpecPartial", "S105")]
     public async Task Sent_invite_to_a_refused_profile_stays_listed()
     {
-        var a = await climbers.ClimberAsync();
+        var a = await climbers.ClimberAsync(language: "en");
         var named = await climbers.ClimberAsync();
         var unnamed = await climbers.ClimberAsync();
         var declined = await climbers.ClimberAsync();
@@ -389,7 +389,7 @@ public sealed class InviteTests(ApiFactory factory) : IntegrationTest(factory)
 
         var sent = (await climbers.ListAsync(a)).Sent.ToDictionary(invite => invite.Id);
 
-        var placeholder = Texts.Get(ListInvites.UnnamedRecipientKey, Language.Bokmal);
+        var placeholder = Texts.Get(ListInvites.UnnamedRecipientKey, Language.English);
         Assert.Equal(3, sent.Count);
         Assert.Equal(("pending", named.Name), (sent[toNamed].State, sent[toNamed].DisplayName));
         Assert.Equal(("pending", placeholder), (sent[toUnnamed].State, sent[toUnnamed].DisplayName));

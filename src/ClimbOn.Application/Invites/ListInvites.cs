@@ -19,40 +19,38 @@ public sealed record SentInvite(Guid Id, DateTimeOffset SentAt, SentInviteView S
 public sealed record InviteList(IReadOnlyList<ReceivedInvite> Received, IReadOnlyList<SentInvite> Sent);
 
 // The viewer's invites, each pending one with the other climber's card (S54).
-public sealed class ListInvites(IInviteStore invites, ICandidateStore climbers, IProfileStore profiles, IClock clock)
+public sealed class ListInvites(
+    IInviteStore invites, ICandidateStore climbers, IProfileStore profiles, GetSuggestions suggestions, IClock clock)
 {
     public const string UnnamedRecipientKey = "invite_recipient_unnamed";
 
     public async Task<InviteList> RunAsync(Guid viewerId, CancellationToken cancellationToken)
     {
+        // The viewer's own stored profile that today's rules refuse is refused with its code, as on the suggestion
+        // list; a viewer without a profile has never been anyone's candidate.
+        if (await suggestions.RequesterAsync(viewerId, cancellationToken) is not { } viewer)
+        {
+            return new InviteList([], []);
+        }
+
         var now = clock.UtcNow;
         var all = (await invites.ListAsync(viewerId, now, cancellationToken)).OrderByDescending(invite => invite.SentAt).ToList();
         var received = all.Where(invite => invite.RecipientId == viewerId && invite.IsPendingAt(now)).ToList();
         var sent = all.Where(invite => invite.SenderId == viewerId).ToList();
 
-        // A sender whose stored profile today's rules refuse is not listed. The viewer's own is refused with its
-        // code, as on the suggestion list (ICandidateStore has logged it); a viewer without a profile has never been
-        // anyone's candidate.
-        var others = received.Select(invite => invite.SenderId).Concat(sent.Select(invite => invite.RecipientId)).ToHashSet();
-        var found = (await climbers.FindAsync([.. others.Append(viewerId)], cancellationToken))
-            .ToDictionary(climber => climber.AccountId);
-        if (!found.TryGetValue(viewerId, out var viewer))
-        {
-            _ = await profiles.FindAsync(viewerId, cancellationToken);
-            return new InviteList([], []);
-        }
-
+        // Only a pending invite shows a card (S35, S54), so only its other climber is read whole. A sender whose
+        // stored profile today's rules refuse is not listed.
         var carded = received.Select(invite => invite.SenderId)
             .Concat(sent.Where(invite => invite.IsPendingAt(now)).Select(invite => invite.RecipientId))
-            .Where(found.ContainsKey)
             .ToHashSet();
+        var found = (await climbers.FindAsync(carded, cancellationToken)).ToDictionary(climber => climber.AccountId);
         var gyms = await profiles.FindGymsAsync(
-            carded.Append(viewerId).SelectMany(id => found[id].Profile.HomeGyms).Distinct().ToList(), cancellationToken);
-        var cards = carded.ToDictionary(id => id, id => CardBuilder.For(viewer, found[id], gyms));
+            found.Values.Append(viewer).SelectMany(climber => climber.Profile.HomeGyms).Distinct().ToList(), cancellationToken);
+        var cards = found.Values.ToDictionary(climber => climber.AccountId, climber => CardBuilder.For(viewer, climber, gyms));
 
-        // S35: a sent invite is never dropped; a recipient whose stored profile is refused is named as stored when
-        // the display name alone passes today's rules.
-        var refused = await profiles.FindStoredAsync(
+        // S35: a sent invite is never dropped; any other recipient is named as stored when the display name alone
+        // passes today's rules.
+        var stored = await profiles.FindStoredAsync(
             sent.Select(invite => invite.RecipientId).Where(id => !found.ContainsKey(id)).ToHashSet(), cancellationToken);
         return new InviteList(
             received.Where(invite => cards.ContainsKey(invite.SenderId))
@@ -64,7 +62,7 @@ public sealed class ListInvites(IInviteStore invites, ICandidateStore climbers, 
                     invite.SenderViewAt(now),
                     found.TryGetValue(invite.RecipientId, out var recipient)
                         ? recipient.Profile.DisplayName
-                        : Profile.ValidDisplayName(refused.GetValueOrDefault(invite.RecipientId)?.DisplayName),
+                        : Profile.ValidDisplayName(stored.GetValueOrDefault(invite.RecipientId)?.DisplayName),
                     invite.IsPendingAt(now) ? cards.GetValueOrDefault(invite.RecipientId) : null))
                 .ToList());
     }
