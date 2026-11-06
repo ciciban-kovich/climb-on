@@ -122,8 +122,9 @@ public sealed class NotificationTests(ApiFactory factory) : IntegrationTest(fact
         Assert.DoesNotContain(await NotificationsAsync(a), entry => entry.Event == "new-message");
     }
 
-    // A message refused because its connection is not the sender's notifies nobody: the event and the message commit
-    // together, or neither does.
+    // A message refused before anything is written, as an outsider's (404) or an empty one (400) is, notifies nobody.
+    // Both are refused before the event is queued, so this does not show that the event and the message commit
+    // together; S9's 409, refused after the event is queued, gets that test when M2 builds pause and end (D39).
     [Fact]
     [Trait("SpecPartial", "S69.3")]
     public async Task Refused_message_notifies_nobody()

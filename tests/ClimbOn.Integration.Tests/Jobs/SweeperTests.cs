@@ -48,6 +48,52 @@ public sealed class SweeperTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(("expired", "timeout", (DateTimeOffset?)(sentAt + Invite.Lifetime)), await StoredInviteAsync(due.InviteId!.Value));
     }
 
+    // S8, S33: a timeout the sweeper writes after the 7 days are over still ends the invite when its time ran out, so
+    // the 30-day bar runs from then, not from the sweep.
+    [Fact]
+    public async Task Late_timeout_ends_when_its_time_ran_out()
+    {
+        var a = await climbers.ClimberAsync();
+        var b = await climbers.ClimberAsync();
+        var sentAt = Factory.Clock.UtcNow;
+        var invite = await climbers.InvitedAsync(a, b);
+        Factory.Clock.Set(sentAt + Invite.Lifetime + TimeSpan.FromHours(5));
+
+        Assert.Equal(0, await Factory.RunJobAsync(SweeperJob.JobName));
+
+        Assert.Equal(("expired", "timeout", (DateTimeOffset?)(sentAt + Invite.Lifetime)), await StoredInviteAsync(invite.InviteId!.Value));
+    }
+
+    // Design §4.2: the sweeper writes a timeout under its pair's lock, so it waits while a pair action holds that lock
+    // and writes the timeout once the action has committed.
+    [Fact]
+    public async Task Timeout_waits_for_the_pair_lock()
+    {
+        var a = await climbers.ClimberAsync();
+        var b = await climbers.ClimberAsync();
+        var invite = await climbers.InvitedAsync(a, b);
+        Factory.Clock.Advance(Invite.Lifetime);
+        await using var holder = new NpgsqlConnection(Factory.ConnectionString);
+        await holder.OpenAsync(Ct);
+        await using var transaction = await holder.BeginTransactionAsync(Ct);
+        await LockPairAsync(holder, a.Id, b.Id);
+
+        var sweep = Task.Run(() => Factory.RunJobAsync(SweeperJob.JobName), Ct);
+        using var waitLimit = CancellationTokenSource.CreateLinkedTokenSource(Ct);
+        waitLimit.CancelAfter(TimeSpan.FromSeconds(10));
+        while (!sweep.IsCompleted && !await PairLockWaitedForAsync(holder))
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(50), waitLimit.Token);
+        }
+
+        Assert.False(sweep.IsCompleted, "The sweeper wrote the timeout without waiting for the pair lock.");
+        Assert.Equal("pending", (await StoredInviteAsync(invite.InviteId!.Value)).State);
+
+        await transaction.CommitAsync(Ct);
+        Assert.Equal(0, await sweep);
+        Assert.Equal("expired", (await StoredInviteAsync(invite.InviteId!.Value)).State);
+    }
+
     // Design §4.1: a run that finds another run holding the lock exits at once, doing nothing; once the lock is free,
     // the next run does the work.
     [Fact]
@@ -173,6 +219,30 @@ public sealed class SweeperTests(ApiFactory factory) : IntegrationTest(factory)
             reader.GetString(0),
             reader.IsDBNull(1) ? null : reader.GetString(1),
             reader.IsDBNull(2) ? null : reader.GetFieldValue<DateTimeOffset>(2));
+    }
+
+    // The pair's advisory lock as a pair action takes it (design §2), in the holder's open transaction. The key is
+    // written out here as PairLocks derives it; if the two drift apart, Timeout_waits_for_the_pair_lock fails.
+    private static async Task LockPairAsync(NpgsqlConnection holder, Guid a, Guid b)
+    {
+        var (low, high) = string.CompareOrdinal(a.ToString("D"), b.ToString("D")) < 0 ? (a, b) : (b, a);
+        await using var command = new NpgsqlCommand("SELECT pg_advisory_xact_lock(19, hashtext(@low || ':' || @high))", holder);
+        command.Parameters.AddWithValue("low", low.ToString("D"));
+        command.Parameters.AddWithValue("high", high.ToString("D"));
+        await command.ExecuteNonQueryAsync(Ct);
+    }
+
+    // Whether another session of this database is waiting for a two-key advisory lock in the pair locks' key space.
+    private static async Task<bool> PairLockWaitedForAsync(NpgsqlConnection holder)
+    {
+        await using var command = new NpgsqlCommand(
+            """
+            SELECT count(*) FROM pg_locks
+            WHERE locktype = 'advisory' AND NOT granted AND classid = 19 AND objsubid = 2
+              AND database = (SELECT oid FROM pg_database WHERE datname = current_database())
+            """,
+            holder);
+        return (long)(await command.ExecuteScalarAsync(Ct))! > 0;
     }
 
     private async Task<long> SessionsAsync(InviteClimber climber)

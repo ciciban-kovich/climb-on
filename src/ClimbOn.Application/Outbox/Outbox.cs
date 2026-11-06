@@ -35,6 +35,10 @@ public interface IOutboxClaim : IAsyncDisposable
     // Failed attempts so far.
     int Attempts { get; }
 
+    // Runs work in the claim's transaction. When it throws, what it wrote is rolled back and the claim stays open, so
+    // the attempt can still be marked.
+    Task RunAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken);
+
     Task MarkSentAsync(DateTimeOffset now, CancellationToken cancellationToken);
 
     Task MarkRetryAsync(int attempts, DateTimeOffset nextAttemptAt, CancellationToken cancellationToken);
@@ -44,8 +48,9 @@ public interface IOutboxClaim : IAsyncDisposable
 }
 
 // Design §4.1: a row is written to the outbox in the same transaction as the state change, delivered after commit,
-// and what remains is retried by the sweeper (RetryDueAsync). An email that fails is retried with backoff. A
-// notification event is fanned out inside the claim's transaction, so its channels' rows commit with the mark.
+// and what remains is retried by the sweeper (RetryDueAsync). A notification event is fanned out inside the claim's
+// transaction, so its channels' rows commit with the mark. A failed attempt, an email's or an event's, is retried with
+// backoff, and the last one marks the row failed.
 public sealed partial class OutboxQueue(
     IOutboxStore store, IEmailSender sender, NotificationFanOut notifications, IClock clock, ILogger<OutboxQueue> logger)
 {
@@ -116,30 +121,23 @@ public sealed partial class OutboxQueue(
 
     private async Task AttemptAsync(IOutboxClaim claim, CancellationToken cancellationToken)
     {
-        switch (claim.Item)
-        {
-            case OutboxEmail email:
-                await SendAsync(claim, email, cancellationToken);
-                break;
-            case OutboxNotification notification:
-                // A failure here throws with the claim unmarked, so its transaction rolls back and the row stays due.
-                await notifications.DeliverAsync(notification.Id, notification.Event, notification.OccurredAt, cancellationToken);
-                await claim.MarkSentAsync(clock.UtcNow, cancellationToken);
-                break;
-            default:
-                throw new InvalidOperationException($"Unknown outbox item {claim.Item.GetType().Name}.");
-        }
-    }
-
-    private async Task SendAsync(IOutboxClaim claim, OutboxEmail email, CancellationToken cancellationToken)
-    {
         try
         {
-            await sender.SendAsync(email.Message, cancellationToken);
+            switch (claim.Item)
+            {
+                case OutboxEmail email:
+                    // The sender logs and counts its own failures (design §4.4).
+                    await sender.SendAsync(email.Message, cancellationToken);
+                    break;
+                case OutboxNotification notification:
+                    await FanOutAsync(claim, notification, cancellationToken);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown outbox item {claim.Item.GetType().Name}.");
+            }
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
-            // The sender logs and counts its own failures (design §4.4).
             var attempts = claim.Attempts + 1;
             var now = clock.UtcNow;
             if (attempts >= MaximumAttempts)
@@ -157,9 +155,30 @@ public sealed partial class OutboxQueue(
         await claim.MarkSentAsync(clock.UtcNow, cancellationToken);
     }
 
+    private async Task FanOutAsync(IOutboxClaim claim, OutboxNotification notification, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await claim.RunAsync(
+                token => notifications.DeliverAsync(notification.Id, notification.Event, notification.OccurredAt, token),
+                cancellationToken);
+        }
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            LogFanOutFailed(notification.Id, exception.GetType().Name);
+            throw;
+        }
+    }
+
     [LoggerMessage(
         EventName = "OutboxDeliveryFailed",
         Level = LogLevel.Warning,
         Message = "Delivering outbox row {OutboxId} after commit failed: {ExceptionType}")]
     private partial void LogDeliveryFailed(Guid outboxId, string exceptionType);
+
+    [LoggerMessage(
+        EventName = "OutboxFanOutFailed",
+        Level = LogLevel.Warning,
+        Message = "Fanning out outbox row {OutboxId} failed: {ExceptionType}")]
+    private partial void LogFanOutFailed(Guid outboxId, string exceptionType);
 }

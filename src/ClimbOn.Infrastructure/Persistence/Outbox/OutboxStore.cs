@@ -82,8 +82,16 @@ public sealed partial class OutboxStore(ClimbOnDbContext db, ILogger<OutboxStore
         Message = "Outbox email {OutboxId} for account {AccountId} failed after {Attempts} attempts")]
     private partial void LogFailed(Guid outboxId, Guid accountId, int attempts);
 
+    [LoggerMessage(
+        EventName = "OutboxNotificationFailed",
+        Level = LogLevel.Error,
+        Message = "Outbox notification {OutboxId} for account {AccountId} failed after {Attempts} attempts")]
+    private partial void LogNotificationFailed(Guid outboxId, Guid accountId, int attempts);
+
     private sealed class Claim(OutboxStore store, ClimbOnDbContext db, IDbContextTransaction transaction, OutboxRow row) : IOutboxClaim
     {
+        private const string WorkSavepoint = "outbox_work";
+
         public OutboxItem Item { get; } = row.Kind == OutboxRow.NotificationKind
             ? new OutboxNotification(
                 row.Id,
@@ -92,6 +100,22 @@ public sealed partial class OutboxStore(ClimbOnDbContext db, ILogger<OutboxStore
             : new OutboxEmail(row.Id, row.AccountId, new EmailMessage(row.Recipient!, row.Subject!, row.Body!));
 
         public int Attempts => row.Attempts;
+
+        // A failed statement aborts the whole transaction in PostgreSQL; rolling back to the savepoint undoes the work
+        // alone and leaves the claim's lock and transaction usable for the mark.
+        public async Task RunAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken)
+        {
+            await transaction.CreateSavepointAsync(WorkSavepoint, cancellationToken);
+            try
+            {
+                await work(cancellationToken);
+            }
+            catch when (!cancellationToken.IsCancellationRequested)
+            {
+                await transaction.RollbackToSavepointAsync(WorkSavepoint, cancellationToken);
+                throw;
+            }
+        }
 
         public Task MarkSentAsync(DateTimeOffset now, CancellationToken cancellationToken) =>
             CommitAsync(
@@ -119,7 +143,14 @@ public sealed partial class OutboxStore(ClimbOnDbContext db, ILogger<OutboxStore
                     .SetProperty(outbox => outbox.Subject, (string?)null)
                     .SetProperty(outbox => outbox.Body, (string?)null),
                 cancellationToken);
-            store.LogFailed(row.Id, row.AccountId, attempts);
+            if (row.Kind == OutboxRow.NotificationKind)
+            {
+                store.LogNotificationFailed(row.Id, row.AccountId, attempts);
+            }
+            else
+            {
+                store.LogFailed(row.Id, row.AccountId, attempts);
+            }
         }
 
         public ValueTask DisposeAsync() => transaction.DisposeAsync();

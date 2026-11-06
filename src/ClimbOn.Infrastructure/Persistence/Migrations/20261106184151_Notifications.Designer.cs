@@ -459,8 +459,10 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Kind")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)")
+                        .HasDefaultValue("email")
                         .HasColumnName("kind");
 
                     b.Property<DateTimeOffset>("NextAttemptAt")

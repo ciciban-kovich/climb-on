@@ -239,13 +239,131 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
             && Equals(item.Field("attribute:SmtpStatusCode"), 550));
     }
 
+    // C29: the previous app version writes an email row without a kind, between the migration and the new app. It is
+    // stored as an email and delivered.
+    [Fact]
+    public async Task Email_row_written_without_a_kind_is_an_email()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (accountId, _) = await EnqueueAsync(0);
+        var id = Guid.CreateVersion7();
+        var now = Factory.Clock.UtcNow;
+        await using (var scope = Factory.Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ClimbOnDbContext>().Database.ExecuteSqlAsync(
+                $"""
+                INSERT INTO outbox (id, account_id, recipient, subject, body, created_at, attempts, next_attempt_at, sent_at, failed_at)
+                VALUES ({id}, {accountId}, 'previous@climbon.test', 'Probe', 'A probe message.', {now}, 0, {now}, NULL, NULL)
+                """,
+                ct);
+        }
+
+        await RetryAsync();
+
+        Assert.Equal("previous@climbon.test", Assert.Single(Factory.Email.Sent).To);
+        var row = Assert.Single(await RowsAsync([id]));
+        Assert.Equal(OutboxRow.EmailKind, row.Kind);
+        Assert.NotNull(row.SentAt);
+    }
+
+    // Design §4.1: a notification event whose fan-out fails is retried with backoff, as an email is. What the failed
+    // fan-out wrote is rolled back with it, and the rows due behind it are still delivered.
+    [Fact]
+    public async Task Failed_notification_is_retried_and_holds_up_nothing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (accountId, _) = await EnqueueAsync(0);
+        var notification = await EnqueueNotificationAsync(accountId);
+        Factory.Clock.Advance(TimeSpan.FromMinutes(1));
+        var (_, emails) = await EnqueueAsync(1);
+
+        await using (var scope = Factory.Services.CreateAsyncScope())
+        {
+            await Outbox(scope, Factory.Email, fanOut: FailingFanOut(scope)).RetryDueAsync(ct);
+        }
+
+        Assert.NotNull(Assert.Single(await RowsAsync(emails)).SentAt);
+        var failed = Assert.Single(await RowsAsync([notification]));
+        Assert.Null(failed.SentAt);
+        Assert.Equal(1, failed.Attempts);
+        Assert.Equal(Factory.Clock.UtcNow + OutboxQueue.Backoff[0], failed.NextAttemptAt);
+        Assert.Equal(0, await NotificationCountAsync(notification));
+
+        // Not due again before the backoff has passed; then delivered once.
+        await RetryAsync();
+        Assert.Equal(0, await NotificationCountAsync(notification));
+        Factory.Clock.Advance(OutboxQueue.Backoff[0]);
+        await RetryAsync();
+
+        Assert.NotNull(Assert.Single(await RowsAsync([notification])).SentAt);
+        Assert.Equal(1, await NotificationCountAsync(notification));
+    }
+
+    [Fact]
+    public async Task Last_failed_notification_attempt_marks_the_row_failed()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (accountId, _) = await EnqueueAsync(0);
+        var notification = await EnqueueNotificationAsync(accountId);
+
+        for (var attempt = 1; attempt <= OutboxQueue.MaximumAttempts; attempt++)
+        {
+            await using (var scope = Factory.Services.CreateAsyncScope())
+            {
+                await Outbox(scope, Factory.Email, fanOut: FailingFanOut(scope)).RetryDueAsync(ct);
+            }
+
+            if (attempt < OutboxQueue.MaximumAttempts)
+            {
+                Factory.Clock.Advance(OutboxQueue.Backoff[attempt - 1]);
+            }
+        }
+
+        var row = Assert.Single(await RowsAsync([notification]));
+        Assert.Equal(OutboxQueue.MaximumAttempts, row.Attempts);
+        Assert.Equal(Factory.Clock.UtcNow, row.FailedAt);
+        Assert.Null(row.SentAt);
+
+        // Failed is final.
+        Factory.Clock.Advance(TimeSpan.FromDays(1));
+        await RetryAsync();
+        Assert.Equal(0, await NotificationCountAsync(notification));
+
+        var captured = await Factory.Telemetry.TakeAsync();
+        Assert.Empty(TelemetryCapture.FindLeaks(captured, Factory.Fixtures));
+        var log = Assert.Single(captured, item => item.Signal == "log" && Equals(item.Field("eventName"), "OutboxNotificationFailed"));
+        Assert.Equal(accountId, log.Field("attribute:AccountId"));
+    }
+
     private static RegistrationRequest Request(AccountDraft account) =>
         new(account.Email, account.Password, account.DateOfBirth, "nb", TermsVersion: 1, PrivacyVersion: 1);
 
-    private OutboxQueue Outbox(AsyncServiceScope scope, IEmailSender sender, IOutboxStore? store = null) =>
+    private static NotificationFanOut FailingFanOut(AsyncServiceScope scope) =>
+        new(new FailingNotificationStore(scope.ServiceProvider.GetRequiredService<INotificationStore>()));
+
+    private OutboxQueue Outbox(
+        AsyncServiceScope scope, IEmailSender sender, IOutboxStore? store = null, NotificationFanOut? fanOut = null) =>
         new(store ?? scope.ServiceProvider.GetRequiredService<IOutboxStore>(), sender,
-            scope.ServiceProvider.GetRequiredService<NotificationFanOut>(), Factory.Clock,
+            fanOut ?? scope.ServiceProvider.GetRequiredService<NotificationFanOut>(), Factory.Clock,
             scope.ServiceProvider.GetRequiredService<ILogger<OutboxQueue>>());
+
+    // A notification event for the account, naming the account itself, due now and not delivered.
+    private async Task<Guid> EnqueueNotificationAsync(Guid accountId)
+    {
+        await using var scope = Factory.Services.CreateAsyncScope();
+        var id = scope.ServiceProvider.GetRequiredService<OutboxQueue>()
+            .Enqueue(new NotificationEvent(NotificationKind.InviteReceived, accountId, accountId, Guid.NewGuid()));
+        await scope.ServiceProvider.GetRequiredService<ClimbOnDbContext>().SaveChangesAsync(TestContext.Current.CancellationToken);
+        return id;
+    }
+
+    // The in-app notifications delivered by this outbox row.
+    private async Task<int> NotificationCountAsync(Guid outboxId)
+    {
+        await using var scope = Factory.Services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<ClimbOnDbContext>().Notifications
+            .CountAsync(row => row.Id == outboxId, TestContext.Current.CancellationToken);
+    }
 
     // The sweeper's step, as the host wires it (the recording sender).
     private async Task RetryAsync()
@@ -323,6 +441,9 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
 
             public int Attempts => inner.Attempts;
 
+            public Task RunAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken) =>
+                inner.RunAsync(work, cancellationToken);
+
             public Task MarkSentAsync(DateTimeOffset now, CancellationToken cancellationToken) =>
                 throw new InvalidOperationException("The database is unavailable.");
 
@@ -334,6 +455,23 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
 
             public ValueTask DisposeAsync() => inner.DisposeAsync();
         }
+    }
+
+    // The real store, which writes the notification and then fails, as a later statement of the fan-out would.
+    private sealed class FailingNotificationStore(INotificationStore inner) : INotificationStore
+    {
+        public async Task AddInAppAsync(
+            Guid id, NotificationEvent notification, DateTimeOffset occurredAt, CancellationToken cancellationToken)
+        {
+            await inner.AddInAppAsync(id, notification, occurredAt, cancellationToken);
+            throw new InvalidOperationException("The notification could not be delivered.");
+        }
+
+        public Task<IReadOnlyList<InAppNotification>> ListAsync(Guid accountId, int size, CancellationToken cancellationToken) =>
+            inner.ListAsync(accountId, size, cancellationToken);
+
+        public Task<bool> MarkSeenAsync(Guid accountId, Guid id, DateTimeOffset now, CancellationToken cancellationToken) =>
+            inner.MarkSeenAsync(accountId, id, now, cancellationToken);
     }
 
     private sealed class FailingSender : IEmailSender

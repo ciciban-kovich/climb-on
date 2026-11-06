@@ -154,7 +154,8 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             outbox.HasKey(row => row.Id).HasName("pk_outbox");
             outbox.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
             outbox.Property(row => row.AccountId).HasColumnName("account_id");
-            outbox.Property(row => row.Kind).HasColumnName("kind").HasMaxLength(16);
+            // C29: the previous app version writes email rows without a kind.
+            outbox.Property(row => row.Kind).HasColumnName("kind").HasMaxLength(16).HasDefaultValue(OutboxRow.EmailKind);
             outbox.Property(row => row.Event).HasColumnName("event").HasMaxLength(32);
             outbox.Property(row => row.ActorId).HasColumnName("actor_id");
             outbox.Property(row => row.SubjectId).HasColumnName("subject_id");

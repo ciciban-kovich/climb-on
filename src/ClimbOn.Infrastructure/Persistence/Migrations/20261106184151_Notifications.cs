@@ -32,9 +32,6 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                 nullable: false,
                 defaultValue: "email");
 
-            // Every row before this migration is an email; the model has no default, so neither does the column.
-            migrationBuilder.Sql("ALTER TABLE outbox ALTER COLUMN kind DROP DEFAULT;");
-
             migrationBuilder.AddColumn<Guid>(
                 name: "subject_id",
                 table: "outbox",
