@@ -1,5 +1,7 @@
 using ClimbOn.Application.Abstractions;
+using ClimbOn.Application.Notifications;
 using ClimbOn.Application.Outbox;
+using ClimbOn.Infrastructure.Persistence.Notifications;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -11,16 +13,32 @@ namespace ClimbOn.Infrastructure.Persistence.Outbox;
 // is delivered by one worker at a time.
 public sealed partial class OutboxStore(ClimbOnDbContext db, ILogger<OutboxStore> logger) : IOutboxStore
 {
-    public void Add(OutboxEmail email, DateTimeOffset now) =>
-        db.Outbox.Add(new OutboxRow
+    public void Add(OutboxItem item, DateTimeOffset now) =>
+        db.Outbox.Add(item switch
         {
-            Id = email.Id,
-            AccountId = email.AccountId,
-            Recipient = email.Message.To,
-            Subject = email.Message.Subject,
-            Body = email.Message.Body,
-            CreatedAt = now,
-            NextAttemptAt = now,
+            OutboxEmail email => new OutboxRow
+            {
+                Id = email.Id,
+                AccountId = email.AccountId,
+                Kind = OutboxRow.EmailKind,
+                Recipient = email.Message.To,
+                Subject = email.Message.Subject,
+                Body = email.Message.Body,
+                CreatedAt = now,
+                NextAttemptAt = now,
+            },
+            OutboxNotification notification => new OutboxRow
+            {
+                Id = notification.Id,
+                AccountId = notification.AccountId,
+                Kind = OutboxRow.NotificationKind,
+                Event = NotificationNames.Of(notification.Event.Kind),
+                ActorId = notification.Event.ActorId,
+                SubjectId = notification.Event.SubjectId,
+                CreatedAt = notification.OccurredAt,
+                NextAttemptAt = now,
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(item), item.GetType().Name, null),
         });
 
     public Task SaveAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
@@ -66,8 +84,12 @@ public sealed partial class OutboxStore(ClimbOnDbContext db, ILogger<OutboxStore
 
     private sealed class Claim(OutboxStore store, ClimbOnDbContext db, IDbContextTransaction transaction, OutboxRow row) : IOutboxClaim
     {
-        public OutboxEmail Email { get; } =
-            new(row.Id, row.AccountId, new EmailMessage(row.Recipient!, row.Subject!, row.Body!));
+        public OutboxItem Item { get; } = row.Kind == OutboxRow.NotificationKind
+            ? new OutboxNotification(
+                row.Id,
+                new NotificationEvent(NotificationNames.Parse(row.Event!), row.AccountId, row.ActorId!.Value, row.SubjectId!.Value),
+                row.CreatedAt)
+            : new OutboxEmail(row.Id, row.AccountId, new EmailMessage(row.Recipient!, row.Subject!, row.Body!));
 
         public int Attempts => row.Attempts;
 

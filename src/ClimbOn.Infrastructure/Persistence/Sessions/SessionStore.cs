@@ -50,4 +50,9 @@ public sealed class SessionStore(ClimbOnDbContext db) : ISessionStore
 
     public Task EndAsync(byte[] tokenHash, CancellationToken cancellationToken) =>
         db.Sessions.Where(session => session.TokenHash == tokenHash).ExecuteDeleteAsync(cancellationToken);
+
+    // TouchAsync resumes only a session used after its cutoff, checked again under the row lock, so a session deleted
+    // here was already expired to every request.
+    public Task<int> PurgeAsync(DateTimeOffset usedUpTo, CancellationToken cancellationToken) =>
+        db.Sessions.Where(session => session.LastUsedAt <= usedUpTo).ExecuteDeleteAsync(cancellationToken);
 }

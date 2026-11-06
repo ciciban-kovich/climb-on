@@ -35,9 +35,7 @@ internal static class PairLocks
             accounts[id] = confirmed.Count == 1 ? new PairAccount(id, confirmed[0]) : null;
         }
 
-        await db.Database.ExecuteSqlAsync(
-            $"SELECT pg_advisory_xact_lock({PairLockSpace}, hashtext({low.ToString("D")} || ':' || {high.ToString("D")}))",
-            cancellationToken);
+        await LockPairOnlyAsync(db, low, high, cancellationToken);
 
         // A profile save upserts its profile row first and holds it to commit (ProfileStore.SaveAsync), so with both
         // rows shared the candidate check's several reads of a profile all see one saved version, as the repeatable
@@ -50,5 +48,15 @@ internal static class PairLocks
         }
 
         return (accounts[actorId], accounts[otherId]);
+    }
+
+    // The pair's advisory lock alone, in the caller's transaction, for a writer that touches only the pair's invites
+    // (the sweeper's S8 step): it holds no account row, so it waits only on this lock and never deadlocks a pair action.
+    public static async Task LockPairOnlyAsync(ClimbOnDbContext db, Guid a, Guid b, CancellationToken cancellationToken)
+    {
+        var (low, high) = Order(a, b);
+        await db.Database.ExecuteSqlAsync(
+            $"SELECT pg_advisory_xact_lock({PairLockSpace}, hashtext({low.ToString("D")} || ':' || {high.ToString("D")}))",
+            cancellationToken);
     }
 }

@@ -33,31 +33,31 @@ public sealed class ChatStore(ClimbOnDbContext db) : IChatStore
 
     public async Task<bool> AddIfActiveAsync(Message message, CancellationToken cancellationToken)
     {
-        // READ COMMITTED: after waiting on a change of the row, the lock reads the row as that change committed it.
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        if (!await ConnectionLocks.ShareIfActiveAsync(db, message.ConnectionId, cancellationToken))
-        {
-            return false;
-        }
-
-        db.Messages.Add(new MessageRow
-        {
-            Id = message.Id,
-            ConnectionId = message.ConnectionId,
-            SenderId = message.SenderId,
-            Text = message.Text,
-            SentAt = message.SentAt,
-        });
+        // The tracker holds the outbox rows added for this message: saved with it, or dropped with it.
         try
         {
+            // READ COMMITTED: after waiting on a change of the row, the lock reads the row as that change committed it.
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            if (!await ConnectionLocks.ShareIfActiveAsync(db, message.ConnectionId, cancellationToken))
+            {
+                return false;
+            }
+
+            db.Messages.Add(new MessageRow
+            {
+                Id = message.Id,
+                ConnectionId = message.ConnectionId,
+                SenderId = message.SenderId,
+                Text = message.Text,
+                SentAt = message.SentAt,
+            });
             await db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return true;
         }
         finally
         {
             db.ChangeTracker.Clear();
         }
-
-        await transaction.CommitAsync(cancellationToken);
-        return true;
     }
 }

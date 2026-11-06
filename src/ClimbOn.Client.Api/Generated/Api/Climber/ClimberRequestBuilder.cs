@@ -8,6 +8,7 @@ using ClimbOn.Client.Api.Api.Climber.Language;
 using ClimbOn.Client.Api.Api.Climber.Login;
 using ClimbOn.Client.Api.Api.Climber.Logout;
 using ClimbOn.Client.Api.Api.Climber.Me;
+using ClimbOn.Client.Api.Api.Climber.Notifications;
 using ClimbOn.Client.Api.Api.Climber.Profile;
 using ClimbOn.Client.Api.Api.Climber.SafetyNotice;
 using ClimbOn.Client.Api.Api.Climber.Suggestions;
@@ -64,6 +65,11 @@ namespace ClimbOn.Client.Api.Api.Climber
         public global::ClimbOn.Client.Api.Api.Climber.Me.MeRequestBuilder Me
         {
             get => new global::ClimbOn.Client.Api.Api.Climber.Me.MeRequestBuilder(PathParameters, RequestAdapter);
+        }
+        /// <summary>The notifications property</summary>
+        public global::ClimbOn.Client.Api.Api.Climber.Notifications.NotificationsRequestBuilder Notifications
+        {
+            get => new global::ClimbOn.Client.Api.Api.Climber.Notifications.NotificationsRequestBuilder(PathParameters, RequestAdapter);
         }
         /// <summary>The profile property</summary>
         public global::ClimbOn.Client.Api.Api.Climber.Profile.ProfileRequestBuilder Profile

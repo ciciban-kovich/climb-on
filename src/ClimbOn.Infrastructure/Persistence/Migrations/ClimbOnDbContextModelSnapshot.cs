@@ -334,6 +334,53 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                     b.ToTable("safety_acknowledgements", (string)null);
                 });
 
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Notifications.NotificationRow", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<Guid>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Event")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("event");
+
+                    b.Property<DateTimeOffset?>("SeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("seen_at");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("subject_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_notifications");
+
+                    b.HasIndex("ActorId")
+                        .HasDatabaseName("ix_notifications_actor_id");
+
+                    b.HasIndex("AccountId", "CreatedAt", "Id")
+                        .HasDatabaseName("ix_notifications_account_created");
+
+                    b.ToTable("notifications", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_notifications_event", "event IN ('invite-received', 'invite-accepted', 'new-message')");
+                        });
+                });
+
             modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Outbox.LinkTokenRow", b =>
                 {
                     b.Property<byte[]>("TokenHash")
@@ -382,6 +429,10 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("account_id");
 
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
                     b.Property<int>("Attempts")
                         .HasColumnType("integer")
                         .HasColumnName("attempts");
@@ -394,9 +445,20 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("Event")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("event");
+
                     b.Property<DateTimeOffset?>("FailedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("failed_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("kind");
 
                     b.Property<DateTimeOffset>("NextAttemptAt")
                         .HasColumnType("timestamp with time zone")
@@ -415,11 +477,18 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("subject");
 
+                    b.Property<Guid?>("SubjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("subject_id");
+
                     b.HasKey("Id")
                         .HasName("pk_outbox");
 
                     b.HasIndex("AccountId")
                         .HasDatabaseName("ix_outbox_account_id");
+
+                    b.HasIndex("ActorId")
+                        .HasDatabaseName("ix_outbox_actor_id");
 
                     b.HasIndex("NextAttemptAt")
                         .HasDatabaseName("ix_outbox_due")
@@ -428,6 +497,12 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                     b.ToTable("outbox", null, t =>
                         {
                             t.HasCheckConstraint("ck_outbox_attempts", "attempts >= 0");
+
+                            t.HasCheckConstraint("ck_outbox_event", "event IN ('invite-received', 'invite-accepted', 'new-message')");
+
+                            t.HasCheckConstraint("ck_outbox_kind", "kind IN ('email', 'notification')");
+
+                            t.HasCheckConstraint("ck_outbox_notification", "(kind = 'notification') = (event IS NOT NULL AND actor_id IS NOT NULL AND subject_id IS NOT NULL)");
                         });
                 });
 
@@ -815,6 +890,23 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_safety_acknowledgements_accounts");
                 });
 
+            modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Notifications.NotificationRow", b =>
+                {
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_notifications_accounts");
+
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_notifications_accounts_actor");
+                });
+
             modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Outbox.LinkTokenRow", b =>
                 {
                     b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
@@ -833,6 +925,12 @@ namespace ClimbOn.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_outbox_accounts");
+
+                    b.HasOne("ClimbOn.Infrastructure.Persistence.Accounts.AccountRow", null)
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_outbox_accounts_actor");
                 });
 
             modelBuilder.Entity("ClimbOn.Infrastructure.Persistence.Profiles.AvailabilityWindowRow", b =>

@@ -18,17 +18,11 @@ public sealed class InviteStore(ClimbOnDbContext db) : IInviteStore
 
             // The timeouts already due (S8), written as the sweeper writes them (design §4.2), so that a new invite
             // after one finds no stored pending invite in the way of the S32 index.
-            var due = now - Invite.Lifetime;
-            await db.Invites
-                .Where(row => row.State == InviteNames.Pending && row.SentAt <= due
-                    && ((row.SenderId == actorId && row.RecipientId == otherId)
-                        || (row.SenderId == otherId && row.RecipientId == actorId)))
-                .ExecuteUpdateAsync(
-                    set => set
-                        .SetProperty(row => row.State, InviteNames.Expired)
-                        .SetProperty(row => row.ExpiryCause, InviteNames.Of(ExpiryCause.Timeout))
-                        .SetProperty(row => row.EndedAt, row => row.SentAt + Invite.Lifetime),
-                    cancellationToken);
+            await ExpireTimedOutAsync(
+                db.Invites.Where(row => (row.SenderId == actorId && row.RecipientId == otherId)
+                    || (row.SenderId == otherId && row.RecipientId == actorId)),
+                now,
+                cancellationToken);
 
             var invites = await db.Invites.AsNoTracking()
                 .Where(row => (row.SenderId == actorId && row.RecipientId == otherId)
@@ -46,6 +40,27 @@ public sealed class InviteStore(ClimbOnDbContext db) : IInviteStore
             await transaction.DisposeAsync();
             throw;
         }
+    }
+
+    // Design §4.2: one transaction per invite, under its pair's lock, as LockPairAsync writes the timeouts, so that no
+    // pair action finds an invite it read as pending already written expired.
+    public async Task<int> ExpireDueAsync(DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var due = now - Invite.Lifetime;
+        var invites = await db.Invites.AsNoTracking()
+            .Where(row => row.State == InviteNames.Pending && row.SentAt <= due)
+            .Select(row => new { row.Id, row.SenderId, row.RecipientId })
+            .ToListAsync(cancellationToken);
+        var expired = 0;
+        foreach (var invite in invites)
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+            await PairLocks.LockPairOnlyAsync(db, invite.SenderId, invite.RecipientId, cancellationToken);
+            expired += await ExpireTimedOutAsync(db.Invites.Where(row => row.Id == invite.Id), now, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        }
+
+        return expired;
     }
 
     public async Task<Invite?> FindAsync(Guid inviteId, CancellationToken cancellationToken) =>
@@ -80,6 +95,20 @@ public sealed class InviteStore(ClimbOnDbContext db) : IInviteStore
             cancellationToken);
         return await FindSafetyAcknowledgementAsync(accountId, cancellationToken)
             ?? throw new InvalidOperationException("The acknowledgement was not stored.");
+    }
+
+    // Writes the timeouts due at now (S8) among invites, ended when their time ran out.
+    private static Task<int> ExpireTimedOutAsync(IQueryable<InviteRow> invites, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var due = now - Invite.Lifetime;
+        return invites
+            .Where(row => row.State == InviteNames.Pending && row.SentAt <= due)
+            .ExecuteUpdateAsync(
+                set => set
+                    .SetProperty(row => row.State, InviteNames.Expired)
+                    .SetProperty(row => row.ExpiryCause, InviteNames.Of(ExpiryCause.Timeout))
+                    .SetProperty(row => row.EndedAt, row => row.SentAt + Invite.Lifetime),
+                cancellationToken);
     }
 
     private sealed class PairTransaction(
@@ -122,13 +151,13 @@ public sealed class InviteStore(ClimbOnDbContext db) : IInviteStore
 
         public Task DeclineAsync(Invite declined, CancellationToken cancellationToken) => EndAsync(declined, cancellationToken);
 
-        public async Task AcceptAsync(Invite accepted, CancellationToken cancellationToken)
+        public async Task AcceptAsync(Invite accepted, Guid connectionId, CancellationToken cancellationToken)
         {
             await EndAsync(accepted, cancellationToken);
             var (low, high) = PairLocks.Order(accepted.SenderId, accepted.RecipientId);
             db.Connections.Add(new ConnectionRow
             {
-                Id = Guid.NewGuid(),
+                Id = connectionId,
                 PairLow = low,
                 PairHigh = high,
                 State = InviteNames.ConnectionActive,

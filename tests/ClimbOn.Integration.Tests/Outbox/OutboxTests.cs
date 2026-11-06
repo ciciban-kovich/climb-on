@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using ClimbOn.Api.Climber;
 using ClimbOn.Application.Abstractions;
+using ClimbOn.Application.Notifications;
 using ClimbOn.Application.Outbox;
 using ClimbOn.Infrastructure.Email;
 using ClimbOn.Infrastructure.Persistence;
@@ -17,7 +18,7 @@ using Xunit;
 
 namespace ClimbOn.Integration.Tests.Outbox;
 
-// Design §4.1. Rows are written through EmailOutbox below the API, and delivered by the step the
+// Design §4.1. Rows are written through OutboxQueue below the API, and delivered by the step the
 // sweeper runs (RetryDueAsync), with senders that fail or wait as each test needs.
 [Collection(EmailFailureCollection.Name)]
 public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
@@ -89,13 +90,13 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
             await using var next = await scope.ServiceProvider.GetRequiredService<IOutboxStore>()
                 .ClaimNextAsync(Factory.Clock.UtcNow, null, waitLimit.Token);
             Assert.NotNull(next);
-            Assert.Equal(rows.Single(row => row != held.Email.Id), next.Email.Id);
+            Assert.Equal(rows.Single(row => row != held.Item.Id), next.Item.Id);
         }
 
         await using (var scope = Factory.Services.CreateAsyncScope())
         {
             await using var same = await scope.ServiceProvider.GetRequiredService<IOutboxStore>()
-                .ClaimNextAsync(Factory.Clock.UtcNow, held.Email.Id, waitLimit.Token);
+                .ClaimNextAsync(Factory.Clock.UtcNow, held.Item.Id, waitLimit.Token);
             Assert.Null(same);
         }
     }
@@ -155,13 +156,13 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
 
         var failed = Assert.Single(await RowsAsync(rows));
         Assert.Equal(1, failed.Attempts);
-        Assert.Equal(Factory.Clock.UtcNow + EmailOutbox.Backoff[0], failed.NextAttemptAt);
+        Assert.Equal(Factory.Clock.UtcNow + OutboxQueue.Backoff[0], failed.NextAttemptAt);
 
         // Not due again before the backoff has passed.
         await RetryAsync();
         Assert.Empty(Factory.Email.Sent);
 
-        Factory.Clock.Advance(EmailOutbox.Backoff[0]);
+        Factory.Clock.Advance(OutboxQueue.Backoff[0]);
         await RetryAsync();
 
         Assert.Single(Factory.Email.Sent);
@@ -176,21 +177,21 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
         var ct = TestContext.Current.CancellationToken;
         var (accountId, rows) = await EnqueueAsync(1);
 
-        for (var attempt = 1; attempt <= EmailOutbox.MaximumAttempts; attempt++)
+        for (var attempt = 1; attempt <= OutboxQueue.MaximumAttempts; attempt++)
         {
             await using (var scope = Factory.Services.CreateAsyncScope())
             {
                 await Outbox(scope, new FailingSender()).RetryDueAsync(ct);
             }
 
-            if (attempt < EmailOutbox.MaximumAttempts)
+            if (attempt < OutboxQueue.MaximumAttempts)
             {
-                Factory.Clock.Advance(EmailOutbox.Backoff[attempt - 1]);
+                Factory.Clock.Advance(OutboxQueue.Backoff[attempt - 1]);
             }
         }
 
         var row = Assert.Single(await RowsAsync(rows));
-        Assert.Equal(EmailOutbox.MaximumAttempts, row.Attempts);
+        Assert.Equal(OutboxQueue.MaximumAttempts, row.Attempts);
         Assert.Equal(Factory.Clock.UtcNow, row.FailedAt);
         Assert.Null(row.SentAt);
         Assert.Null(row.Recipient);
@@ -229,7 +230,7 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Contains("RCPT", server.Commands);
         var row = Assert.Single(await RowsAsync(rows));
         Assert.Equal(1, row.Attempts);
-        Assert.Equal(Factory.Clock.UtcNow + EmailOutbox.Backoff[0], row.NextAttemptAt);
+        Assert.Equal(Factory.Clock.UtcNow + OutboxQueue.Backoff[0], row.NextAttemptAt);
         Assert.Null(row.SentAt);
         Assert.Null(row.FailedAt);
         var captured = await Factory.Telemetry.TakeAsync();
@@ -241,15 +242,16 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
     private static RegistrationRequest Request(AccountDraft account) =>
         new(account.Email, account.Password, account.DateOfBirth, "nb", TermsVersion: 1, PrivacyVersion: 1);
 
-    private EmailOutbox Outbox(AsyncServiceScope scope, IEmailSender sender, IOutboxStore? store = null) =>
-        new(store ?? scope.ServiceProvider.GetRequiredService<IOutboxStore>(), sender, Factory.Clock,
-            scope.ServiceProvider.GetRequiredService<ILogger<EmailOutbox>>());
+    private OutboxQueue Outbox(AsyncServiceScope scope, IEmailSender sender, IOutboxStore? store = null) =>
+        new(store ?? scope.ServiceProvider.GetRequiredService<IOutboxStore>(), sender,
+            scope.ServiceProvider.GetRequiredService<NotificationFanOut>(), Factory.Clock,
+            scope.ServiceProvider.GetRequiredService<ILogger<OutboxQueue>>());
 
     // The sweeper's step, as the host wires it (the recording sender).
     private async Task RetryAsync()
     {
         await using var scope = Factory.Services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<EmailOutbox>().RetryDueAsync(TestContext.Current.CancellationToken);
+        await scope.ServiceProvider.GetRequiredService<OutboxQueue>().RetryDueAsync(TestContext.Current.CancellationToken);
     }
 
     private async Task<AccountDraft> RegisterAsync()
@@ -271,7 +273,7 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
         await using var scope = Factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ClimbOnDbContext>();
         var accountId = await db.Accounts.Where(row => row.Email == account.Email).Select(row => row.Id).SingleAsync(ct);
-        var outbox = scope.ServiceProvider.GetRequiredService<EmailOutbox>();
+        var outbox = scope.ServiceProvider.GetRequiredService<OutboxQueue>();
         var rows = Enumerable.Range(0, count)
             .Select(i => outbox.Enqueue(accountId, new EmailMessage(account.Email, $"Probe {i}", "A probe message.")))
             .ToArray();
@@ -301,7 +303,7 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
             MarkSent,
         }
 
-        public void Add(OutboxEmail email, DateTimeOffset now) => inner.Add(email, now);
+        public void Add(OutboxItem item, DateTimeOffset now) => inner.Add(item, now);
 
         public Task SaveAsync(CancellationToken cancellationToken) => inner.SaveAsync(cancellationToken);
 
@@ -317,7 +319,7 @@ public sealed class OutboxTests(ApiFactory factory) : IntegrationTest(factory)
 
         private sealed class BrokenClaim(IOutboxClaim inner) : IOutboxClaim
         {
-            public OutboxEmail Email => inner.Email;
+            public OutboxItem Item => inner.Item;
 
             public int Attempts => inner.Attempts;
 

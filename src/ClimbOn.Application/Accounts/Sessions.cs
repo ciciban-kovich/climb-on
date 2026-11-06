@@ -22,6 +22,9 @@ public interface ISessionStore
     Task<SessionOwner?> TouchAsync(byte[] tokenHash, DateTimeOffset now, DateTimeOffset usedAfter, CancellationToken cancellationToken);
 
     Task EndAsync(byte[] tokenHash, CancellationToken cancellationToken);
+
+    // Deletes every session last used at or before usedUpTo; returns how many.
+    Task<int> PurgeAsync(DateTimeOffset usedUpTo, CancellationToken cancellationToken);
 }
 
 // S82: a session lasts until 30 days after its last use; logging out ends it.
@@ -38,4 +41,8 @@ public sealed class Sessions(ISessionStore store, IClock clock)
 
     public Task EndAsync(string token, CancellationToken cancellationToken) =>
         store.EndAsync(LinkTokens.Hash(token), cancellationToken);
+
+    // The sweeper's step: deletes the sessions expired at now, which no request can resume any more.
+    public Task<int> PurgeExpiredAsync(CancellationToken cancellationToken) =>
+        store.PurgeAsync(SessionPolicy.LiveIfUsedAfter(clock.UtcNow), cancellationToken);
 }
