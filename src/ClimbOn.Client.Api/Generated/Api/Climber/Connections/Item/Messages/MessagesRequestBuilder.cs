@@ -22,7 +22,7 @@ namespace ClimbOn.Client.Api.Api.Climber.Connections.Item.Messages
         /// </summary>
         /// <param name="pathParameters">Path parameters for the request</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public MessagesRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/climber/connections/{id}/messages", pathParameters)
+        public MessagesRequestBuilder(Dictionary<string, object> pathParameters, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/climber/connections/{id}/messages{?before*}", pathParameters)
         {
         }
         /// <summary>
@@ -30,27 +30,29 @@ namespace ClimbOn.Client.Api.Api.Climber.Connections.Item.Messages
         /// </summary>
         /// <param name="rawUrl">The raw URL to use for the request builder.</param>
         /// <param name="requestAdapter">The request adapter to use to execute the requests.</param>
-        public MessagesRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/climber/connections/{id}/messages", rawUrl)
+        public MessagesRequestBuilder(string rawUrl, IRequestAdapter requestAdapter) : base(requestAdapter, "{+baseurl}/api/climber/connections/{id}/messages{?before*}", rawUrl)
         {
         }
         /// <returns>A <see cref="global::ClimbOn.Client.Api.Models.MessageListResponse"/></returns>
         /// <param name="cancellationToken">Cancellation token to use when cancelling requests</param>
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
+        /// <exception cref="global::ClimbOn.Client.Api.Models.ErrorBody">When receiving a 400 status code</exception>
         /// <exception cref="global::ClimbOn.Client.Api.Models.ErrorBody">When receiving a 401 status code</exception>
         /// <exception cref="global::ClimbOn.Client.Api.Models.ErrorBody">When receiving a 404 status code</exception>
         /// <exception cref="global::ClimbOn.Client.Api.Models.ErrorBody">When receiving a 4XX or 5XX status code</exception>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public async Task<global::ClimbOn.Client.Api.Models.MessageListResponse?> GetAsync(Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<global::ClimbOn.Client.Api.Models.MessageListResponse?> GetAsync(Action<RequestConfiguration<global::ClimbOn.Client.Api.Api.Climber.Connections.Item.Messages.MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters>>? requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #nullable restore
 #else
-        public async Task<global::ClimbOn.Client.Api.Models.MessageListResponse> GetAsync(Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
+        public async Task<global::ClimbOn.Client.Api.Models.MessageListResponse> GetAsync(Action<RequestConfiguration<global::ClimbOn.Client.Api.Api.Climber.Connections.Item.Messages.MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters>> requestConfiguration = default, CancellationToken cancellationToken = default)
         {
 #endif
             var requestInfo = ToGetRequestInformation(requestConfiguration);
             var errorMapping = new Dictionary<string, ParsableFactory<IParsable>>
             {
+                { "400", global::ClimbOn.Client.Api.Models.ErrorBody.CreateFromDiscriminatorValue },
                 { "401", global::ClimbOn.Client.Api.Models.ErrorBody.CreateFromDiscriminatorValue },
                 { "404", global::ClimbOn.Client.Api.Models.ErrorBody.CreateFromDiscriminatorValue },
                 { "XXX", global::ClimbOn.Client.Api.Models.ErrorBody.CreateFromDiscriminatorValue },
@@ -91,11 +93,11 @@ namespace ClimbOn.Client.Api.Api.Climber.Connections.Item.Messages
         /// <param name="requestConfiguration">Configuration for the request such as headers, query parameters, and middleware options.</param>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
-        public RequestInformation ToGetRequestInformation(Action<RequestConfiguration<DefaultQueryParameters>>? requestConfiguration = default)
+        public RequestInformation ToGetRequestInformation(Action<RequestConfiguration<global::ClimbOn.Client.Api.Api.Climber.Connections.Item.Messages.MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters>>? requestConfiguration = default)
         {
 #nullable restore
 #else
-        public RequestInformation ToGetRequestInformation(Action<RequestConfiguration<DefaultQueryParameters>> requestConfiguration = default)
+        public RequestInformation ToGetRequestInformation(Action<RequestConfiguration<global::ClimbOn.Client.Api.Api.Climber.Connections.Item.Messages.MessagesRequestBuilder.MessagesRequestBuilderGetQueryParameters>> requestConfiguration = default)
         {
 #endif
             var requestInfo = new RequestInformation(Method.GET, UrlTemplate, PathParameters);
@@ -130,6 +132,25 @@ namespace ClimbOn.Client.Api.Api.Climber.Connections.Item.Messages
         public global::ClimbOn.Client.Api.Api.Climber.Connections.Item.Messages.MessagesRequestBuilder WithUrl(string rawUrl)
         {
             return new global::ClimbOn.Client.Api.Api.Climber.Connections.Item.Messages.MessagesRequestBuilder(rawUrl, RequestAdapter);
+        }
+        [global::System.CodeDom.Compiler.GeneratedCode("Kiota", "1.0.0")]
+        #pragma warning disable CS1591
+        public partial class MessagesRequestBuilderGetQueryParameters 
+        #pragma warning restore CS1591
+        {
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+#nullable enable
+            #pragma warning disable CS1591
+            [QueryParameter("before")]
+            public string? Before { get; set; }
+            #pragma warning restore CS1591
+#nullable restore
+#else
+            #pragma warning disable CS1591
+            [QueryParameter("before")]
+            public string Before { get; set; }
+            #pragma warning restore CS1591
+#endif
         }
     }
 }

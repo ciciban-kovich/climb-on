@@ -191,6 +191,9 @@ If it was not you, you can ignore this email. Your account has not been changed.
   <data name="connection_not_active" xml:space="preserve">
     <value>Messages can only be sent in an active connection.</value>
   </data>
+  <data name="message_cursor_invalid" xml:space="preserve">
+    <value>This page of messages could not be found.</value>
+  </data>
   <data name="message_empty" xml:space="preserve">
     <value>Write a message before sending it.</value>
   </data>
