@@ -21,8 +21,9 @@ public sealed record MessageRequest(string? Text);
 // Text exactly as written, as plain text (S115). Mine is whether the viewer sent it. No read state (N18).
 public sealed record MessageResponse(Guid Id, bool Mine, string Text, DateTimeOffset SentAt);
 
-// In the order the messages were sent.
-public sealed record MessageListResponse(IReadOnlyList<MessageResponse> Messages);
+// A page of at most 10 messages, in the order they were sent (S118). HasOlder is whether messages before the first
+// one exist; ask for them with before set to its Id.
+public sealed record MessageListResponse(IReadOnlyList<MessageResponse> Messages, bool HasOlder);
 
 public static class ChatEndpoints
 {
@@ -35,6 +36,7 @@ public static class ChatEndpoints
             .RequireClimberSession()
             .WithTags(Tag);
         endpoints.MapGet(Route + "/{id:guid}/messages", ListMessagesAsync)
+            .Produces<ErrorBody>(StatusCodes.Status400BadRequest)
             .Produces<ErrorBody>(StatusCodes.Status404NotFound)
             .RequireClimberSession()
             .WithTags(Tag);
@@ -69,11 +71,12 @@ public static class ChatEndpoints
     }
 
     private static async Task<Ok<MessageListResponse>> ListMessagesAsync(
-        Guid id, HttpContext context, Messages messages, CancellationToken cancellationToken)
+        Guid id, string? before, HttpContext context, Messages messages, CancellationToken cancellationToken)
     {
         var viewerId = ClimberSessions.Current(context).AccountId;
-        var list = await messages.ListAsync(viewerId, id, cancellationToken);
-        return TypedResults.Ok(new MessageListResponse(list.Select(message => ToResponse(message, viewerId)).ToList()));
+        var page = await messages.ListAsync(viewerId, id, before, cancellationToken);
+        return TypedResults.Ok(new MessageListResponse(
+            page.Messages.Select(message => ToResponse(message, viewerId)).ToList(), page.HasOlder));
     }
 
     private static async Task<Ok<MessageResponse>> SendAsync(

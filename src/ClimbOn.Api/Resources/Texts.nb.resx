@@ -191,6 +191,9 @@ Hvis det ikke var deg, kan du se bort fra denne e-posten. Kontoen din er ikke en
   <data name="connection_not_active" xml:space="preserve">
     <value>Meldinger kan bare sendes i en aktiv forbindelse.</value>
   </data>
+  <data name="message_cursor_invalid" xml:space="preserve">
+    <value>Fant ikke denne siden med meldinger.</value>
+  </data>
   <data name="message_empty" xml:space="preserve">
     <value>Skriv en melding før du sender den.</value>
   </data>

@@ -1094,6 +1094,13 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1103,6 +1110,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MessageListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
                 }
               }
             }
@@ -1687,7 +1704,8 @@
       },
       "MessageListResponse": {
         "required": [
-          "messages"
+          "messages",
+          "hasOlder"
         ],
         "type": "object",
         "properties": {
@@ -1696,6 +1714,9 @@
             "items": {
               "$ref": "#/components/schemas/MessageResponse"
             }
+          },
+          "hasOlder": {
+            "type": "boolean"
           }
         }
       },

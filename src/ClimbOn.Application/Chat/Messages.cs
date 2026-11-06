@@ -11,8 +11,13 @@ public sealed class Messages(IChatStore chat, IConnectionStore connections, IClo
 {
     public const string ConnectionNotFoundCode = "connection_not_found";
     public const string ConnectionNotActiveCode = "connection_not_active";
+    public const string MessageCursorInvalidCode = "message_cursor_invalid";
 
-    public static IReadOnlyList<string> Codes { get; } = [ConnectionNotFoundCode, ConnectionNotActiveCode, .. Message.Codes];
+    // S118.
+    public const int PageSize = 10;
+
+    public static IReadOnlyList<string> Codes { get; } =
+        [ConnectionNotFoundCode, ConnectionNotActiveCode, MessageCursorInvalidCode, .. Message.Codes];
 
     // S9: only within an active connection.
     public async Task<Message> SendAsync(Guid senderId, Guid connectionId, string? text, CancellationToken cancellationToken)
@@ -27,12 +32,24 @@ public sealed class Messages(IChatStore chat, IConnectionStore connections, IClo
         return message;
     }
 
-    // S9: readable in every state of the connection.
-    public async Task<IReadOnlyList<Message>> ListAsync(Guid viewerId, Guid connectionId, CancellationToken cancellationToken)
+    // S9: readable in every state of the connection. S118: a page of the newest messages, or with before (a message
+    // ID) of the ones before it. The connection is checked first, so to anyone else it does not exist whatever the
+    // cursor; a cursor that is not a message of this connection is refused like a malformed one, so the reply never
+    // shows whether a message of another connection exists.
+    public async Task<MessagePage> ListAsync(
+        Guid viewerId, Guid connectionId, string? before, CancellationToken cancellationToken)
     {
         await FindAsync(viewerId, connectionId, cancellationToken);
-        return await chat.ListMessagesAsync(connectionId, cancellationToken);
+        Guid? cursor = null;
+        if (before is not null)
+        {
+            cursor = Guid.TryParse(before, out var id) ? id : throw CursorInvalid();
+        }
+
+        return await chat.ListMessagesAsync(connectionId, cursor, PageSize, cancellationToken) ?? throw CursorInvalid();
     }
+
+    private static DomainError CursorInvalid() => new(MessageCursorInvalidCode);
 
     private async Task FindAsync(Guid accountId, Guid connectionId, CancellationToken cancellationToken)
     {
