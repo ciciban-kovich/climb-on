@@ -12,7 +12,7 @@ public sealed class Register(
     ILegalDocumentStore legalDocuments,
     IPasswordHasher hasher,
     ILinkTokenStore linkTokens,
-    EmailOutbox outbox,
+    OutboxQueue outbox,
     IEmailContent emails,
     IClock clock)
 {

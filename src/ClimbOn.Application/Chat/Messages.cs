@@ -1,5 +1,7 @@
 using ClimbOn.Application.Abstractions;
 using ClimbOn.Application.Invites;
+using ClimbOn.Application.Notifications;
+using ClimbOn.Application.Outbox;
 using ClimbOn.Domain.Chat;
 using ClimbOn.Domain.Errors;
 
@@ -7,7 +9,7 @@ namespace ClimbOn.Application.Chat;
 
 // Sending and reading the messages of a connection (S9, S115). Only its two climbers can do either; to anyone else
 // the connection does not exist.
-public sealed class Messages(IChatStore chat, IConnectionStore connections, IClock clock)
+public sealed class Messages(IChatStore chat, IConnectionStore connections, OutboxQueue outbox, IClock clock)
 {
     public const string ConnectionNotFoundCode = "connection_not_found";
     public const string ConnectionNotActiveCode = "connection_not_active";
@@ -19,16 +21,21 @@ public sealed class Messages(IChatStore chat, IConnectionStore connections, IClo
     public static IReadOnlyList<string> Codes { get; } =
         [ConnectionNotFoundCode, ConnectionNotActiveCode, MessageCursorInvalidCode, .. Message.Codes];
 
-    // S9: only within an active connection.
+    // S9: only within an active connection. The message notifies the other climber (S69.3), without its content (S74).
     public async Task<Message> SendAsync(Guid senderId, Guid connectionId, string? text, CancellationToken cancellationToken)
     {
         var message = Message.Write(Guid.NewGuid(), connectionId, senderId, text, clock.UtcNow);
-        await FindAsync(senderId, connectionId, cancellationToken);
+        var connection = await FindAsync(senderId, connectionId, cancellationToken);
+
+        // Enqueued first, so that storing the message saves it in the same transaction, or drops it with the message.
+        var notified = outbox.Enqueue(
+            new NotificationEvent(NotificationKind.NewMessage, connection.PartnerId, senderId, connectionId));
         if (!await chat.AddIfActiveAsync(message, cancellationToken))
         {
             throw new DomainError(ConnectionNotActiveCode, DomainErrorKind.Conflict);
         }
 
+        await outbox.DeliverAsync(notified, cancellationToken);
         return message;
     }
 
@@ -51,11 +58,7 @@ public sealed class Messages(IChatStore chat, IConnectionStore connections, IClo
 
     private static DomainError CursorInvalid() => new(MessageCursorInvalidCode);
 
-    private async Task FindAsync(Guid accountId, Guid connectionId, CancellationToken cancellationToken)
-    {
-        if (await connections.FindAsync(accountId, connectionId, cancellationToken) is null)
-        {
-            throw new DomainError(ConnectionNotFoundCode, DomainErrorKind.NotFound);
-        }
-    }
+    private async Task<Connection> FindAsync(Guid accountId, Guid connectionId, CancellationToken cancellationToken) =>
+        await connections.FindAsync(accountId, connectionId, cancellationToken)
+            ?? throw new DomainError(ConnectionNotFoundCode, DomainErrorKind.NotFound);
 }

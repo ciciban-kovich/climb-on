@@ -9,7 +9,8 @@ public interface IChatStore
     Task<MessagePage?> ListMessagesAsync(Guid connectionId, Guid? before, int size, CancellationToken cancellationToken);
 
     // Stores the message if its connection is active, holding the connection row FOR SHARE to commit so that no
-    // state change of the connection commits between the check and the insert. False when it is not active.
+    // state change of the connection commits between the check and the insert. The rows the outbox has added are
+    // saved with the message; when the connection is not active, the result is false and they are dropped.
     Task<bool> AddIfActiveAsync(Message message, CancellationToken cancellationToken);
 }
 

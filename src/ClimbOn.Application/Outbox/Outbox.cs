@@ -1,16 +1,25 @@
 using ClimbOn.Application.Abstractions;
+using ClimbOn.Application.Notifications;
 using Microsoft.Extensions.Logging;
 
 namespace ClimbOn.Application.Outbox;
 
-public sealed record OutboxEmail(Guid Id, Guid AccountId, EmailMessage Message);
+// A row of the outbox: an email to send, or a notification event to fan out (design §4.1). AccountId is the
+// recipient's.
+public abstract record OutboxItem(Guid Id, Guid AccountId);
+
+public sealed record OutboxEmail(Guid Id, Guid AccountId, EmailMessage Message) : OutboxItem(Id, AccountId);
+
+// OccurredAt is when the event happened, the time its notifications carry, whenever they are delivered.
+public sealed record OutboxNotification(Guid Id, NotificationEvent Event, DateTimeOffset OccurredAt)
+    : OutboxItem(Id, Event.RecipientId);
 
 public interface IOutboxStore
 {
     // Saved with the request's other changes, in one transaction (IAccountStore.AddAsync).
-    void Add(OutboxEmail email, DateTimeOffset now);
+    void Add(OutboxItem item, DateTimeOffset now);
 
-    // Commits the rows added, for a request whose only change is an email (EmailOutbox.EnqueueAsync).
+    // Commits the rows added, for a request whose only change is an email (OutboxQueue.EnqueueAsync).
     Task SaveAsync(CancellationToken cancellationToken);
 
     // Opens a transaction and locks the oldest due row (FOR UPDATE SKIP LOCKED), or the row with
@@ -21,10 +30,14 @@ public interface IOutboxStore
 // A claimed row. Each mark commits the claim's transaction.
 public interface IOutboxClaim : IAsyncDisposable
 {
-    OutboxEmail Email { get; }
+    OutboxItem Item { get; }
 
     // Failed attempts so far.
     int Attempts { get; }
+
+    // Runs work in the claim's transaction. When it throws, what it wrote is rolled back and the claim stays open, so
+    // the attempt can still be marked.
+    Task RunAsync(Func<CancellationToken, Task> work, CancellationToken cancellationToken);
 
     Task MarkSentAsync(DateTimeOffset now, CancellationToken cancellationToken);
 
@@ -34,9 +47,12 @@ public interface IOutboxClaim : IAsyncDisposable
     Task MarkFailedAsync(int attempts, DateTimeOffset now, CancellationToken cancellationToken);
 }
 
-// Design §4.1: an email is written to the outbox in the same transaction as the state change, delivered
-// after commit, and what remains is retried by the sweeper (RetryDueAsync) with backoff.
-public sealed partial class EmailOutbox(IOutboxStore store, IEmailSender sender, IClock clock, ILogger<EmailOutbox> logger)
+// Design §4.1: a row is written to the outbox in the same transaction as the state change, delivered after commit,
+// and what remains is retried by the sweeper (RetryDueAsync). A notification event is fanned out inside the claim's
+// transaction, so its channels' rows commit with the mark. A failed attempt, an email's or an event's, is retried with
+// backoff, and the last one marks the row failed.
+public sealed partial class OutboxQueue(
+    IOutboxStore store, IEmailSender sender, NotificationFanOut notifications, IClock clock, ILogger<OutboxQueue> logger)
 {
     // The wait after each failed attempt; the attempt after the last of these is the last one.
     public static readonly IReadOnlyList<TimeSpan> Backoff =
@@ -50,6 +66,15 @@ public sealed partial class EmailOutbox(IOutboxStore store, IEmailSender sender,
         var email = new OutboxEmail(Guid.CreateVersion7(now), accountId, message);
         store.Add(email, now);
         return email.Id;
+    }
+
+    // S69: saved with the request's other changes, as an email is.
+    public Guid Enqueue(NotificationEvent notification)
+    {
+        var now = clock.UtcNow;
+        var item = new OutboxNotification(Guid.CreateVersion7(now), notification, now);
+        store.Add(item, now);
+        return item.Id;
     }
 
     // Enqueue for a request that changes nothing else: the row is committed on its own.
@@ -98,11 +123,21 @@ public sealed partial class EmailOutbox(IOutboxStore store, IEmailSender sender,
     {
         try
         {
-            await sender.SendAsync(claim.Email.Message, cancellationToken);
+            switch (claim.Item)
+            {
+                case OutboxEmail email:
+                    // The sender logs and counts its own failures (design §4.4).
+                    await sender.SendAsync(email.Message, cancellationToken);
+                    break;
+                case OutboxNotification notification:
+                    await FanOutAsync(claim, notification, cancellationToken);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown outbox item {claim.Item.GetType().Name}.");
+            }
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
-            // The sender logs and counts its own failures (design §4.4).
             var attempts = claim.Attempts + 1;
             var now = clock.UtcNow;
             if (attempts >= MaximumAttempts)
@@ -120,9 +155,30 @@ public sealed partial class EmailOutbox(IOutboxStore store, IEmailSender sender,
         await claim.MarkSentAsync(clock.UtcNow, cancellationToken);
     }
 
+    private async Task FanOutAsync(IOutboxClaim claim, OutboxNotification notification, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await claim.RunAsync(
+                token => notifications.DeliverAsync(notification.Id, notification.Event, notification.OccurredAt, token),
+                cancellationToken);
+        }
+        catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            LogFanOutFailed(notification.Id, exception.GetType().Name);
+            throw;
+        }
+    }
+
     [LoggerMessage(
         EventName = "OutboxDeliveryFailed",
         Level = LogLevel.Warning,
-        Message = "Delivering outbox email {OutboxId} after commit failed: {ExceptionType}")]
+        Message = "Delivering outbox row {OutboxId} after commit failed: {ExceptionType}")]
     private partial void LogDeliveryFailed(Guid outboxId, string exceptionType);
+
+    [LoggerMessage(
+        EventName = "OutboxFanOutFailed",
+        Level = LogLevel.Warning,
+        Message = "Fanning out outbox row {OutboxId} failed: {ExceptionType}")]
+    private partial void LogFanOutFailed(Guid outboxId, string exceptionType);
 }

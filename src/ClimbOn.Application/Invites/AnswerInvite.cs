@@ -1,13 +1,16 @@
 using ClimbOn.Application.Abstractions;
 using ClimbOn.Application.Accounts;
 using ClimbOn.Application.Matching;
+using ClimbOn.Application.Notifications;
+using ClimbOn.Application.Outbox;
 using ClimbOn.Domain.Errors;
 using ClimbOn.Domain.Invites;
 
 namespace ClimbOn.Application.Invites;
 
-// The recipient accepts a pending invite, which creates a connection, or declines it (S7).
-public sealed class AnswerInvite(IAccountStore accounts, IInviteStore invites, IClock clock)
+// The recipient accepts a pending invite, which creates a connection and notifies its sender (S69.2), or declines it
+// (S7), which notifies nobody.
+public sealed class AnswerInvite(IAccountStore accounts, IInviteStore invites, OutboxQueue outbox, IClock clock)
 {
     public const string NotFoundCode = "invite_not_found";
 
@@ -55,9 +58,16 @@ public sealed class AnswerInvite(IAccountStore accounts, IInviteStore invites, I
             throw new DomainError(Invite.NotPendingCode, DomainErrorKind.Conflict);
         }
 
+        Guid? accepted = null;
         if (accept)
         {
-            await pair.AcceptAsync(invite.Accept(now), cancellationToken);
+            var answered = invite.Accept(now);
+            var connectionId = Guid.NewGuid();
+
+            // Enqueued first, so that the pair's write saves it in the same transaction.
+            accepted = outbox.Enqueue(
+                new NotificationEvent(NotificationKind.InviteAccepted, invite.SenderId, recipientId, connectionId));
+            await pair.AcceptAsync(answered, connectionId, cancellationToken);
         }
         else
         {
@@ -65,5 +75,9 @@ public sealed class AnswerInvite(IAccountStore accounts, IInviteStore invites, I
         }
 
         await pair.CommitAsync(cancellationToken);
+        if (accepted is { } id)
+        {
+            await outbox.DeliverAsync(id, cancellationToken);
+        }
     }
 }

@@ -38,7 +38,8 @@ public interface IPairTransaction : IAsyncDisposable
     // Writes the invite's new state: declined, or accepted together with the active connection it creates.
     Task DeclineAsync(Invite declined, CancellationToken cancellationToken);
 
-    Task AcceptAsync(Invite accepted, CancellationToken cancellationToken);
+    // The connection takes connectionId as its ID.
+    Task AcceptAsync(Invite accepted, Guid connectionId, CancellationToken cancellationToken);
 
     Task CommitAsync(CancellationToken cancellationToken);
 }
@@ -50,6 +51,10 @@ public interface IInviteStore
     // candidate check reads each profile whole. Then writes the pair's timeouts due at now and reads the pair.
     Task<IPairTransaction> LockPairAsync(
         Guid actorId, Guid otherId, PairAction action, DateTimeOffset now, CancellationToken cancellationToken);
+
+    // S8, the sweeper's step (design §4.2): writes every invite whose timeout is due at now as expired by timeout, each
+    // under its pair's advisory lock. Returns how many it wrote.
+    Task<int> ExpireDueAsync(DateTimeOffset now, CancellationToken cancellationToken);
 
     Task<Invite?> FindAsync(Guid inviteId, CancellationToken cancellationToken);
 

@@ -206,4 +206,19 @@ If it was not you, you can ignore this email. Your account has not been changed.
   <data name="connection_partner_unnamed" xml:space="preserve">
     <value>A climber</value>
   </data>
+  <data name="notification_not_found" xml:space="preserve">
+    <value>No such notification.</value>
+  </data>
+  <data name="notification_actor_unnamed" xml:space="preserve">
+    <value>A climber</value>
+  </data>
+  <data name="notification_invite_received" xml:space="preserve">
+    <value>{0} sent you an invite.</value>
+  </data>
+  <data name="notification_invite_accepted" xml:space="preserve">
+    <value>{0} accepted your invite.</value>
+  </data>
+  <data name="notification_new_message" xml:space="preserve">
+    <value>New message from {0}.</value>
+  </data>
 </root>

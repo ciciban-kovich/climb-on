@@ -2,6 +2,20 @@
 
 Each job is an `IJob` registered in DI and run through `JobRunner` (design §5).
 
+## `sweeper` (design §4.1, §4.2)
+
+Every 15 minutes. Exits 0 at start, doing nothing, when `Maintenance:Enabled` is true or when another run holds
+its lock (a session advisory lock on `hashtext('sweeper')`, held by a connection outside the pool, logged as
+`SweeperMaintenance` and `SweeperLockHeld`). Otherwise, in order, each step idempotent:
+
+1. Writes every invite whose 7 days are over as expired by timeout (S8), one transaction per invite under its
+   pair's advisory lock.
+2. Deletes the sessions last used 30 days or more ago (S82).
+3. Delivers every due outbox row: emails, retried with backoff, and notification events, fanned out to the
+   in-app channel (S70).
+
+It ends with one `SweeperCompleted` event carrying counts only (C32).
+
 ## `postcodes` (S99–S102)
 
 Imports Kartverket's Postnummerområder (C2, CC BY 4.0) monthly and logs one

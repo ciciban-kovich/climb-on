@@ -1,6 +1,7 @@
 using ClimbOn.Infrastructure.Persistence.Accounts;
 using ClimbOn.Infrastructure.Persistence.Chat;
 using ClimbOn.Infrastructure.Persistence.Invites;
+using ClimbOn.Infrastructure.Persistence.Notifications;
 using ClimbOn.Infrastructure.Persistence.Outbox;
 using ClimbOn.Infrastructure.Persistence.Profiles;
 using ClimbOn.Infrastructure.Persistence.Sessions;
@@ -53,6 +54,8 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
     public DbSet<SafetyAcknowledgementRow> SafetyAcknowledgements => Set<SafetyAcknowledgementRow>();
 
     public DbSet<MessageRow> Messages => Set<MessageRow>();
+
+    public DbSet<NotificationRow> Notifications => Set<NotificationRow>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -140,10 +143,22 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
         modelBuilder.Entity<OutboxRow>(outbox =>
         {
             outbox.ToTable("outbox", table =>
-                table.HasCheckConstraint("ck_outbox_attempts", "attempts >= 0"));
+            {
+                table.HasCheckConstraint("ck_outbox_attempts", "attempts >= 0");
+                table.HasCheckConstraint("ck_outbox_kind", $"kind IN ('{OutboxRow.EmailKind}', '{OutboxRow.NotificationKind}')");
+                table.HasCheckConstraint(
+                    "ck_outbox_notification",
+                    $"(kind = '{OutboxRow.NotificationKind}') = (event IS NOT NULL AND actor_id IS NOT NULL AND subject_id IS NOT NULL)");
+                table.HasCheckConstraint("ck_outbox_event", NotificationEventCheck);
+            });
             outbox.HasKey(row => row.Id).HasName("pk_outbox");
             outbox.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
             outbox.Property(row => row.AccountId).HasColumnName("account_id");
+            // C29: the previous app version writes email rows without a kind.
+            outbox.Property(row => row.Kind).HasColumnName("kind").HasMaxLength(16).HasDefaultValue(OutboxRow.EmailKind);
+            outbox.Property(row => row.Event).HasColumnName("event").HasMaxLength(32);
+            outbox.Property(row => row.ActorId).HasColumnName("actor_id");
+            outbox.Property(row => row.SubjectId).HasColumnName("subject_id");
             outbox.Property(row => row.Recipient).HasColumnName("recipient").HasMaxLength(254);
             outbox.Property(row => row.Subject).HasColumnName("subject");
             outbox.Property(row => row.Body).HasColumnName("body");
@@ -155,6 +170,9 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             outbox.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.AccountId)
                 .HasConstraintName("fk_outbox_accounts").OnDelete(DeleteBehavior.Cascade);
             outbox.HasIndex(row => row.AccountId).HasDatabaseName("ix_outbox_account_id");
+            outbox.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.ActorId)
+                .HasConstraintName("fk_outbox_accounts_actor").OnDelete(DeleteBehavior.Cascade);
+            outbox.HasIndex(row => row.ActorId).HasDatabaseName("ix_outbox_actor_id");
             outbox.HasIndex(row => row.NextAttemptAt).HasDatabaseName("ix_outbox_due")
                 .HasFilter("sent_at IS NULL AND failed_at IS NULL");
         });
@@ -367,7 +385,32 @@ public sealed class ClimbOnDbContext(DbContextOptions<ClimbOnDbContext> options)
             message.HasIndex(row => new { row.ConnectionId, row.Position }).IsUnique().HasDatabaseName("ix_messages_connection_position");
             message.HasIndex(row => row.SenderId).HasDatabaseName("ix_messages_sender_id");
         });
+
+        // S70, in-app. Both accounts cascade: a notification is only the recipient's, about the actor.
+        modelBuilder.Entity<NotificationRow>(notification =>
+        {
+            notification.ToTable("notifications", table => table.HasCheckConstraint("ck_notifications_event", NotificationEventCheck));
+            notification.HasKey(row => row.Id).HasName("pk_notifications");
+            notification.Property(row => row.Id).HasColumnName("id").ValueGeneratedNever();
+            notification.Property(row => row.AccountId).HasColumnName("account_id");
+            notification.Property(row => row.Event).HasColumnName("event").HasMaxLength(32);
+            notification.Property(row => row.ActorId).HasColumnName("actor_id");
+            notification.Property(row => row.SubjectId).HasColumnName("subject_id");
+            notification.Property(row => row.CreatedAt).HasColumnName("created_at");
+            notification.Property(row => row.SeenAt).HasColumnName("seen_at");
+            notification.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.AccountId)
+                .HasConstraintName("fk_notifications_accounts").OnDelete(DeleteBehavior.Cascade);
+            notification.HasOne<AccountRow>().WithMany().HasForeignKey(row => row.ActorId)
+                .HasConstraintName("fk_notifications_accounts_actor").OnDelete(DeleteBehavior.Cascade);
+
+            // Serves the list, newest first, for one account.
+            notification.HasIndex(row => new { row.AccountId, row.CreatedAt, row.Id }).HasDatabaseName("ix_notifications_account_created");
+            notification.HasIndex(row => row.ActorId).HasDatabaseName("ix_notifications_actor_id");
+        });
     }
+
+    private static readonly string NotificationEventCheck =
+        $"event IN ('{NotificationNames.InviteReceived}', '{NotificationNames.InviteAccepted}', '{NotificationNames.NewMessage}')";
 
     // C3: every timestamp is stored as timestamptz; Npgsql rejects DateTime values whose Kind is not Utc.
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

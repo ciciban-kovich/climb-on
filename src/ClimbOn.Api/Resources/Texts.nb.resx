@@ -206,4 +206,19 @@ Hvis det ikke var deg, kan du se bort fra denne e-posten. Kontoen din er ikke en
   <data name="connection_partner_unnamed" xml:space="preserve">
     <value>En klatrer</value>
   </data>
+  <data name="notification_not_found" xml:space="preserve">
+    <value>Fant ikke varselet.</value>
+  </data>
+  <data name="notification_actor_unnamed" xml:space="preserve">
+    <value>En klatrer</value>
+  </data>
+  <data name="notification_invite_received" xml:space="preserve">
+    <value>{0} har sendt deg en invitasjon.</value>
+  </data>
+  <data name="notification_invite_accepted" xml:space="preserve">
+    <value>{0} har godtatt invitasjonen din.</value>
+  </data>
+  <data name="notification_new_message" xml:space="preserve">
+    <value>Ny melding fra {0}.</value>
+  </data>
 </root>
