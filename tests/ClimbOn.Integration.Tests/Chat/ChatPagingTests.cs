@@ -123,6 +123,39 @@ public sealed class ChatPagingTests(ApiFactory factory) : IntegrationTest(factor
         }
     }
 
+    // Two connections whose messages are sent in turn: every page of each, newest and older, holds its own messages
+    // only, whichever connection sent first.
+    [Fact]
+    [Trait("SpecPartial", "S118")]
+    public async Task Pages_hold_only_their_own_connections_messages()
+    {
+        var (a, b, connection) = await ConnectedAsync();
+        var (c, d, other) = await ConnectedAsync();
+        var own = new List<string>();
+        var others = new List<string>();
+        for (var index = 0; index < 15; index++)
+        {
+            own.AddRange(await SendManyAsync(a, b, connection, 1, tied: _ => false));
+            others.AddRange(await SendManyAsync(c, d, other, 1, tied: _ => false));
+        }
+
+        Assert.Equal(own, await WalkAsync(b, connection));
+        Assert.Equal(others, await WalkAsync(d, other));
+    }
+
+    // Every message of the connection, oldest first, walked back from the newest page.
+    private async Task<List<string>> WalkAsync(InviteClimber climber, Guid connection)
+    {
+        var pages = new List<MessageListResponse> { await PageAsync(climber, connection, before: null) };
+        while (pages[^1].HasOlder)
+        {
+            Assert.True(pages.Count < 5, "the walk back does not end");
+            pages.Add(await PageAsync(climber, connection, before: pages[^1].Messages[0].Id.ToString()));
+        }
+
+        return pages.AsEnumerable().Reverse().SelectMany(page => page.Messages).Select(message => message.Text).ToList();
+    }
+
     private static string MessagesRoute(Guid connection) => $"{ConnectionsRoute}/{connection}/messages";
 
     // Two climbers and their connection: an invite, accepted.
