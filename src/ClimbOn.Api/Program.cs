@@ -95,6 +95,7 @@ builder.Services.AddApiDocuments();
 
 var app = builder.Build();
 
+app.UseApiNoStore();
 app.UseClimberPipeline();
 app.MapHealthChecks("/health", HealthResponse.Options);
 app.MapAccountsEndpoints();

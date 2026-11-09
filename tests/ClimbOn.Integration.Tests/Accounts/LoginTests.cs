@@ -179,6 +179,20 @@ public sealed class LoginTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(HttpStatusCode.OK, other.StatusCode);
     }
 
+    // A climber's own data is never kept in the browser's cache, where it would outlive logout on a shared device.
+    [Fact]
+    public async Task Account_data_is_not_stored_by_the_browser()
+    {
+        var account = Factory.Data.Account();
+        await RegisterAsync(account);
+        var token = await LogInAsync(account);
+
+        using var response = await SendAsync(HttpMethod.Get, MeRoute, token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.True(response.Headers.CacheControl?.NoStore);
+    }
+
     [Theory]
     [Trait("SpecPartial", "S98")]
     [InlineData(null)]
