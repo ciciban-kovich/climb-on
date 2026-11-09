@@ -5,6 +5,7 @@ using ClimbOn.Client.Resources;
 using ClimbOn.Client.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 
 namespace ClimbOn.Client.Tests;
 
@@ -25,6 +26,8 @@ public abstract class ClientTestContext : BunitContext
         Services.AddSingleton(Api);
         Services.AddScoped(_ => Api.Client());
         Services.AddScoped<ClimberLanguage>();
+        Services.AddSingleton<LogRecorder>();
+        Services.AddSingleton(typeof(ILogger<>), typeof(RecordingLogger<>));
         UseLanguage(UiLanguage.English);
     }
 
@@ -33,6 +36,8 @@ public abstract class ClientTestContext : BunitContext
     protected BunitNavigationManager Navigation => Services.GetRequiredService<BunitNavigationManager>();
 
     protected IReadOnlyList<string> MissingTexts => Services.GetRequiredService<MissingTextRecorder>().Missing;
+
+    protected IReadOnlyList<LogEntry> Logged => Services.GetRequiredService<LogRecorder>().Entries;
 
     // The client's own text for a key in the current language, so a test names the key rather than its wording (C45).
     protected string Text(string key) => Services.GetRequiredService<IStringLocalizer<UiTexts>>()[key].Value;

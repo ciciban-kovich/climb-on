@@ -3,6 +3,7 @@
 @inject ClimberLanguage Language
 @inject NavigationManager Navigation
 @inject IStringLocalizer<UiTexts> T
+@inject ILogger<Login> Log
 
 <PageTitle>@T["login_title"]</PageTitle>
 
@@ -34,7 +35,7 @@
     {
         busy = true;
         message = await ServerMessage.RunAsync(
-            () => Api.Api.Climber.Login.PostAsync(new LoginRequest { Email = email, Password = password }), T);
+            () => Api.Api.Climber.Login.PostAsync(new LoginRequest { Email = email, Password = password }), T, Log);
         busy = false;
         if (message is null)
         {

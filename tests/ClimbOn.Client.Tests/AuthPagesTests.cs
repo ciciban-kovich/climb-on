@@ -2,6 +2,8 @@ using System.Net;
 using Bunit;
 using ClimbOn.Client.Pages;
 using ClimbOn.Client.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using Xunit;
 
 namespace ClimbOn.Client.Tests;
@@ -81,11 +83,12 @@ public sealed class AuthPagesTests : ClientTestContext
         Assert.Empty(MissingTexts);
     }
 
-    // The terms are answered only once the privacy policy has been asked for, so the two are asked for together.
+    // Each document is answered only once the other has been asked for, so the two are asked for together.
     [Fact]
     public void Register_loads_both_legal_documents_at_once()
     {
-        Api.HoldUntilRequested(HttpMethod.Get, TermsRoute, HttpMethod.Get, PrivacyRoute);
+        Api.HoldUntilRequested(HttpMethod.Get, TermsRoute, HttpMethod.Get, PrivacyRoute)
+            .HoldUntilRequested(HttpMethod.Get, PrivacyRoute, HttpMethod.Get, TermsRoute);
 
         var page = Render<Register>();
 
@@ -165,6 +168,23 @@ public sealed class AuthPagesTests : ClientTestContext
         Assert.False(Navigation.History.First().Options.ForceLoad);
     }
 
+    // A browser that refuses the language calls (climbon.js not loaded): login still goes home, without a reload.
+    [Fact]
+    public void Login_goes_home_when_the_browser_refuses_the_language_calls()
+    {
+        Api.Answer(HttpMethod.Post, LoginRoute, HttpStatusCode.NoContent)
+            .Answer(HttpMethod.Get, MeRoute, HttpStatusCode.OK, Me(UiLanguage.Bokmal));
+        JSInterop.SetupVoid(ClimberLanguage.StoreLanguageFunction, _ => true).SetException(new JSException("Refused."));
+        JSInterop.SetupVoid(ClimberLanguage.SetPageLanguageFunction, _ => true).SetException(new JSException("Refused."));
+        JSInterop.Setup<string?>(ClimberLanguage.StoredLanguageFunction).SetException(new JSException("Refused."));
+        var page = Render<Login>();
+
+        page.Find("form").Submit();
+
+        page.WaitForAssertion(() => Assert.Equal(FakeApi.BaseUrl + "/", Navigation.Uri));
+        Assert.False(Navigation.History.First().Options.ForceLoad);
+    }
+
     [Fact]
     public void Login_shows_server_message_and_stays()
     {
@@ -178,6 +198,7 @@ public sealed class AuthPagesTests : ClientTestContext
         Assert.Equal("Server text.", page.Find("[role=alert]").TextContent);
         Assert.Equal(FakeApi.BaseUrl + "/login", Navigation.Uri);
         Assert.DoesNotContain(Api.Requests, request => request.Path == MeRoute);
+        Assert.Empty(Logged);
     }
 
     // A reply that is not the api's error body (C45), such as a proxy's page: the client's own text, with no code,
@@ -197,6 +218,9 @@ public sealed class AuthPagesTests : ClientTestContext
         Assert.False(page.Find("[role=alert]").HasAttribute("data-code"));
         Assert.False(page.Find("button[type=submit]").HasAttribute("disabled"));
         Assert.Empty(MissingTexts);
+
+        // Unexpected, so the cause is kept in the browser's console for whoever has to fix it.
+        Assert.Contains(Logged, entry => entry.Level == LogLevel.Warning && entry.Exception is not null);
     }
 
     [Fact]
@@ -211,6 +235,7 @@ public sealed class AuthPagesTests : ClientTestContext
         Assert.False(page.Find("[role=alert]").HasAttribute("data-code"));
         Assert.False(page.Find("button[type=submit]").HasAttribute("disabled"));
         Assert.Empty(MissingTexts);
+        Assert.Empty(Logged);
     }
 
     [Fact]

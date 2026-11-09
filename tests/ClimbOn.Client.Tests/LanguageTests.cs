@@ -5,6 +5,7 @@ using ClimbOn.Client.Layout;
 using ClimbOn.Client.Pages;
 using ClimbOn.Client.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 using Xunit;
 
@@ -87,6 +88,23 @@ public sealed class LanguageTests : ClientTestContext
         JSInterop.VerifyNotInvoke(ClimberLanguage.SetPageLanguageFunction);
         JSInterop.VerifyNotInvoke(ClimberLanguage.StoreLanguageFunction);
         Assert.Empty(Navigation.History);
+        Assert.Empty(Logged);
+    }
+
+    // A browser that refuses the language calls (climbon.js not loaded) while a climber is logged in: the page
+    // stays as it started, the app goes on, and the refusal is kept in the console.
+    [Fact]
+    public void Logged_in_climber_survives_a_browser_that_refuses_the_language_calls()
+    {
+        UseLanguage(UiLanguage.English);
+        Api.Answer(HttpMethod.Get, MeRoute, HttpStatusCode.OK, Me(UiLanguage.Bokmal));
+        RefuseLanguageCalls();
+
+        var layout = Render<MainLayout>();
+
+        layout.WaitForAssertion(() => Assert.Contains(Logged, entry => entry.Level == LogLevel.Warning && entry.Exception is JSException));
+        Assert.NotEmpty(layout.FindAll("nav"));
+        Assert.Empty(Navigation.History);
     }
 
     // The api cannot be reached (an offline start, N21), or something other than the api answers: the language
@@ -98,6 +116,7 @@ public sealed class LanguageTests : ClientTestContext
 
         Assert.False(await Services.GetRequiredService<ClimberLanguage>().ApplyStoredAsync(Xunit.TestContext.Current.CancellationToken));
         JSInterop.VerifyNotInvoke(ClimberLanguage.SetPageLanguageFunction);
+        Assert.Empty(Logged);
     }
 
     [Theory]
@@ -110,6 +129,7 @@ public sealed class LanguageTests : ClientTestContext
 
         Assert.False(await Services.GetRequiredService<ClimberLanguage>().ApplyStoredAsync(Xunit.TestContext.Current.CancellationToken));
         JSInterop.VerifyNotInvoke(ClimberLanguage.SetPageLanguageFunction);
+        Assert.Contains(Logged, entry => entry.Level == LogLevel.Warning && entry.Exception is not null);
     }
 
     // Program's startup: the stored language wins, and the page language is the one whose texts are shown.
@@ -129,13 +149,25 @@ public sealed class LanguageTests : ClientTestContext
     [Fact]
     public async Task Startup_survives_a_browser_that_refuses_the_language_calls()
     {
-        JSInterop.Setup<string?>(ClimberLanguage.StoredLanguageFunction).SetException(new JSException("Refused."));
+        RefuseLanguageCalls();
         JSInterop.Setup<string?>(ClimberLanguage.BrowserLanguageFunction).SetException(new JSException("Refused."));
-        JSInterop.SetupVoid(ClimberLanguage.SetPageLanguageFunction).SetException(new JSException("Refused."));
 
         var culture = await ClimberLanguage.StartupCultureAsync(JSInterop.JSRuntime);
 
         Assert.Equal(UiLanguage.English, culture.Name);
+        JSInterop.VerifyInvoke(ClimberLanguage.SetPageLanguageFunction);
+    }
+
+    // Only the stored language cannot be read: it counts as absent, so the browser's language decides.
+    [Fact]
+    public async Task Startup_uses_the_browser_language_when_the_stored_one_cannot_be_read()
+    {
+        JSInterop.Setup<string?>(ClimberLanguage.StoredLanguageFunction).SetException(new JSException("Refused."));
+        JSInterop.Setup<string?>(ClimberLanguage.BrowserLanguageFunction).SetResult("nb-NO");
+
+        var culture = await ClimberLanguage.StartupCultureAsync(JSInterop.JSRuntime);
+
+        Assert.Equal("nb-NO", culture.Name);
     }
 
     [Theory]
@@ -155,6 +187,13 @@ public sealed class LanguageTests : ClientTestContext
     [InlineData("not a language tag !", null, "en")]
     public void Startup_culture_prefers_stored_language(string? stored, string? browser, string expected) =>
         Assert.Equal(expected, UiLanguage.StartupCulture(stored, browser).Name);
+
+    private void RefuseLanguageCalls()
+    {
+        JSInterop.Setup<string?>(ClimberLanguage.StoredLanguageFunction).SetException(new JSException("Refused."));
+        JSInterop.SetupVoid(ClimberLanguage.StoreLanguageFunction, _ => true).SetException(new JSException("Refused."));
+        JSInterop.SetupVoid(ClimberLanguage.SetPageLanguageFunction, _ => true).SetException(new JSException("Refused."));
+    }
 
     private string RenderIn(string language, Type page, string settledWhen)
     {

@@ -1,6 +1,7 @@
 using ClimbOn.Client.Api.Models;
 using ClimbOn.Client.Resources;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging;
 
 namespace ClimbOn.Client.Services;
 
@@ -12,7 +13,7 @@ public sealed record ServerMessage(string? Code, string Text)
     public const string NetworkKey = "error_network";
 
     // Runs an api call; null if it succeeded.
-    public static async Task<ServerMessage?> RunAsync(Func<Task> call, IStringLocalizer<UiTexts> texts)
+    public static async Task<ServerMessage?> RunAsync(Func<Task> call, IStringLocalizer<UiTexts> texts, ILogger logger)
     {
         try
         {
@@ -27,10 +28,12 @@ public sealed record ServerMessage(string? Code, string Text)
         {
             return new ServerMessage(null, texts[NetworkKey]);
         }
-        catch (Exception)
+        catch (Exception exception)
         {
-            // No error body (C45): an ApiException without one, or a reply that is not the api's, such as a
-            // proxy's error page or a body that does not parse.
+            // No error body (C45): an ApiException without one, a reply that is not the api's, such as a proxy's
+            // error page or a body that does not parse, or a fault in the client itself. The browser's console
+            // keeps the cause.
+            logger.LogWarning(exception, "An api call failed without the api's error body");
             return new ServerMessage(null, texts[UnexpectedKey]);
         }
     }

@@ -2,6 +2,7 @@
 @inject ClimberApiClient Api
 @inject NavigationManager Navigation
 @inject IStringLocalizer<UiTexts> T
+@inject ILogger<Confirm> Log
 
 <PageTitle>@T["confirm_title"]</PageTitle>
 
@@ -31,7 +32,7 @@ else if (message is null)
         {
             await Api.Api.Climber.EmailConfirmations.PostAsync(new EmailConfirmationRequest { Token = TokenFrom(Navigation.Uri) });
             confirmed = true;
-        }, T);
+        }, T, Log);
 
     public static string? TokenFrom(string uri)
     {
