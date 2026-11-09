@@ -134,6 +134,23 @@ public sealed class AuthPagesTests : ClientTestContext
         Assert.True(Navigation.History.First().Options.ForceLoad);
     }
 
+    // Storage that keeps nothing (blocked, private mode): a reload would start from the browser's language
+    // again, so login goes home without one and the texts stay as they are.
+    [Fact]
+    public void Login_does_not_reload_when_the_browser_keeps_no_language()
+    {
+        Api.Answer(HttpMethod.Post, LoginRoute, HttpStatusCode.NoContent)
+            .Answer(HttpMethod.Get, MeRoute, HttpStatusCode.OK, Me(UiLanguage.Bokmal));
+        JSInterop.Setup<string?>(ClimberLanguage.StoredLanguageFunction).SetResult(null);
+        var page = Render<Login>();
+
+        page.Find("form").Submit();
+
+        page.WaitForAssertion(() => Assert.Equal(FakeApi.BaseUrl + "/", Navigation.Uri));
+        Assert.Equal(UiLanguage.Bokmal, JSInterop.VerifyInvoke(ClimberLanguage.SetPageLanguageFunction).Arguments.Single());
+        Assert.False(Navigation.History.First().Options.ForceLoad);
+    }
+
     [Fact]
     public void Login_shows_server_message_and_stays()
     {
