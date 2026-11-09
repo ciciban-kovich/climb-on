@@ -172,7 +172,7 @@ public sealed class RegistrationTests(ApiFactory factory) : IntegrationTest(fact
 
     // S103: the api answers in either supported language; before an account exists, the request's.
     [Theory]
-    [Trait("SpecPartial", "S103")]
+    [Trait("Spec", "S103")]
     [InlineData("nb-NO", "nb")]
     [InlineData("en-GB", "en")]
     public async Task Refusal_is_in_the_requested_language(string acceptLanguage, string expected)

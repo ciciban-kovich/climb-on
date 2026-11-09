@@ -76,7 +76,7 @@
     <value>The confirmation link is not valid, or it has already been used.</value>
   </data>
   <data name="email_confirmation_subject" xml:space="preserve">
-    <value>Confirm your email address for climb-on</value>
+    <value>Confirm your email address for Climb On</value>
   </data>
   <data name="email_confirmation_body" xml:space="preserve">
     <value>Hi,
@@ -85,15 +85,15 @@ Confirm your email address by opening this link:
 
 {0}
 
-If you did not register with climb-on, you can ignore this email.</value>
+If you did not register with Climb On, you can ignore this email.</value>
   </data>
   <data name="registration_attempt_subject" xml:space="preserve">
-    <value>Someone tried to register with your email address at climb-on</value>
+    <value>Someone tried to register with your email address at Climb On</value>
   </data>
   <data name="registration_attempt_body" xml:space="preserve">
     <value>Hi,
 
-Someone tried to register a new climb-on account with this email address. You already have an account, so no new account was created.
+Someone tried to register a new Climb On account with this email address. You already have an account, so no new account was created.
 
 If it was you, you can log in here:
 

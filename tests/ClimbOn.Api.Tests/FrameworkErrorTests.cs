@@ -26,7 +26,9 @@ public sealed class FrameworkErrorTests(FrameworkErrorTests.Hosts hosts) : IClas
     [MemberData(nameof(Environments))]
     public async Task Unknown_route_has_code(string environment)
     {
-        var (response, body) = await SendAsync(environment, HttpMethod.Get, "/no-such-route");
+        // Under /api: any other path that is not a file loads the climber client (ClientHostingTests).
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/no-such-route");
+        var (response, body) = await ErrorTestHost.SendAsync(hosts.Client(environment), request);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal(ErrorCodes.NotFound, body?.Code);

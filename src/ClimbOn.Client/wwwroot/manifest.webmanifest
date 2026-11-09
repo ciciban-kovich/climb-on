@@ -1,0 +1,13 @@
+{
+  "name": "Climb On",
+  "short_name": "Climb On",
+  "id": "./",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f5f8b",
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }
+  ]
+}

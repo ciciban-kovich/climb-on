@@ -1,0 +1,26 @@
+@inherits LayoutComponentBase
+@inject ClimberLanguage Language
+@inject NavigationManager Navigation
+@inject IStringLocalizer<UiTexts> T
+
+<header>
+    <nav aria-label="@T["nav_label"]">
+        <a href="">@T["nav_home"]</a>
+        <a href="register">@T["nav_register"]</a>
+        <a href="login">@T["nav_login"]</a>
+    </nav>
+</header>
+<main>
+    @Body
+</main>
+
+@code {
+    // C62: a climber who is already logged in gets their stored language when the app starts.
+    protected override async Task OnInitializedAsync()
+    {
+        if (await Language.ApplyStoredAsync())
+        {
+            Navigation.Refresh(forceReload: true);
+        }
+    }
+}

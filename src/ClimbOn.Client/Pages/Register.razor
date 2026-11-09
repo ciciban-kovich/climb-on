@@ -1,0 +1,101 @@
+@page "/register"
+@inject ClimberApiClient Api
+@inject IJSRuntime JS
+@inject IStringLocalizer<UiTexts> T
+@inject ILogger<Register> Log
+
+<PageTitle>@T["register_title"]</PageTitle>
+
+<h1>@T["register_title"]</h1>
+
+@if (registered)
+{
+    <p class="success" role="status">@T["register_done"]</p>
+    <p><a href="login">@T["login_link"]</a></p>
+}
+else
+{
+    @* novalidate: every rule is the server's (C7); what is entered is sent, and the server answers. *@
+    <form @onsubmit="RegisterAsync" novalidate>
+        <label>
+            @T["email_label"]
+            <input type="email" autocomplete="email" @bind="email" />
+        </label>
+        <label>
+            @T["password_label"]
+            <input type="password" autocomplete="new-password" @bind="password" />
+        </label>
+        <label>
+            @T["date_of_birth_label"]
+            <input type="date" autocomplete="bday" @bind="dateOfBirth" />
+        </label>
+        @if (terms is not null)
+        {
+            <details>
+                <summary>@T["terms_title"]</summary>
+                <p class="legal-text">@terms.Text</p>
+            </details>
+        }
+        @if (privacy is not null)
+        {
+            <details>
+                <summary>@T["privacy_title"]</summary>
+                <p class="legal-text">@privacy.Text</p>
+            </details>
+        }
+        <label class="check">
+            <input type="checkbox" @bind="acceptsLegal" />
+            @T["accept_legal_label"]
+        </label>
+        <MessageView Message="message" />
+        <button type="submit" disabled="@busy">@T["register_button"]</button>
+    </form>
+}
+
+@code {
+    public const string TermsDocument = "terms";
+
+    public const string PrivacyDocument = "privacy";
+
+    private string? email;
+    private string? password;
+    private DateOnly? dateOfBirth;
+    private bool acceptsLegal;
+    private LegalDocumentResponse? terms;
+    private LegalDocumentResponse? privacy;
+    private ServerMessage? message;
+    private bool busy;
+    private bool registered;
+
+    // The current versions, so the acceptance names exactly the versions shown (S111). Asked for together.
+    protected override async Task OnInitializedAsync() =>
+        message = await ServerMessage.RunAsync(async () =>
+        {
+            var termsCall = Api.Api.Public.Legal[TermsDocument].GetAsync();
+            var privacyCall = Api.Api.Public.Legal[PrivacyDocument].GetAsync();
+            await Task.WhenAll(termsCall, privacyCall);
+            terms = await termsCall;
+            privacy = await privacyCall;
+        }, T, Log);
+
+    private async Task RegisterAsync()
+    {
+        busy = true;
+        message = await ServerMessage.RunAsync(async () =>
+        {
+            await Api.Api.Climber.Accounts.PostAsync(new RegistrationRequest
+            {
+                Email = email,
+                Password = password,
+                DateOfBirth = dateOfBirth is { } date ? new Microsoft.Kiota.Abstractions.Date(date.Year, date.Month, date.Day) : null,
+
+                // S104: the browser's language setting as it is; the api maps it.
+                Language = await JS.InvokeAsync<string?>(ClimberLanguage.BrowserLanguageFunction),
+                TermsVersion = acceptsLegal ? terms?.Version : null,
+                PrivacyVersion = acceptsLegal ? privacy?.Version : null,
+            });
+            registered = true;
+        }, T, Log);
+        busy = false;
+    }
+}
