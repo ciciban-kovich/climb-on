@@ -37,6 +37,10 @@ public sealed class ClimberLanguage(ClimberApiClient api, IJSRuntime js)
 
         await js.InvokeVoidAsync(StoreLanguageFunction, cancellationToken, language);
         await js.InvokeVoidAsync(SetPageLanguageFunction, cancellationToken, language);
-        return language != UiLanguage.Of(CultureInfo.CurrentUICulture);
+
+        // A reload shows the language only if the browser kept it: startup reads it back. Without storage
+        // (blocked, private mode) a reload would start from the browser's language again, and reload again.
+        return language != UiLanguage.Of(CultureInfo.CurrentUICulture)
+            && await js.InvokeAsync<string?>(StoredLanguageFunction, cancellationToken) == language;
     }
 }

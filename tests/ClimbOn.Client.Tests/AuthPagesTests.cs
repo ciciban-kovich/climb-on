@@ -125,6 +125,7 @@ public sealed class AuthPagesTests : ClientTestContext
     {
         Api.Answer(HttpMethod.Post, LoginRoute, HttpStatusCode.NoContent)
             .Answer(HttpMethod.Get, MeRoute, HttpStatusCode.OK, Me(UiLanguage.Bokmal));
+        JSInterop.Setup<string?>(ClimberLanguage.StoredLanguageFunction).SetResult(UiLanguage.Bokmal);
         var page = Render<Login>();
 
         page.Find("form").Submit();

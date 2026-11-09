@@ -53,13 +53,30 @@ public sealed class LanguageTests : ClientTestContext
     public void Page_lang_follows_stored_language(string shown, string stored, bool reloads)
     {
         UseLanguage(shown);
-        Api.Answer(HttpMethod.Get, MeRoute, HttpStatusCode.OK, new { email = "climber@example.no", language = stored, emailConfirmed = true });
+        Api.Answer(HttpMethod.Get, MeRoute, HttpStatusCode.OK, Me(stored));
+        JSInterop.Setup<string?>(ClimberLanguage.StoredLanguageFunction).SetResult(stored);
 
         var layout = Render<MainLayout>();
 
-        layout.WaitForAssertion(() => Assert.Equal(reloads, Navigation.History.Any(entry => entry.Options.ForceLoad)));
-        Assert.Equal(stored, JSInterop.VerifyInvoke(ClimberLanguage.SetPageLanguageFunction).Arguments.Single());
+        layout.WaitForAssertion(() => Assert.Equal(stored, JSInterop.VerifyInvoke(ClimberLanguage.SetPageLanguageFunction).Arguments.Single()));
         Assert.Equal(stored, JSInterop.VerifyInvoke(ClimberLanguage.StoreLanguageFunction).Arguments.Single());
+        layout.WaitForAssertion(() => Assert.Equal(reloads, Navigation.History.Any(entry => entry.Options.ForceLoad)));
+    }
+
+    // Storage that keeps nothing (blocked, private mode): a reload would start from the browser's language
+    // again and reload again, so the page language follows and the texts stay as they are.
+    [Fact]
+    public void No_reload_when_the_browser_does_not_keep_the_language()
+    {
+        UseLanguage(UiLanguage.English);
+        Api.Answer(HttpMethod.Get, MeRoute, HttpStatusCode.OK, Me(UiLanguage.Bokmal));
+        JSInterop.Setup<string?>(ClimberLanguage.StoredLanguageFunction).SetResult(null);
+
+        var layout = Render<MainLayout>();
+
+        layout.WaitForAssertion(() => JSInterop.VerifyInvoke(ClimberLanguage.StoredLanguageFunction));
+        Assert.Equal(UiLanguage.Bokmal, JSInterop.VerifyInvoke(ClimberLanguage.SetPageLanguageFunction).Arguments.Single());
+        Assert.Empty(Navigation.History);
     }
 
     // Not logged in: the language chosen at startup stays.
@@ -104,6 +121,8 @@ public sealed class LanguageTests : ClientTestContext
         rendered.WaitForAssertion(() => Assert.NotEmpty(rendered.FindAll(settledWhen)));
         return rendered.Markup;
     }
+
+    private static object Me(string language) => new { email = "climber@example.no", language, emailConfirmed = true };
 
     private static object LegalDocument(string document) => new
     {
