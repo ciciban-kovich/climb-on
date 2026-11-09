@@ -28,6 +28,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ClimbOn.Infrastructure\ClimbOn.Infrastructure.csproj" />
+    <!-- The climber PWA's build is served from this host's wwwroot (design §2 'Same-origin climber client'). -->
+    <ProjectReference Include="..\ClimbOn.Client\ClimbOn.Client.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <!-- The climber PWA (C6). The api serves its build from its own wwwroot (design §2 'Same-origin climber client'). -->
+  <PropertyGroup>
+    <!-- UiTexts.resx is English; UiTexts.nb.resx builds the nb satellite assembly. -->
+    <NeutralLanguage>en</NeutralLanguage>
+    <SatelliteResourceLanguages>nb</SatelliteResourceLanguages>
+    <!-- The UI culture is chosen at startup from the stored language, not from the browser's (C62). -->
+    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+    <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <PackageReference Include="Microsoft.Extensions.Localization" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ClimbOn.Client.Api\ClimbOn.Client.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ServiceWorker Include="wwwroot\service-worker.js" PublishedContent="wwwroot\service-worker.published.js" />
+  </ItemGroup>
+
+</Project>

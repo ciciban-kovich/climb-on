@@ -1,0 +1,10 @@
+@* A failed call's message as the api sent it (C45); its code is kept on the element. *@
+@if (Message is not null)
+{
+    <p class="error" role="alert" data-code="@Message.Code">@Message.Text</p>
+}
+
+@code {
+    [Parameter]
+    public ServerMessage? Message { get; set; }
+}

@@ -2,6 +2,7 @@ using ClimbOn.Api.Climber;
 using ClimbOn.Api.Email;
 using ClimbOn.Api.Errors;
 using ClimbOn.Api.Health;
+using ClimbOn.Api.Hosting;
 using ClimbOn.Api.Jobs;
 using ClimbOn.Api.Middleware;
 using ClimbOn.Api.OpenApi;
@@ -104,6 +105,7 @@ app.MapSuggestionEndpoints();
 app.MapInviteEndpoints();
 app.MapChatEndpoints();
 app.MapNotificationEndpoints();
+app.MapClimberClient();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

@@ -1,0 +1,45 @@
+@page "/login"
+@inject ClimberApiClient Api
+@inject ClimberLanguage Language
+@inject NavigationManager Navigation
+@inject IStringLocalizer<UiTexts> T
+
+<PageTitle>@T["login_title"]</PageTitle>
+
+<h1>@T["login_title"]</h1>
+
+@* novalidate: every rule is the server's (C7). *@
+<form @onsubmit="LoginAsync" novalidate>
+    <label>
+        @T["email_label"]
+        <input type="email" autocomplete="username" @bind="email" />
+    </label>
+    <label>
+        @T["password_label"]
+        <input type="password" autocomplete="current-password" @bind="password" />
+    </label>
+    <MessageView Message="message" />
+    <button type="submit" disabled="@busy">@T["login_button"]</button>
+</form>
+<p><a href="register">@T["nav_register"]</a></p>
+
+@code {
+    private string? email;
+    private string? password;
+    private ServerMessage? message;
+    private bool busy;
+
+    // The api's response sets the session cookie (S78); the client never sees it.
+    private async Task LoginAsync()
+    {
+        busy = true;
+        message = await ServerMessage.RunAsync(
+            () => Api.Api.Climber.Login.PostAsync(new LoginRequest { Email = email, Password = password }), T);
+        busy = false;
+        if (message is null)
+        {
+            // C62: the stored language applies from now on; the client's own texts need a reload to follow it.
+            Navigation.NavigateTo(string.Empty, forceLoad: await Language.ApplyStoredAsync());
+        }
+    }
+}

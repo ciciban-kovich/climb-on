@@ -1,0 +1,50 @@
+@page "/confirm"
+@inject ClimberApiClient Api
+@inject NavigationManager Navigation
+@inject IStringLocalizer<UiTexts> T
+
+<PageTitle>@T["confirm_title"]</PageTitle>
+
+<h1>@T["confirm_title"]</h1>
+
+@if (confirmed)
+{
+    <p class="success" role="status">@T["confirm_done"]</p>
+    <p><a href="login">@T["login_link"]</a></p>
+}
+else if (message is null)
+{
+    <p role="status">@T["confirm_pending"]</p>
+}
+<MessageView Message="message" />
+
+@code {
+    // The link's token parameter. It is in the URL fragment, which the browser never sends (design §3).
+    public const string TokenParameter = "t";
+
+    private ServerMessage? message;
+    private bool confirmed;
+
+    // A link without a token is sent as none: what that means is the api's to say (C7).
+    protected override async Task OnInitializedAsync() =>
+        message = await ServerMessage.RunAsync(async () =>
+        {
+            await Api.Api.Climber.EmailConfirmations.PostAsync(new EmailConfirmationRequest { Token = TokenFrom(Navigation.Uri) });
+            confirmed = true;
+        }, T);
+
+    public static string? TokenFrom(string uri)
+    {
+        var fragment = new Uri(uri).Fragment.TrimStart('#');
+        foreach (var pair in fragment.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = pair.IndexOf('=');
+            if (separator > 0 && pair[..separator] == TokenParameter)
+            {
+                return Uri.UnescapeDataString(pair[(separator + 1)..]);
+            }
+        }
+
+        return null;
+    }
+}

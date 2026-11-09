@@ -52,7 +52,7 @@ public sealed class LegalDocumentTests(ApiFactory factory) : IntegrationTest(fac
 
     // S103: the text is published in both supported languages; the request's language picks one.
     [Theory]
-    [Trait("SpecPartial", "S103")]
+    [Trait("Spec", "S103")]
     [InlineData("terms")]
     [InlineData("privacy")]
     public async Task Text_is_in_the_requested_language(string document)

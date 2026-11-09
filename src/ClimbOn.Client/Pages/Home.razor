@@ -1,0 +1,12 @@
+@page "/"
+@inject IStringLocalizer<UiTexts> T
+
+<PageTitle>@T["app_name"]</PageTitle>
+
+<h1>@T["home_title"]</h1>
+<p>@T["home_intro"]</p>
+<p>
+    <a href="register">@T["nav_register"]</a>
+    ·
+    <a href="login">@T["nav_login"]</a>
+</p>

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <data name="app_name" xml:space="preserve">
+    <value>Climb On</value>
+  </data>
+  <data name="nav_label" xml:space="preserve">
+    <value>Hovedmeny</value>
+  </data>
+  <data name="nav_home" xml:space="preserve">
+    <value>Hjem</value>
+  </data>
+  <data name="nav_register" xml:space="preserve">
+    <value>Opprett konto</value>
+  </data>
+  <data name="nav_login" xml:space="preserve">
+    <value>Logg inn</value>
+  </data>
+  <data name="home_title" xml:space="preserve">
+    <value>Finn en klatrepartner</value>
+  </data>
+  <data name="home_intro" xml:space="preserve">
+    <value>Climb On setter klatrere i Norge i kontakt med andre som vil klatre på samme måte.</value>
+  </data>
+  <data name="register_title" xml:space="preserve">
+    <value>Opprett konto</value>
+  </data>
+  <data name="email_label" xml:space="preserve">
+    <value>E-postadresse</value>
+  </data>
+  <data name="password_label" xml:space="preserve">
+    <value>Passord</value>
+  </data>
+  <data name="date_of_birth_label" xml:space="preserve">
+    <value>Fødselsdato</value>
+  </data>
+  <data name="terms_title" xml:space="preserve">
+    <value>Brukervilkår</value>
+  </data>
+  <data name="privacy_title" xml:space="preserve">
+    <value>Personvernerklæring</value>
+  </data>
+  <data name="accept_legal_label" xml:space="preserve">
+    <value>Jeg godtar brukervilkårene og personvernerklæringen</value>
+  </data>
+  <data name="register_button" xml:space="preserve">
+    <value>Opprett konto</value>
+  </data>
+  <data name="register_done" xml:space="preserve">
+    <value>Sjekk e-posten din. Hvis adressen kan brukes, har vi sendt en lenke til den.</value>
+  </data>
+  <data name="confirm_title" xml:space="preserve">
+    <value>Bekreft e-postadresse</value>
+  </data>
+  <data name="confirm_pending" xml:space="preserve">
+    <value>Bekrefter e-postadressen din …</value>
+  </data>
+  <data name="confirm_done" xml:space="preserve">
+    <value>E-postadressen din er bekreftet.</value>
+  </data>
+  <data name="login_title" xml:space="preserve">
+    <value>Logg inn</value>
+  </data>
+  <data name="login_button" xml:space="preserve">
+    <value>Logg inn</value>
+  </data>
+  <data name="login_link" xml:space="preserve">
+    <value>Gå til innlogging</value>
+  </data>
+  <data name="not_found_title" xml:space="preserve">
+    <value>Fant ikke siden</value>
+  </data>
+  <data name="not_found_text" xml:space="preserve">
+    <value>Det finnes ingenting på denne adressen.</value>
+  </data>
+  <data name="error_unexpected" xml:space="preserve">
+    <value>Noe gikk galt. Prøv igjen.</value>
+  </data>
+  <data name="error_network" xml:space="preserve">
+    <value>Fikk ikke kontakt med Climb On. Sjekk tilkoblingen og prøv igjen.</value>
+  </data>
+</root>
