@@ -5,8 +5,9 @@
     <!-- UiTexts.resx is English; UiTexts.nb.resx builds the nb satellite assembly. -->
     <NeutralLanguage>en</NeutralLanguage>
     <SatelliteResourceLanguages>nb</SatelliteResourceLanguages>
-    <!-- The UI culture is chosen at startup from the stored language, not from the browser's (C62). -->
-    <BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+    <!-- The UI culture can differ from the browser's, since the climber's stored language wins (C62), so the ICU
+         data is the one file with every locale but CJK, nb included, not the shard the browser's culture picks. -->
+    <BlazorIcuDataFileName>icudt_no_CJK.dat</BlazorIcuDataFileName>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
   </PropertyGroup>
 
