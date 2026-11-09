@@ -1,7 +1,6 @@
 using ClimbOn.Client.Api.Models;
 using ClimbOn.Client.Resources;
 using Microsoft.Extensions.Localization;
-using Microsoft.Kiota.Abstractions;
 
 namespace ClimbOn.Client.Services;
 
@@ -24,13 +23,15 @@ public sealed record ServerMessage(string? Code, string Text)
         {
             return new ServerMessage(error.Code, error.MessageEscaped);
         }
-        catch (ApiException)
-        {
-            return new ServerMessage(null, texts[UnexpectedKey]);
-        }
         catch (HttpRequestException)
         {
             return new ServerMessage(null, texts[NetworkKey]);
+        }
+        catch (Exception)
+        {
+            // No error body (C45): an ApiException without one, or a reply that is not the api's, such as a
+            // proxy's error page or a body that does not parse.
+            return new ServerMessage(null, texts[UnexpectedKey]);
         }
     }
 }

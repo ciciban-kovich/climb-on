@@ -26,12 +26,8 @@ builder.Services.AddScoped<ClimberLanguage>();
 var host = builder.Build();
 
 // Satellite resources load for the culture set before the host runs, so a language change reloads the app.
-var js = host.Services.GetRequiredService<IJSRuntime>();
-var culture = UiLanguage.StartupCulture(
-    await js.InvokeAsync<string?>(ClimberLanguage.StoredLanguageFunction),
-    await js.InvokeAsync<string?>(ClimberLanguage.BrowserLanguageFunction));
+var culture = await ClimberLanguage.StartupCultureAsync(host.Services.GetRequiredService<IJSRuntime>());
 CultureInfo.DefaultThreadCurrentCulture = culture;
 CultureInfo.DefaultThreadCurrentUICulture = culture;
-await js.InvokeVoidAsync(ClimberLanguage.SetPageLanguageFunction, UiLanguage.Of(culture));
 
 await host.RunAsync();

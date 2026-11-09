@@ -37,17 +37,18 @@ public sealed class AuthPagesTests : ClientTestContext
         Assert.Equal("abc+def_123", request.StringProperty("token"));
         Assert.Empty(request.Query);
         Assert.Empty(request.Fragment);
+        Assert.Empty(MissingTexts);
     }
 
     [Fact]
     public void Confirm_without_token_sends_none_and_shows_server_message()
     {
-        Api.Fail(HttpMethod.Post, ConfirmationsRoute, HttpStatusCode.BadRequest, "confirmation_token_invalid", "Server text.");
+        Api.Fail(HttpMethod.Post, ConfirmationsRoute, HttpStatusCode.BadRequest, "link_invalid", "Server text.");
         Navigation.NavigateTo("/confirm");
 
         var page = Render<Confirm>();
 
-        page.WaitForAssertion(() => Assert.Equal("confirmation_token_invalid", page.Find("[role=alert]").GetAttribute("data-code")));
+        page.WaitForAssertion(() => Assert.Equal("link_invalid", page.Find("[role=alert]").GetAttribute("data-code")));
         Assert.Equal("Server text.", page.Find("[role=alert]").TextContent);
         Assert.Null(Api.Single(HttpMethod.Post, ConfirmationsRoute).StringProperty("token"));
         Assert.Empty(page.FindAll(".success"));
@@ -77,6 +78,19 @@ public sealed class AuthPagesTests : ClientTestContext
         Assert.Equal("nn-NO", request.StringProperty("language"));
         Assert.Equal(3, request.IntProperty("termsVersion"));
         Assert.Equal(4, request.IntProperty("privacyVersion"));
+        Assert.Empty(MissingTexts);
+    }
+
+    // The terms are answered only once the privacy policy has been asked for, so the two are asked for together.
+    [Fact]
+    public void Register_loads_both_legal_documents_at_once()
+    {
+        Api.HoldUntilRequested(HttpMethod.Get, TermsRoute, HttpMethod.Get, PrivacyRoute);
+
+        var page = Render<Register>();
+
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll("details").Count));
+        Assert.Empty(page.FindAll("[role=alert]"));
     }
 
     [Fact]
@@ -94,7 +108,7 @@ public sealed class AuthPagesTests : ClientTestContext
         Assert.Null(request.StringProperty("email"));
         Assert.Null(request.StringProperty("dateOfBirth"));
 
-        // Not accepted: no versions are named, and the api refuses (S113).
+        // Not accepted: no versions are named, and the api refuses (S111).
         Assert.Null(request.IntProperty("termsVersion"));
         Assert.Null(request.IntProperty("privacyVersion"));
         Assert.Empty(page.FindAll(".success"));
@@ -164,6 +178,64 @@ public sealed class AuthPagesTests : ClientTestContext
         Assert.Equal("Server text.", page.Find("[role=alert]").TextContent);
         Assert.Equal(FakeApi.BaseUrl + "/login", Navigation.Uri);
         Assert.DoesNotContain(Api.Requests, request => request.Path == MeRoute);
+    }
+
+    // A reply that is not the api's error body (C45), such as a proxy's page: the client's own text, with no code,
+    // and the form can be sent again.
+    [Theory]
+    [InlineData("text/html", "<html><body>Bad gateway</body></html>")]
+    [InlineData("text/plain", "Bad gateway")]
+    [InlineData("application/json", "not json")]
+    public void Login_shows_unexpected_text_for_a_reply_that_is_not_the_api_error(string mediaType, string body)
+    {
+        Api.AnswerRaw(HttpMethod.Post, LoginRoute, HttpStatusCode.BadGateway, mediaType, body);
+        var page = Render<Login>();
+
+        page.Find("form").Submit();
+
+        page.WaitForAssertion(() => Assert.Equal(Text(ServerMessage.UnexpectedKey), page.Find("[role=alert]").TextContent));
+        Assert.False(page.Find("[role=alert]").HasAttribute("data-code"));
+        Assert.False(page.Find("button[type=submit]").HasAttribute("disabled"));
+        Assert.Empty(MissingTexts);
+    }
+
+    [Fact]
+    public void Login_shows_network_text_when_the_api_cannot_be_reached()
+    {
+        Api.Unreachable(HttpMethod.Post, LoginRoute);
+        var page = Render<Login>();
+
+        page.Find("form").Submit();
+
+        page.WaitForAssertion(() => Assert.Equal(Text(ServerMessage.NetworkKey), page.Find("[role=alert]").TextContent));
+        Assert.False(page.Find("[role=alert]").HasAttribute("data-code"));
+        Assert.False(page.Find("button[type=submit]").HasAttribute("disabled"));
+        Assert.Empty(MissingTexts);
+    }
+
+    [Fact]
+    public void Confirm_shows_unexpected_text_for_a_reply_that_is_not_the_api_error()
+    {
+        Api.AnswerRaw(HttpMethod.Post, ConfirmationsRoute, HttpStatusCode.BadGateway, "text/html", "<html><body>Bad gateway</body></html>");
+        Navigation.NavigateTo("/confirm#t=abc");
+
+        var page = Render<Confirm>();
+
+        page.WaitForAssertion(() => Assert.Equal(Text(ServerMessage.UnexpectedKey), page.Find("[role=alert]").TextContent));
+        Assert.Empty(page.FindAll(".success"));
+        Assert.Empty(MissingTexts);
+    }
+
+    [Fact]
+    public void Register_shows_network_text_when_the_legal_documents_cannot_be_loaded()
+    {
+        Api.Unreachable(HttpMethod.Get, TermsRoute).Unreachable(HttpMethod.Get, PrivacyRoute);
+
+        var page = Render<Register>();
+
+        page.WaitForAssertion(() => Assert.Equal(Text(ServerMessage.NetworkKey), page.Find("[role=alert]").TextContent));
+        Assert.False(page.Find("[role=alert]").HasAttribute("data-code"));
+        Assert.Empty(MissingTexts);
     }
 
     private static object LegalDocument(string document, int version) => new

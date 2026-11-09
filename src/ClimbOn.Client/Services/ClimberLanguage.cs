@@ -1,7 +1,6 @@
 using System.Globalization;
 using ClimbOn.Client.Api;
 using Microsoft.JSInterop;
-using Microsoft.Kiota.Abstractions;
 
 namespace ClimbOn.Client.Services;
 
@@ -16,6 +15,37 @@ public sealed class ClimberLanguage(ClimberApiClient api, IJSRuntime js)
 
     public const string SetPageLanguageFunction = "climbOn.setPageLanguage";
 
+    // Before the host runs: the culture whose texts the client shows, with the page language set to match. A
+    // browser that refuses these calls still gets the app, in the language StartupCulture falls back to.
+    public static async Task<CultureInfo> StartupCultureAsync(IJSRuntime js)
+    {
+        var culture = UiLanguage.StartupCulture(
+            await ReadAsync(js, StoredLanguageFunction),
+            await ReadAsync(js, BrowserLanguageFunction));
+        try
+        {
+            await js.InvokeVoidAsync(SetPageLanguageFunction, UiLanguage.Of(culture));
+        }
+        catch (JSException)
+        {
+            // index.html's own lang stays.
+        }
+
+        return culture;
+    }
+
+    private static async Task<string?> ReadAsync(IJSRuntime js, string function)
+    {
+        try
+        {
+            return await js.InvokeAsync<string?>(function);
+        }
+        catch (JSException)
+        {
+            return null;
+        }
+    }
+
     // Applies the stored language if a climber is logged in. True if the app must reload to show it.
     public async Task<bool> ApplyStoredAsync(CancellationToken cancellationToken = default)
     {
@@ -24,9 +54,9 @@ public sealed class ClimberLanguage(ClimberApiClient api, IJSRuntime js)
         {
             language = (await api.Api.Climber.Me.GetAsync(cancellationToken: cancellationToken))?.Language;
         }
-        catch (Exception exception) when (exception is ApiException or HttpRequestException)
+        catch (Exception)
         {
-            // Not logged in, or the api is unreachable: the startup language stays.
+            // Not logged in, the api unreachable, or a reply that is not the api's: the startup language stays.
             return false;
         }
 

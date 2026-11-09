@@ -3,10 +3,9 @@ using System.Net;
 using Bunit;
 using ClimbOn.Client.Layout;
 using ClimbOn.Client.Pages;
-using ClimbOn.Client.Resources;
 using ClimbOn.Client.Services;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
+using Microsoft.JSInterop;
 using Xunit;
 
 namespace ClimbOn.Client.Tests;
@@ -32,15 +31,13 @@ public sealed class LanguageTests : ClientTestContext
     [MemberData(nameof(Pages))]
     public void Both_supported_languages_render(Type page, string settledWhen)
     {
-        Services.AddSingleton<MissingTextRecorder>();
-        Services.AddSingleton<IStringLocalizer<UiTexts>>(services => services.GetRequiredService<MissingTextRecorder>());
         Api.Answer(HttpMethod.Get, "/api/public/legal/terms", HttpStatusCode.OK, LegalDocument("terms"))
             .Answer(HttpMethod.Get, "/api/public/legal/privacy", HttpStatusCode.OK, LegalDocument("privacy"));
 
         var english = RenderIn(UiLanguage.English, page, settledWhen);
         var bokmal = RenderIn(UiLanguage.Bokmal, page, settledWhen);
 
-        Assert.Empty(Services.GetRequiredService<MissingTextRecorder>().Missing);
+        Assert.Empty(MissingTexts);
         Assert.NotEqual(english, bokmal);
     }
 
@@ -90,6 +87,55 @@ public sealed class LanguageTests : ClientTestContext
         JSInterop.VerifyNotInvoke(ClimberLanguage.SetPageLanguageFunction);
         JSInterop.VerifyNotInvoke(ClimberLanguage.StoreLanguageFunction);
         Assert.Empty(Navigation.History);
+    }
+
+    // The api cannot be reached (an offline start, N21), or something other than the api answers: the language
+    // chosen at startup stays, and the app goes on.
+    [Fact]
+    public async Task Startup_language_stays_when_the_api_cannot_be_reached()
+    {
+        Api.Unreachable(HttpMethod.Get, MeRoute);
+
+        Assert.False(await Services.GetRequiredService<ClimberLanguage>().ApplyStoredAsync(Xunit.TestContext.Current.CancellationToken));
+        JSInterop.VerifyNotInvoke(ClimberLanguage.SetPageLanguageFunction);
+    }
+
+    [Theory]
+    [InlineData("text/html", "<html><body>Service unavailable</body></html>")]
+    [InlineData("text/plain", "Service unavailable")]
+    [InlineData("application/json", "not json")]
+    public async Task Startup_language_stays_when_a_reply_is_not_the_api(string mediaType, string body)
+    {
+        Api.AnswerRaw(HttpMethod.Get, MeRoute, HttpStatusCode.ServiceUnavailable, mediaType, body);
+
+        Assert.False(await Services.GetRequiredService<ClimberLanguage>().ApplyStoredAsync(Xunit.TestContext.Current.CancellationToken));
+        JSInterop.VerifyNotInvoke(ClimberLanguage.SetPageLanguageFunction);
+    }
+
+    // Program's startup: the stored language wins, and the page language is the one whose texts are shown.
+    [Fact]
+    public async Task Startup_culture_comes_from_the_stored_language()
+    {
+        JSInterop.Setup<string?>(ClimberLanguage.StoredLanguageFunction).SetResult("nb-NO");
+        JSInterop.Setup<string?>(ClimberLanguage.BrowserLanguageFunction).SetResult("en-GB");
+
+        var culture = await ClimberLanguage.StartupCultureAsync(JSInterop.JSRuntime);
+
+        Assert.Equal("nb-NO", culture.Name);
+        Assert.Equal(UiLanguage.Bokmal, JSInterop.VerifyInvoke(ClimberLanguage.SetPageLanguageFunction).Arguments.Single());
+    }
+
+    // A browser that refuses the startup calls still gets the app, in English.
+    [Fact]
+    public async Task Startup_survives_a_browser_that_refuses_the_language_calls()
+    {
+        JSInterop.Setup<string?>(ClimberLanguage.StoredLanguageFunction).SetException(new JSException("Refused."));
+        JSInterop.Setup<string?>(ClimberLanguage.BrowserLanguageFunction).SetException(new JSException("Refused."));
+        JSInterop.SetupVoid(ClimberLanguage.SetPageLanguageFunction).SetException(new JSException("Refused."));
+
+        var culture = await ClimberLanguage.StartupCultureAsync(JSInterop.JSRuntime);
+
+        Assert.Equal(UiLanguage.English, culture.Name);
     }
 
     [Theory]

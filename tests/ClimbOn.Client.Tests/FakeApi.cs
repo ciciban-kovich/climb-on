@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using ClimbOn.Client.Api;
 using Microsoft.Kiota.Abstractions.Authentication;
@@ -14,7 +16,11 @@ public sealed class FakeApi : HttpMessageHandler
 {
     public const string BaseUrl = "http://localhost";
 
-    private readonly Dictionary<(HttpMethod Method, string Path), Func<HttpResponseMessage>> answers = [];
+    private static readonly TimeSpan HoldLimit = TimeSpan.FromSeconds(5);
+
+    private readonly Dictionary<(HttpMethod Method, string Path), Func<Task<HttpResponseMessage>>> answers = [];
+
+    private readonly ConcurrentDictionary<(HttpMethod Method, string Path), TaskCompletionSource> arrivals = [];
 
     private readonly List<RecordedRequest> requests = [];
 
@@ -31,9 +37,39 @@ public sealed class FakeApi : HttpMessageHandler
 
     public FakeApi Answer(HttpMethod method, string path, HttpStatusCode status, object? body = null)
     {
-        answers[(method, path)] = () => new HttpResponseMessage(status)
+        answers[(method, path)] = () => Task.FromResult(new HttpResponseMessage(status)
         {
             Content = body is null ? null : JsonContent.Create(body),
+        });
+        return this;
+    }
+
+    // A reply that is not the api's: a proxy's error page, or a body that does not parse.
+    public FakeApi AnswerRaw(HttpMethod method, string path, HttpStatusCode status, string mediaType, string body)
+    {
+        answers[(method, path)] = () => Task.FromResult(new HttpResponseMessage(status)
+        {
+            Content = new StringContent(body, Encoding.UTF8, mediaType),
+        });
+        return this;
+    }
+
+    // No reply at all: the network fails, as offline or with the api down.
+    public FakeApi Unreachable(HttpMethod method, string path)
+    {
+        answers[(method, path)] = () => throw new HttpRequestException("The api cannot be reached.");
+        return this;
+    }
+
+    // The answer already set for the route waits until another request has arrived; past HoldLimit it fails.
+    public FakeApi HoldUntilRequested(HttpMethod method, string path, HttpMethod otherMethod, string otherPath)
+    {
+        var answer = answers[(method, path)];
+        var other = Arrival(otherMethod, otherPath).Task;
+        answers[(method, path)] = async () =>
+        {
+            await other.WaitAsync(HoldLimit);
+            return await answer();
         };
         return this;
     }
@@ -60,10 +96,14 @@ public sealed class FakeApi : HttpMessageHandler
             requests.Add(new RecordedRequest(request.Method, uri.AbsolutePath, uri.Query, uri.Fragment, body));
         }
 
+        Arrival(request.Method, uri.AbsolutePath).TrySetResult();
         return answers.TryGetValue((request.Method, uri.AbsolutePath), out var answer)
-            ? answer()
+            ? await answer()
             : new HttpResponseMessage(HttpStatusCode.NotFound) { Content = JsonContent.Create(new { code = "not_found", message = "Not found." }) };
     }
+
+    private TaskCompletionSource Arrival(HttpMethod method, string path) =>
+        arrivals.GetOrAdd((method, path), _ => new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
 }
 
 public sealed record RecordedRequest(HttpMethod Method, string Path, string Query, string Fragment, string? Body)

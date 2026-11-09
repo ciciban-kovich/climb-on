@@ -66,12 +66,15 @@ else
     private bool busy;
     private bool registered;
 
-    // The current versions, so the acceptance names exactly the versions shown (S113).
+    // The current versions, so the acceptance names exactly the versions shown (S111). Asked for together.
     protected override async Task OnInitializedAsync() =>
         message = await ServerMessage.RunAsync(async () =>
         {
-            terms = await Api.Api.Public.Legal[TermsDocument].GetAsync();
-            privacy = await Api.Api.Public.Legal[PrivacyDocument].GetAsync();
+            var termsCall = Api.Api.Public.Legal[TermsDocument].GetAsync();
+            var privacyCall = Api.Api.Public.Legal[PrivacyDocument].GetAsync();
+            await Task.WhenAll(termsCall, privacyCall);
+            terms = await termsCall;
+            privacy = await privacyCall;
         }, T);
 
     private async Task RegisterAsync()
