@@ -21,6 +21,18 @@ public sealed class ApiCachingTests(ClientHostingTests.Host host) : IClassFixtur
         Assert.True(response.Headers.CacheControl?.NoStore);
     }
 
+    // A body that does not parse fails inside the endpoint, so the error response is written from scratch.
+    [Fact]
+    public async Task Api_error_written_from_an_exception_is_not_stored()
+    {
+        using var body = new StringContent("{", System.Text.Encoding.UTF8, "application/json");
+
+        using var response = await client.PostAsync("/api/climber/login", body, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.True(response.Headers.CacheControl?.NoStore);
+    }
+
     [Theory]
     [InlineData("/")]
     [InlineData("/login")]

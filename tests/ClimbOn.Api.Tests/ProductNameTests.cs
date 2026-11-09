@@ -22,7 +22,27 @@ public sealed partial class ProductNameTests
         Assert.Empty(OtherSpelling().Matches(text).Select(match => match.Value));
     }
 
-    // climb-on, climbon, ClimbOn as a word, but not followed by a dot, as an identifier or a file name is.
-    [GeneratedRegex(@"\bclimb-?on\b(?!\.)", RegexOptions.IgnoreCase)]
+    [Theory]
+    [InlineData("Someone tried to register at climb-on.")]
+    [InlineData("Velkommen til ClimbOn.")]
+    [InlineData("Welcome to climbon today")]
+    [InlineData("Welcome to Climb on")]
+    [InlineData("WELCOME TO CLIMB ON")]
+    [InlineData("<title>Climb-On</title>")]
+    public void Other_spellings_are_found(string text) =>
+        Assert.Matches(OtherSpelling(), text);
+
+    [Theory]
+    [InlineData("Welcome to Climb On.")]
+    [InlineData("<script src=\"js/climbon.js\"></script>")]
+    [InlineData("ClimbOn.Api")]
+    [InlineData("climbOn.storedLanguage")]
+    [InlineData("Where do you climb on weekdays?")]
+    public void The_name_identifiers_and_the_verb_are_not(string text) =>
+        Assert.DoesNotMatch(OtherSpelling(), text);
+
+    // climb-on, climbon or ClimbOn in any case, but not as an identifier or a file name (a dot and a letter follow);
+    // or the two words in any case but "Climb On" itself and the verb "climb on".
+    [GeneratedRegex(@"\b(?i:climb-?on)\b(?!\.\w)|\b(?!Climb On\b|climb on\b)(?i:climb on)\b")]
     private static partial Regex OtherSpelling();
 }
