@@ -61,10 +61,13 @@ public sealed class ClientHostingTests : IClassFixture<ClientHostingTests.Host>
         }
     }
 
-    [Fact]
-    public async Task Missing_file_is_404_not_the_shell()
+    [Theory]
+    [InlineData("/no-such-file.js")]
+    [InlineData("/_framework/no-such-file.js")]
+    [InlineData("/some/deep/no-such-file.js")]
+    public async Task Missing_file_is_404_not_the_shell(string path)
     {
-        using var response = await client.GetAsync("/no-such-file.js", TestContext.Current.CancellationToken);
+        using var response = await client.GetAsync(path, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
