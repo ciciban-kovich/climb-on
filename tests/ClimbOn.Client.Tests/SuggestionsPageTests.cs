@@ -27,27 +27,46 @@ public sealed class SuggestionsPageTests : ClientTestContext
         Assert.Empty(MissingTexts);
     }
 
-    // What S51 puts on a card, each value as the api sent it: the S22 label, an inactive gym marked (S21), the
-    // overlap with the viewer.
+    // What S51 puts on a card, each value as the api sent it: own sex, own gear, each discipline with its venues and
+    // grades, the S22 label, an inactive gym marked (S21), the overlap with the viewer.
     [Fact]
     public void Card_shows_what_the_api_sent()
     {
-        Api.Answer(HttpMethod.Get, SuggestionsRoute, HttpStatusCode.OK, new { candidates = new[] { Card("Siri", "< 2 km") } });
+        Api.Answer(HttpMethod.Get, SuggestionsRoute, HttpStatusCode.OK, new
+        {
+            candidates = new[]
+            {
+                Card("Siri", "< 2 km"),
+                Card("Anders", "12 km", sex: "male", ownGear: false, discipline: "bouldering", venue: "outdoor"),
+            },
+        });
 
         var page = Render<Suggestions>();
 
-        page.WaitForAssertion(() => Assert.NotNull(page.Find("article.card")));
-        var card = page.Find("article.card");
-        Assert.Contains("(self-declared)", page.Find(".certification").TextContent);
-        Assert.Contains(Text("certification_brattkort-led"), page.Find(".certification").TextContent);
-        var gyms = page.FindAll(".gyms li");
+        page.WaitForAssertion(() => Assert.Equal(2, page.FindAll("article.card").Count));
+        var card = page.FindAll("article.card")[0];
+        Assert.Equal(Text("sex_female"), Value(card, Text("card_sex")));
+        Assert.Equal(Text("value_yes"), Value(card, Text("card_own_gear")));
+        var discipline = card.QuerySelector(".disciplines li")!.TextContent;
+        Assert.Contains(Text("discipline_lead"), discipline);
+        Assert.Contains(Text("venue_indoor"), discipline);
+        Assert.Contains("(self-declared)", card.QuerySelector(".certification")!.TextContent);
+        Assert.Contains(Text("certification_brattkort-led"), card.QuerySelector(".certification")!.TextContent);
+        var gyms = card.QuerySelectorAll(".gyms li");
         Assert.Equal(2, gyms.Count);
         Assert.False(gyms[0].ClassList.Contains("inactive"));
         Assert.True(gyms[1].ClassList.Contains("inactive"));
         Assert.Contains(Text("card_gym_inactive"), gyms[1].TextContent);
-        Assert.Equal(Text("day_monday") + " 18:00–24:00", page.Find(".overlap li").TextContent.Trim());
-        Assert.Contains("6a–7a+", page.Find(".disciplines li").TextContent);
+        Assert.Equal(Text("day_monday") + " 18:00–24:00", card.QuerySelector(".overlap li")!.TextContent.Trim());
+        Assert.Contains("6a–7a+", discipline);
         Assert.Equal(card.GetAttribute("aria-labelledby"), card.QuerySelector("h2")!.Id);
+
+        var other = page.FindAll("article.card")[1];
+        Assert.Equal(Text("sex_male"), Value(other, Text("card_sex")));
+        Assert.Equal(Text("value_no"), Value(other, Text("card_own_gear")));
+        var otherDiscipline = other.QuerySelector(".disciplines li")!.TextContent;
+        Assert.Contains(Text("discipline_bouldering"), otherDiscipline);
+        Assert.Contains(Text("venue_outdoor"), otherDiscipline);
         Assert.Empty(MissingTexts);
     }
 
@@ -100,15 +119,25 @@ public sealed class SuggestionsPageTests : ClientTestContext
         Assert.Empty(MissingTexts);
     }
 
-    private static object Card(string displayName, string distance) => new
+    // The value a card shows under one of its terms.
+    private static string Value(AngleSharp.Dom.IElement card, string term) =>
+        card.QuerySelectorAll("dt").Single(dt => dt.TextContent == term).NextElementSibling!.TextContent.Trim();
+
+    private static object Card(
+        string displayName,
+        string distance,
+        string sex = "female",
+        bool ownGear = true,
+        string discipline = "lead",
+        string venue = "indoor") => new
     {
         accountId = Guid.NewGuid(),
         displayName,
-        sex = "female",
-        disciplines = new[] { new { discipline = "lead", venues = new[] { "indoor" }, grades = new { lowest = "6a", highest = "7a+" } } },
+        sex,
+        disciplines = new[] { new { discipline, venues = new[] { venue }, grades = new { lowest = "6a", highest = "7a+" } } },
         certification = "brattkort-led",
         certificationLabel = "self-declared",
-        ownGear = true,
+        ownGear,
         homeGyms = new[] { new { name = "Klatreverket", active = true }, new { name = "Old gym", active = false } },
         overlap = new[] { new { day = "monday", start = 18, end = 24 } },
         distance,
