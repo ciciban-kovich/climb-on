@@ -324,7 +324,7 @@ public sealed record GitBaseline(HashSet<string> Specs, HashSet<string>? Pending
         return code == 0 ? output : throw new SpecTraceException($"git show {baseRef}:{path} failed{GitError(error)}");
     }
 
-    // Git's own words for a failure, so the cause is in the message rather than lost.
+    /// <summary>Git's own words for a failure, so the cause is in the message rather than lost.</summary>
     private static string GitError(string error) =>
         string.IsNullOrWhiteSpace(error) ? string.Empty : $": {error.Trim()}";
 
