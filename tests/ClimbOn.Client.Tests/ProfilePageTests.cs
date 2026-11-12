@@ -28,7 +28,6 @@ public sealed class ProfilePageTests : ClientTestContext
 
         page.WaitForAssertion(() => Assert.Equal("display_name_invalid", page.Find("[role=alert]").GetAttribute("data-code")));
         Assert.Equal("Server text.", page.Find("[role=alert]").TextContent);
-        Assert.Empty(page.FindAll(".success"));
 
         // The stored profile goes back as it was, with the one change, home gyms included.
         var request = Api.Single(HttpMethod.Put, ProfileRoute).Json;
@@ -55,6 +54,24 @@ public sealed class ProfilePageTests : ClientTestContext
 
         Assert.False(page.Find("button[type=submit]").HasAttribute("disabled"));
         Assert.Empty(MissingTexts);
+    }
+
+    // A save the api refuses after one it took shows the refusal only: the earlier success is gone.
+    [Fact]
+    public void Refused_save_after_a_saved_one_shows_no_success()
+    {
+        Api.Answer(HttpMethod.Get, ProfileRoute, HttpStatusCode.OK, Stored())
+            .Answer(HttpMethod.Put, ProfileRoute, HttpStatusCode.OK, Stored());
+        var page = Render<Profile>();
+        page.WaitForAssertion(() => Assert.NotNull(page.Find("form")));
+        page.Find("form").Submit();
+        page.WaitForAssertion(() => Assert.NotNull(page.Find(".success")));
+
+        Api.Fail(HttpMethod.Put, ProfileRoute, HttpStatusCode.BadRequest, "display_name_invalid", "Server text.");
+        page.Find("form").Submit();
+
+        page.WaitForAssertion(() => Assert.Equal("display_name_invalid", page.Find("[role=alert]").GetAttribute("data-code")));
+        Assert.Empty(page.FindAll(".success"));
     }
 
     // S61's overlap is the api's rule: two overlapping windows are sent as entered, and the api's answer shown.
