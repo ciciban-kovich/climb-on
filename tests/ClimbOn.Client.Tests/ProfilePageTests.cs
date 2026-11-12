@@ -145,6 +145,25 @@ public sealed class ProfilePageTests : ClientTestContext
         Assert.Empty(MissingTexts);
     }
 
+    // Own gear (S3) is shown as stored, and either choice is sent as the climber made it.
+    [Fact]
+    public void Own_gear_shows_the_stored_value_and_sends_the_choice()
+    {
+        Api.Answer(HttpMethod.Get, ProfileRoute, HttpStatusCode.OK, Stored())
+            .Answer(HttpMethod.Put, ProfileRoute, HttpStatusCode.OK, Stored());
+        var page = Render<Profile>();
+        page.WaitForAssertion(() => Assert.NotNull(page.Find("form")));
+        Assert.Equal("yes", page.Find("select[name=own-gear]").GetAttribute("value"));
+
+        page.Find("select[name=own-gear]").Change("no");
+        Assert.Equal("no", page.Find("select[name=own-gear]").GetAttribute("value"));
+        page.Find("select[name=own-gear]").Change("yes");
+        page.Find("form").Submit();
+
+        page.WaitForAssertion(() => Assert.NotNull(page.Find(".success")));
+        Assert.True(Api.Single(HttpMethod.Put, ProfileRoute).Json.GetProperty("ownGear").GetBoolean());
+    }
+
     // A stored profile today's rules refuse is the climber's to replace: the api's refusal is shown over an empty
     // form, and saving it puts the replacement.
     [Fact]
