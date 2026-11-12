@@ -58,7 +58,7 @@ else
             <legend>@T["profile_disciplines"]</legend>
             @foreach (var entry in Disciplines)
             {
-                <fieldset class="entry discipline-entry">
+                <fieldset class="discipline-entry">
                     <label>
                         @T["profile_discipline"]
                         <select @bind="entry.Discipline">
@@ -128,7 +128,7 @@ else
             <legend>@T["profile_windows"]</legend>
             @foreach (var window in Windows)
             {
-                <fieldset class="entry window-entry">
+                <fieldset class="window-entry">
                     <label>
                         @T["profile_window_day"]
                         <select name="day" @bind="window.Day">
