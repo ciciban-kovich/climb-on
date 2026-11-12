@@ -84,4 +84,193 @@
   <data name="error_network" xml:space="preserve">
     <value>Could not reach Climb On. Check your connection and try again.</value>
   </data>
+  <data name="nav_profile" xml:space="preserve">
+    <value>Profile</value>
+  </data>
+  <data name="nav_suggestions" xml:space="preserve">
+    <value>Suggestions</value>
+  </data>
+  <data name="loading" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
+  <data name="choose" xml:space="preserve">
+    <value>Choose</value>
+  </data>
+  <data name="value_yes" xml:space="preserve">
+    <value>Yes</value>
+  </data>
+  <data name="value_no" xml:space="preserve">
+    <value>No</value>
+  </data>
+  <data name="sex_female" xml:space="preserve">
+    <value>Female</value>
+  </data>
+  <data name="sex_male" xml:space="preserve">
+    <value>Male</value>
+  </data>
+  <data name="sex_other" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="rope_scale_norwegian" xml:space="preserve">
+    <value>Norwegian</value>
+  </data>
+  <data name="rope_scale_french" xml:space="preserve">
+    <value>French</value>
+  </data>
+  <data name="discipline_bouldering" xml:space="preserve">
+    <value>Bouldering</value>
+  </data>
+  <data name="discipline_top-rope" xml:space="preserve">
+    <value>Top rope</value>
+  </data>
+  <data name="discipline_lead" xml:space="preserve">
+    <value>Lead</value>
+  </data>
+  <data name="discipline_multipitch" xml:space="preserve">
+    <value>Multipitch</value>
+  </data>
+  <data name="discipline_ice" xml:space="preserve">
+    <value>Ice</value>
+  </data>
+  <data name="venue_indoor" xml:space="preserve">
+    <value>Indoor</value>
+  </data>
+  <data name="venue_outdoor" xml:space="preserve">
+    <value>Outdoor</value>
+  </data>
+  <data name="certification_none" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="certification_brattkort-topptau" xml:space="preserve">
+    <value>Brattkort topptau</value>
+  </data>
+  <data name="certification_brattkort-led" xml:space="preserve">
+    <value>Brattkort led</value>
+  </data>
+  <data name="day_monday" xml:space="preserve">
+    <value>Monday</value>
+  </data>
+  <data name="day_tuesday" xml:space="preserve">
+    <value>Tuesday</value>
+  </data>
+  <data name="day_wednesday" xml:space="preserve">
+    <value>Wednesday</value>
+  </data>
+  <data name="day_thursday" xml:space="preserve">
+    <value>Thursday</value>
+  </data>
+  <data name="day_friday" xml:space="preserve">
+    <value>Friday</value>
+  </data>
+  <data name="day_saturday" xml:space="preserve">
+    <value>Saturday</value>
+  </data>
+  <data name="day_sunday" xml:space="preserve">
+    <value>Sunday</value>
+  </data>
+  <data name="card_sex" xml:space="preserve">
+    <value>Sex</value>
+  </data>
+  <data name="card_distance" xml:space="preserve">
+    <value>Distance</value>
+  </data>
+  <data name="card_disciplines" xml:space="preserve">
+    <value>Climbing</value>
+  </data>
+  <data name="card_certification" xml:space="preserve">
+    <value>Belay certification</value>
+  </data>
+  <data name="card_own_gear" xml:space="preserve">
+    <value>Own gear</value>
+  </data>
+  <data name="card_home_gyms" xml:space="preserve">
+    <value>Home gyms</value>
+  </data>
+  <data name="card_gym_inactive" xml:space="preserve">
+    <value>no longer available</value>
+  </data>
+  <data name="card_overlap" xml:space="preserve">
+    <value>Times you are both free</value>
+  </data>
+  <data name="suggestions_title" xml:space="preserve">
+    <value>Suggested partners</value>
+  </data>
+  <data name="suggestions_empty" xml:space="preserve">
+    <value>No climbers match your profile right now.</value>
+  </data>
+  <data name="profile_title" xml:space="preserve">
+    <value>Your profile</value>
+  </data>
+  <data name="profile_display_name" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="profile_sex" xml:space="preserve">
+    <value>Your sex</value>
+  </data>
+  <data name="profile_accepted_sexes" xml:space="preserve">
+    <value>Partners you accept</value>
+  </data>
+  <data name="profile_rope_scale" xml:space="preserve">
+    <value>Grade scale for rope climbing</value>
+  </data>
+  <data name="profile_disciplines" xml:space="preserve">
+    <value>Disciplines and grades</value>
+  </data>
+  <data name="profile_discipline" xml:space="preserve">
+    <value>Discipline</value>
+  </data>
+  <data name="profile_own_lowest" xml:space="preserve">
+    <value>Your lowest grade</value>
+  </data>
+  <data name="profile_own_highest" xml:space="preserve">
+    <value>Your highest grade</value>
+  </data>
+  <data name="profile_partner_lowest" xml:space="preserve">
+    <value>Partner's lowest grade</value>
+  </data>
+  <data name="profile_partner_highest" xml:space="preserve">
+    <value>Partner's highest grade</value>
+  </data>
+  <data name="profile_add_discipline" xml:space="preserve">
+    <value>Add discipline</value>
+  </data>
+  <data name="profile_remove_discipline" xml:space="preserve">
+    <value>Remove discipline</value>
+  </data>
+  <data name="profile_certification" xml:space="preserve">
+    <value>Belay certification</value>
+  </data>
+  <data name="profile_own_gear" xml:space="preserve">
+    <value>Do you have your own gear?</value>
+  </data>
+  <data name="profile_postcode" xml:space="preserve">
+    <value>Postcode</value>
+  </data>
+  <data name="profile_max_travel_km" xml:space="preserve">
+    <value>Maximum travel distance (km)</value>
+  </data>
+  <data name="profile_windows" xml:space="preserve">
+    <value>When you can climb</value>
+  </data>
+  <data name="profile_window_day" xml:space="preserve">
+    <value>Day</value>
+  </data>
+  <data name="profile_window_start" xml:space="preserve">
+    <value>From hour</value>
+  </data>
+  <data name="profile_window_end" xml:space="preserve">
+    <value>To hour</value>
+  </data>
+  <data name="profile_add_window" xml:space="preserve">
+    <value>Add time</value>
+  </data>
+  <data name="profile_remove_window" xml:space="preserve">
+    <value>Remove time</value>
+  </data>
+  <data name="profile_save" xml:space="preserve">
+    <value>Save profile</value>
+  </data>
+  <data name="profile_saved" xml:space="preserve">
+    <value>Your profile is saved.</value>
+  </data>
 </root>

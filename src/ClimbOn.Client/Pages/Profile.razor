@@ -1,0 +1,260 @@
+@page "/profile"
+@inject ClimberApiClient Api
+@inject IStringLocalizer<UiTexts> T
+@inject ILogger<Profile> Log
+
+<PageTitle>@T["profile_title"]</PageTitle>
+
+<h1>@T["profile_title"]</h1>
+
+@if (profile is null)
+{
+    @if (message is null)
+    {
+        <p role="status">@T["loading"]</p>
+    }
+    <MessageView Message="message" />
+}
+else
+{
+    @* novalidate, and no rule of its own: what is entered is sent, and the api answers (C7). *@
+    <form @onsubmit="SaveAsync" novalidate>
+        <label>
+            @T["profile_display_name"]
+            <input type="text" autocomplete="nickname" @bind="profile.DisplayName" />
+        </label>
+        <label>
+            @T["profile_sex"]
+            <select @bind="profile.Sex">
+                <option value="">@T["choose"]</option>
+                @foreach (var sex in ValueText.Sexes)
+                {
+                    <option value="@sex">@T[ValueText.Sex(sex)]</option>
+                }
+            </select>
+        </label>
+        <fieldset>
+            <legend>@T["profile_accepted_sexes"]</legend>
+            @foreach (var sex in ValueText.Sexes)
+            {
+                <label class="check">
+                    <input type="checkbox" name="accepted-sex" value="@sex" checked="@AcceptedSexes.Contains(sex)"
+                           @onchange="change => Toggle(AcceptedSexes, sex, change)" />
+                    @T[ValueText.Sex(sex)]
+                </label>
+            }
+        </fieldset>
+        <label>
+            @T["profile_rope_scale"]
+            <select @bind="profile.RopeScale">
+                <option value="">@T["choose"]</option>
+                @foreach (var scale in ValueText.RopeScales)
+                {
+                    <option value="@scale">@T[ValueText.RopeScale(scale)]</option>
+                }
+            </select>
+        </label>
+        <fieldset>
+            <legend>@T["profile_disciplines"]</legend>
+            @foreach (var entry in Disciplines)
+            {
+                <fieldset class="entry discipline-entry">
+                    <label>
+                        @T["profile_discipline"]
+                        <select @bind="entry.Discipline">
+                            <option value="">@T["choose"]</option>
+                            @foreach (var discipline in ValueText.Disciplines)
+                            {
+                                <option value="@discipline">@T[ValueText.Discipline(discipline)]</option>
+                            }
+                        </select>
+                    </label>
+                    @foreach (var venue in ValueText.Venues)
+                    {
+                        <label class="check">
+                            <input type="checkbox" name="venue" value="@venue" checked="@(entry.Venues?.Contains(venue) == true)"
+                                   @onchange="change => Toggle(entry.Venues ??= [], venue, change)" />
+                            @T[ValueText.Venue(venue)]
+                        </label>
+                    }
+                    <label>
+                        @T["profile_own_lowest"]
+                        <input type="text" name="own-lowest" @bind="entry.Own!.Lowest" />
+                    </label>
+                    <label>
+                        @T["profile_own_highest"]
+                        <input type="text" name="own-highest" @bind="entry.Own!.Highest" />
+                    </label>
+                    <label>
+                        @T["profile_partner_lowest"]
+                        <input type="text" name="partner-lowest" @bind="entry.Partner!.Lowest" />
+                    </label>
+                    <label>
+                        @T["profile_partner_highest"]
+                        <input type="text" name="partner-highest" @bind="entry.Partner!.Highest" />
+                    </label>
+                    <button type="button" class="remove" @onclick="() => Disciplines.Remove(entry)">@T["profile_remove_discipline"]</button>
+                </fieldset>
+            }
+            <button type="button" class="add-discipline" @onclick="AddDiscipline">@T["profile_add_discipline"]</button>
+        </fieldset>
+        <label>
+            @T["profile_certification"]
+            <select @bind="profile.Certification">
+                <option value="">@T["choose"]</option>
+                @foreach (var certification in ValueText.Certifications)
+                {
+                    <option value="@certification">@T[ValueText.Certification(certification)]</option>
+                }
+            </select>
+        </label>
+        <label>
+            @T["profile_own_gear"]
+            <select name="own-gear" @bind="OwnGear">
+                <option value="">@T["choose"]</option>
+                <option value="@Yes">@T["value_yes"]</option>
+                <option value="@No">@T["value_no"]</option>
+            </select>
+        </label>
+        <label>
+            @T["profile_postcode"]
+            <input type="text" inputmode="numeric" autocomplete="postal-code" name="postcode" @bind="profile.Postcode" />
+        </label>
+        <label>
+            @T["profile_max_travel_km"]
+            <input type="number" name="max-travel-km" @bind="profile.MaxTravelKm" />
+        </label>
+        <fieldset>
+            <legend>@T["profile_windows"]</legend>
+            @foreach (var window in Windows)
+            {
+                <fieldset class="entry window-entry">
+                    <label>
+                        @T["profile_window_day"]
+                        <select name="day" @bind="window.Day">
+                            <option value="">@T["choose"]</option>
+                            @foreach (var day in ValueText.Days)
+                            {
+                                <option value="@day">@T[ValueText.Day(day)]</option>
+                            }
+                        </select>
+                    </label>
+                    <label>
+                        @T["profile_window_start"]
+                        <input type="number" name="start" @bind="window.Start" />
+                    </label>
+                    <label>
+                        @T["profile_window_end"]
+                        <input type="number" name="end" @bind="window.End" />
+                    </label>
+                    <button type="button" class="remove" @onclick="() => Windows.Remove(window)">@T["profile_remove_window"]</button>
+                </fieldset>
+            }
+            <button type="button" class="add-window" @onclick="AddWindow">@T["profile_add_window"]</button>
+        </fieldset>
+        @if (saved)
+        {
+            <p class="success" role="status">@T["profile_saved"]</p>
+        }
+        <MessageView Message="message" />
+        <button type="submit" disabled="@busy">@T["profile_save"]</button>
+    </form>
+}
+
+@code {
+    private const string Yes = "yes";
+    private const string No = "no";
+
+    private ProfileRequest? profile;
+    private ServerMessage? message;
+    private bool busy;
+    private bool saved;
+
+    private List<string> AcceptedSexes => profile!.AcceptedSexes ??= [];
+
+    private List<DisciplineEntryRequest> Disciplines => profile!.Disciplines ??= [];
+
+    private List<WindowRequest> Windows => profile!.Windows ??= [];
+
+    private string OwnGear
+    {
+        get => profile!.OwnGear switch { true => Yes, false => No, null => string.Empty };
+        set => profile!.OwnGear = value switch { Yes => true, No => false, _ => null };
+    }
+
+    // No profile yet (404) starts an empty one; any other failure is shown.
+    protected override async Task OnInitializedAsync() =>
+        message = await ServerMessage.RunAsync(async () =>
+        {
+            try
+            {
+                profile = Editable(await Api.Api.Climber.Profile.GetAsync());
+            }
+            catch (ErrorBody error) when (error.ResponseStatusCode == 404)
+            {
+                profile = New();
+            }
+        }, T, Log);
+
+    private async Task SaveAsync()
+    {
+        busy = true;
+        saved = false;
+        message = await ServerMessage.RunAsync(async () =>
+        {
+            profile = Editable(await Api.Api.Climber.Profile.PutAsync(profile!));
+            saved = true;
+        }, T, Log);
+        busy = false;
+    }
+
+    private void AddDiscipline() => Disciplines.Add(new DisciplineEntryRequest
+    {
+        Venues = [],
+        Own = new GradeRangeRequest(),
+        Partner = new GradeRangeRequest(),
+    });
+
+    private void AddWindow() => Windows.Add(new WindowRequest());
+
+    private static void Toggle(List<string> values, string value, ChangeEventArgs change)
+    {
+        values.Remove(value);
+        if (change.Value is true)
+        {
+            values.Add(value);
+        }
+    }
+
+    // A new profile accepts every sex until the climber says otherwise, as the api's own default does (S3).
+    private static ProfileRequest New() => new()
+    {
+        AcceptedSexes = [.. ValueText.Sexes],
+        Disciplines = [],
+        HomeGyms = [],
+        Windows = [],
+    };
+
+    // The stored profile as the request that saves it. Home gyms are sent back as they are: M1 has no gym list
+    // to choose from.
+    private static ProfileRequest Editable(ProfileResponse? stored) => stored is null ? New() : new()
+    {
+        DisplayName = stored.DisplayName,
+        Sex = stored.Sex,
+        AcceptedSexes = [.. stored.AcceptedSexes ?? []],
+        RopeScale = stored.RopeScale,
+        Disciplines = [.. (stored.Disciplines ?? []).Select(entry => new DisciplineEntryRequest
+        {
+            Discipline = entry.Discipline,
+            Venues = [.. entry.Venues ?? []],
+            Own = new GradeRangeRequest { Lowest = entry.Own?.Lowest, Highest = entry.Own?.Highest },
+            Partner = new GradeRangeRequest { Lowest = entry.Partner?.Lowest, Highest = entry.Partner?.Highest },
+        })],
+        Certification = stored.Certification,
+        OwnGear = stored.OwnGear,
+        Postcode = stored.Postcode,
+        MaxTravelKm = stored.MaxTravelKm,
+        HomeGyms = [.. stored.HomeGyms ?? []],
+        Windows = [.. (stored.Windows ?? []).Select(window => new WindowRequest { Day = window.Day, Start = window.Start, End = window.End })],
+    };
+}
