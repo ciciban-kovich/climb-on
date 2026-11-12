@@ -20,11 +20,11 @@ else
     @* novalidate, and no rule of its own: what is entered is sent, and the api answers (C7). *@
     <form @onsubmit="SaveAsync" novalidate>
         <label>
-            @T["profile_display_name"]
+            @T["profile_display_name_label"]
             <input type="text" autocomplete="nickname" @bind="profile.DisplayName" />
         </label>
         <label>
-            @T["profile_sex"]
+            @T["profile_sex_label"]
             <select @bind="profile.Sex">
                 <option value="">@T["choose"]</option>
                 @foreach (var sex in ValueText.Sexes)
@@ -34,7 +34,7 @@ else
             </select>
         </label>
         <fieldset>
-            <legend>@T["profile_accepted_sexes"]</legend>
+            <legend>@T["profile_accepted_sexes_label"]</legend>
             @foreach (var sex in ValueText.Sexes)
             {
                 <label class="check">
@@ -45,7 +45,7 @@ else
             }
         </fieldset>
         <label>
-            @T["profile_rope_scale"]
+            @T["profile_rope_scale_label"]
             <select @bind="profile.RopeScale">
                 <option value="">@T["choose"]</option>
                 @foreach (var scale in ValueText.RopeScales)
@@ -55,12 +55,12 @@ else
             </select>
         </label>
         <fieldset>
-            <legend>@T["profile_disciplines"]</legend>
+            <legend>@T["profile_disciplines_label"]</legend>
             @foreach (var entry in Disciplines)
             {
                 <fieldset class="discipline-entry">
                     <label>
-                        @T["profile_discipline"]
+                        @T["profile_discipline_label"]
                         <select @bind="entry.Discipline">
                             <option value="">@T["choose"]</option>
                             @foreach (var discipline in ValueText.Disciplines)
@@ -78,28 +78,28 @@ else
                         </label>
                     }
                     <label>
-                        @T["profile_own_lowest"]
+                        @T["profile_own_lowest_label"]
                         <input type="text" name="own-lowest" @bind="entry.Own!.Lowest" />
                     </label>
                     <label>
-                        @T["profile_own_highest"]
+                        @T["profile_own_highest_label"]
                         <input type="text" name="own-highest" @bind="entry.Own!.Highest" />
                     </label>
                     <label>
-                        @T["profile_partner_lowest"]
+                        @T["profile_partner_lowest_label"]
                         <input type="text" name="partner-lowest" @bind="entry.Partner!.Lowest" />
                     </label>
                     <label>
-                        @T["profile_partner_highest"]
+                        @T["profile_partner_highest_label"]
                         <input type="text" name="partner-highest" @bind="entry.Partner!.Highest" />
                     </label>
-                    <button type="button" class="remove" @onclick="() => Disciplines.Remove(entry)">@T["profile_remove_discipline"]</button>
+                    <button type="button" class="remove" @onclick="() => Disciplines.Remove(entry)">@T["profile_remove_discipline_button"]</button>
                 </fieldset>
             }
-            <button type="button" class="add-discipline" @onclick="AddDiscipline">@T["profile_add_discipline"]</button>
+            <button type="button" class="add-discipline" @onclick="AddDiscipline">@T["profile_add_discipline_button"]</button>
         </fieldset>
         <label>
-            @T["profile_certification"]
+            @T["profile_certification_label"]
             <select @bind="profile.Certification">
                 <option value="">@T["choose"]</option>
                 @foreach (var certification in ValueText.Certifications)
@@ -109,7 +109,7 @@ else
             </select>
         </label>
         <label>
-            @T["profile_own_gear"]
+            @T["profile_own_gear_label"]
             <select name="own-gear" @bind="OwnGear">
                 <option value="">@T["choose"]</option>
                 <option value="@Yes">@T["value_yes"]</option>
@@ -117,20 +117,20 @@ else
             </select>
         </label>
         <label>
-            @T["profile_postcode"]
+            @T["profile_postcode_label"]
             <input type="text" inputmode="numeric" autocomplete="postal-code" name="postcode" @bind="profile.Postcode" />
         </label>
         <label>
-            @T["profile_max_travel_km"]
+            @T["profile_max_travel_km_label"]
             <input type="number" name="max-travel-km" @bind="profile.MaxTravelKm" />
         </label>
         <fieldset>
-            <legend>@T["profile_windows"]</legend>
+            <legend>@T["profile_windows_label"]</legend>
             @foreach (var window in Windows)
             {
                 <fieldset class="window-entry">
                     <label>
-                        @T["profile_window_day"]
+                        @T["profile_window_day_label"]
                         <select name="day" @bind="window.Day">
                             <option value="">@T["choose"]</option>
                             @foreach (var day in ValueText.Days)
@@ -140,24 +140,24 @@ else
                         </select>
                     </label>
                     <label>
-                        @T["profile_window_start"]
+                        @T["profile_window_start_label"]
                         <input type="number" name="start" @bind="window.Start" />
                     </label>
                     <label>
-                        @T["profile_window_end"]
+                        @T["profile_window_end_label"]
                         <input type="number" name="end" @bind="window.End" />
                     </label>
-                    <button type="button" class="remove" @onclick="() => Windows.Remove(window)">@T["profile_remove_window"]</button>
+                    <button type="button" class="remove" @onclick="() => Windows.Remove(window)">@T["profile_remove_window_button"]</button>
                 </fieldset>
             }
-            <button type="button" class="add-window" @onclick="AddWindow">@T["profile_add_window"]</button>
+            <button type="button" class="add-window" @onclick="AddWindow">@T["profile_add_window_button"]</button>
         </fieldset>
         @if (saved)
         {
-            <p class="success" role="status">@T["profile_saved"]</p>
+            <p class="success" role="status">@T["profile_done"]</p>
         }
         <MessageView Message="message" />
-        <button type="submit" disabled="@busy">@T["profile_save"]</button>
+        <button type="submit" disabled="@busy">@T["profile_save_button"]</button>
     </form>
 }
 

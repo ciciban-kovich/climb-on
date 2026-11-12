@@ -201,76 +201,76 @@
   <data name="profile_title" xml:space="preserve">
     <value>Your profile</value>
   </data>
-  <data name="profile_display_name" xml:space="preserve">
+  <data name="profile_display_name_label" xml:space="preserve">
     <value>Display name</value>
   </data>
-  <data name="profile_sex" xml:space="preserve">
+  <data name="profile_sex_label" xml:space="preserve">
     <value>Your sex</value>
   </data>
-  <data name="profile_accepted_sexes" xml:space="preserve">
+  <data name="profile_accepted_sexes_label" xml:space="preserve">
     <value>Partners you accept</value>
   </data>
-  <data name="profile_rope_scale" xml:space="preserve">
+  <data name="profile_rope_scale_label" xml:space="preserve">
     <value>Grade scale for rope climbing</value>
   </data>
-  <data name="profile_disciplines" xml:space="preserve">
+  <data name="profile_disciplines_label" xml:space="preserve">
     <value>Disciplines and grades</value>
   </data>
-  <data name="profile_discipline" xml:space="preserve">
+  <data name="profile_discipline_label" xml:space="preserve">
     <value>Discipline</value>
   </data>
-  <data name="profile_own_lowest" xml:space="preserve">
+  <data name="profile_own_lowest_label" xml:space="preserve">
     <value>Your lowest grade</value>
   </data>
-  <data name="profile_own_highest" xml:space="preserve">
+  <data name="profile_own_highest_label" xml:space="preserve">
     <value>Your highest grade</value>
   </data>
-  <data name="profile_partner_lowest" xml:space="preserve">
+  <data name="profile_partner_lowest_label" xml:space="preserve">
     <value>Partner's lowest grade</value>
   </data>
-  <data name="profile_partner_highest" xml:space="preserve">
+  <data name="profile_partner_highest_label" xml:space="preserve">
     <value>Partner's highest grade</value>
   </data>
-  <data name="profile_add_discipline" xml:space="preserve">
+  <data name="profile_add_discipline_button" xml:space="preserve">
     <value>Add discipline</value>
   </data>
-  <data name="profile_remove_discipline" xml:space="preserve">
+  <data name="profile_remove_discipline_button" xml:space="preserve">
     <value>Remove discipline</value>
   </data>
-  <data name="profile_certification" xml:space="preserve">
+  <data name="profile_certification_label" xml:space="preserve">
     <value>Belay certification</value>
   </data>
-  <data name="profile_own_gear" xml:space="preserve">
+  <data name="profile_own_gear_label" xml:space="preserve">
     <value>Do you have your own gear?</value>
   </data>
-  <data name="profile_postcode" xml:space="preserve">
+  <data name="profile_postcode_label" xml:space="preserve">
     <value>Postcode</value>
   </data>
-  <data name="profile_max_travel_km" xml:space="preserve">
+  <data name="profile_max_travel_km_label" xml:space="preserve">
     <value>Maximum travel distance (km)</value>
   </data>
-  <data name="profile_windows" xml:space="preserve">
+  <data name="profile_windows_label" xml:space="preserve">
     <value>When you can climb</value>
   </data>
-  <data name="profile_window_day" xml:space="preserve">
+  <data name="profile_window_day_label" xml:space="preserve">
     <value>Day</value>
   </data>
-  <data name="profile_window_start" xml:space="preserve">
+  <data name="profile_window_start_label" xml:space="preserve">
     <value>From hour</value>
   </data>
-  <data name="profile_window_end" xml:space="preserve">
+  <data name="profile_window_end_label" xml:space="preserve">
     <value>To hour</value>
   </data>
-  <data name="profile_add_window" xml:space="preserve">
+  <data name="profile_add_window_button" xml:space="preserve">
     <value>Add time</value>
   </data>
-  <data name="profile_remove_window" xml:space="preserve">
+  <data name="profile_remove_window_button" xml:space="preserve">
     <value>Remove time</value>
   </data>
-  <data name="profile_save" xml:space="preserve">
+  <data name="profile_save_button" xml:space="preserve">
     <value>Save profile</value>
   </data>
-  <data name="profile_saved" xml:space="preserve">
+  <data name="profile_done" xml:space="preserve">
     <value>Your profile is saved.</value>
   </data>
 </root>

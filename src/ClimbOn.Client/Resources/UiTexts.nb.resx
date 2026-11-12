@@ -201,76 +201,76 @@
   <data name="profile_title" xml:space="preserve">
     <value>Profilen din</value>
   </data>
-  <data name="profile_display_name" xml:space="preserve">
+  <data name="profile_display_name_label" xml:space="preserve">
     <value>Visningsnavn</value>
   </data>
-  <data name="profile_sex" xml:space="preserve">
+  <data name="profile_sex_label" xml:space="preserve">
     <value>Ditt kjønn</value>
   </data>
-  <data name="profile_accepted_sexes" xml:space="preserve">
+  <data name="profile_accepted_sexes_label" xml:space="preserve">
     <value>Partnere du godtar</value>
   </data>
-  <data name="profile_rope_scale" xml:space="preserve">
+  <data name="profile_rope_scale_label" xml:space="preserve">
     <value>Graderingsskala for tauklatring</value>
   </data>
-  <data name="profile_disciplines" xml:space="preserve">
+  <data name="profile_disciplines_label" xml:space="preserve">
     <value>Disipliner og grader</value>
   </data>
-  <data name="profile_discipline" xml:space="preserve">
+  <data name="profile_discipline_label" xml:space="preserve">
     <value>Disiplin</value>
   </data>
-  <data name="profile_own_lowest" xml:space="preserve">
+  <data name="profile_own_lowest_label" xml:space="preserve">
     <value>Din laveste grad</value>
   </data>
-  <data name="profile_own_highest" xml:space="preserve">
+  <data name="profile_own_highest_label" xml:space="preserve">
     <value>Din høyeste grad</value>
   </data>
-  <data name="profile_partner_lowest" xml:space="preserve">
+  <data name="profile_partner_lowest_label" xml:space="preserve">
     <value>Partnerens laveste grad</value>
   </data>
-  <data name="profile_partner_highest" xml:space="preserve">
+  <data name="profile_partner_highest_label" xml:space="preserve">
     <value>Partnerens høyeste grad</value>
   </data>
-  <data name="profile_add_discipline" xml:space="preserve">
+  <data name="profile_add_discipline_button" xml:space="preserve">
     <value>Legg til disiplin</value>
   </data>
-  <data name="profile_remove_discipline" xml:space="preserve">
+  <data name="profile_remove_discipline_button" xml:space="preserve">
     <value>Fjern disiplin</value>
   </data>
-  <data name="profile_certification" xml:space="preserve">
+  <data name="profile_certification_label" xml:space="preserve">
     <value>Sikringskort</value>
   </data>
-  <data name="profile_own_gear" xml:space="preserve">
+  <data name="profile_own_gear_label" xml:space="preserve">
     <value>Har du eget utstyr?</value>
   </data>
-  <data name="profile_postcode" xml:space="preserve">
+  <data name="profile_postcode_label" xml:space="preserve">
     <value>Postnummer</value>
   </data>
-  <data name="profile_max_travel_km" xml:space="preserve">
+  <data name="profile_max_travel_km_label" xml:space="preserve">
     <value>Lengste reiseavstand (km)</value>
   </data>
-  <data name="profile_windows" xml:space="preserve">
+  <data name="profile_windows_label" xml:space="preserve">
     <value>Når du kan klatre</value>
   </data>
-  <data name="profile_window_day" xml:space="preserve">
+  <data name="profile_window_day_label" xml:space="preserve">
     <value>Dag</value>
   </data>
-  <data name="profile_window_start" xml:space="preserve">
+  <data name="profile_window_start_label" xml:space="preserve">
     <value>Fra time</value>
   </data>
-  <data name="profile_window_end" xml:space="preserve">
+  <data name="profile_window_end_label" xml:space="preserve">
     <value>Til time</value>
   </data>
-  <data name="profile_add_window" xml:space="preserve">
+  <data name="profile_add_window_button" xml:space="preserve">
     <value>Legg til tidspunkt</value>
   </data>
-  <data name="profile_remove_window" xml:space="preserve">
+  <data name="profile_remove_window_button" xml:space="preserve">
     <value>Fjern tidspunkt</value>
   </data>
-  <data name="profile_save" xml:space="preserve">
+  <data name="profile_save_button" xml:space="preserve">
     <value>Lagre profil</value>
   </data>
-  <data name="profile_saved" xml:space="preserve">
+  <data name="profile_done" xml:space="preserve">
     <value>Profilen din er lagret.</value>
   </data>
 </root>
