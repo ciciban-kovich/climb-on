@@ -49,7 +49,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
         Assert.Contains("PASS", result.Out);
     }
 
@@ -62,7 +62,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("C17): S4", result.Out);
     }
 
@@ -75,7 +75,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("C17): S2.1", result.Out);
     }
 
@@ -88,7 +88,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("have a Spec test", result.Out);
         Assert.Contains("(C68): S2", result.Out);
     }
@@ -102,7 +102,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
         Assert.Contains("IDs with only SpecPartial tests: S2", result.Out);
     }
 
@@ -115,7 +115,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("C17): S1", result.Out);
     }
 
@@ -131,7 +131,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
         Assert.Contains("IDs with only SpecPartial tests: S2.1, S4", result.Out);
     }
 
@@ -143,7 +143,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("not new in docs/specs.md since origin/main (C68): S1", result.Out);
     }
 
@@ -156,7 +156,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("not live in docs/specs.md: S3, S9", result.Out);
     }
 
@@ -191,7 +191,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("tests reference IDs that are not live in docs/specs.md: S3", result.Out);
     }
 
@@ -203,7 +203,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Error, result.Code);
+        RunResult.AssertExit(ExitCode.Error, result);
         Assert.Contains("origin/main is not available", result.Err);
     }
 
@@ -214,7 +214,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Error, result.Code);
+        RunResult.AssertExit(ExitCode.Error, result);
         Assert.Contains("docs/spec-pending.txt not found", result.Err);
     }
 
@@ -226,7 +226,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Error, result.Code);
+        RunResult.AssertExit(ExitCode.Error, result);
     }
 
     // --- require ---
@@ -241,7 +241,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "S2.1");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
     }
 
     [Fact]
@@ -252,7 +252,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "S1", "S2");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("FAIL S2", result.Out);
         Assert.DoesNotContain("FAIL S1", result.Out);
     }
@@ -266,7 +266,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "--whole", "S1");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
     }
 
     [Fact]
@@ -278,7 +278,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "--whole", "S1");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("FAIL S1: no Spec test", result.Out);
     }
 
@@ -291,7 +291,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "--whole", "S1");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("still listed", result.Out);
     }
 
@@ -308,8 +308,8 @@ public sealed class SpecTraceTests : IDisposable
         var plain = _repo.Run("require", "S1", id);
         var whole = _repo.Run("require", "--whole", id);
 
-        Assert.Equal(ExitCode.Error, plain.Code);
-        Assert.Equal(ExitCode.Error, whole.Code);
+        RunResult.AssertExit(ExitCode.Error, plain);
+        RunResult.AssertExit(ExitCode.Error, whole);
         Assert.Equal(0, _repo.Builds);
     }
 
@@ -330,7 +330,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run(args);
 
-        Assert.Equal(ExitCode.Error, result.Code);
+        RunResult.AssertExit(ExitCode.Error, result);
         Assert.Contains("usage:", result.Err);
     }
 
@@ -339,7 +339,7 @@ public sealed class SpecTraceTests : IDisposable
     {
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""));
 
-        Assert.Equal(ExitCode.Error, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.Error, _repo.Run("require", "S1"));
     }
 
     // --- which traits count ---
@@ -360,7 +360,7 @@ public sealed class SpecTraceTests : IDisposable
             {{testAttribute}} [Trait("Spec", "S1")] public void T({{(testAttribute.Contains("InlineData") ? "int x" : "")}}) { }
             """));
 
-        Assert.Equal(ExitCode.RuleFailure, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, _repo.Run("require", "S1"));
     }
 
     [Theory]
@@ -375,7 +375,7 @@ public sealed class SpecTraceTests : IDisposable
             {{testAttribute}} [Trait("Spec", "S1")] public void T({{(testAttribute.Contains("InlineData") ? "int x" : "")}}) { }
             """));
 
-        Assert.Equal(ExitCode.Pass, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.Pass, _repo.Run("require", "S1"));
     }
 
     [Fact]
@@ -393,7 +393,7 @@ public sealed class SpecTraceTests : IDisposable
             }
             """);
 
-        Assert.Equal(ExitCode.Pass, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.Pass, _repo.Run("require", "S1"));
     }
 
     [Fact]
@@ -411,7 +411,7 @@ public sealed class SpecTraceTests : IDisposable
             }
             """);
 
-        Assert.Equal(ExitCode.RuleFailure, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, _repo.Run("require", "S1"));
     }
 
     [Fact]
@@ -421,8 +421,8 @@ public sealed class SpecTraceTests : IDisposable
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S2")] public void T() { }"""));
         _repo.File("tests/Stray.cs", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""));
 
-        Assert.Equal(ExitCode.RuleFailure, _repo.Run("require", "S1").Code);
-        Assert.Equal(ExitCode.Pass, _repo.Run("require", "S2").Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, _repo.Run("require", "S1"));
+        RunResult.AssertExit(ExitCode.Pass, _repo.Run("require", "S2"));
     }
 
     [Fact]
@@ -432,7 +432,7 @@ public sealed class SpecTraceTests : IDisposable
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S2")] public void T() { }"""));
         _repo.TestProject("Unlisted", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""), listed: false);
 
-        Assert.Equal(ExitCode.RuleFailure, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, _repo.Run("require", "S1"));
     }
 
     [Fact]
@@ -442,7 +442,7 @@ public sealed class SpecTraceTests : IDisposable
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S2")] public void T() { }"""));
         _repo.TestProject("Tool", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""), folder: "tools");
 
-        Assert.Equal(ExitCode.RuleFailure, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, _repo.Run("require", "S1"));
     }
 
     // --- missing or stale assemblies ---
@@ -455,7 +455,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "S1");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
         Assert.Equal(1, _repo.Builds);
     }
 
@@ -469,7 +469,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "S1");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
         Assert.Equal(1, _repo.Builds);
     }
 
@@ -480,7 +480,7 @@ public sealed class SpecTraceTests : IDisposable
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""));
         _repo.Touch("tests/A/A.csproj", DateTime.UtcNow.AddMinutes(5));
 
-        Assert.Equal(ExitCode.Pass, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.Pass, _repo.Run("require", "S1"));
         Assert.Equal(1, _repo.Builds);
     }
 
@@ -490,7 +490,7 @@ public sealed class SpecTraceTests : IDisposable
         _repo.Specs(Specs);
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""));
 
-        Assert.Equal(ExitCode.Pass, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.Pass, _repo.Run("require", "S1"));
         Assert.Equal(0, _repo.Builds);
     }
 
@@ -508,7 +508,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "--no-build", "S1");
 
-        Assert.Equal(ExitCode.Error, result.Code);
+        RunResult.AssertExit(ExitCode.Error, result);
         Assert.Equal(0, _repo.Builds);
     }
 
@@ -521,7 +521,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "S1");
 
-        Assert.Equal(ExitCode.Error, result.Code);
+        RunResult.AssertExit(ExitCode.Error, result);
         Assert.Equal(1, _repo.Builds);
     }
 
@@ -532,7 +532,7 @@ public sealed class SpecTraceTests : IDisposable
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""), compile: false);
         _repo.BuildExitCode = 1;
 
-        Assert.Equal(ExitCode.Error, _repo.Run("check").Code);
+        RunResult.AssertExit(ExitCode.Error, _repo.Run("check"));
     }
 
     private static string TestClass(string members, string name = "Tests") => $$"""
@@ -545,7 +545,12 @@ public sealed class SpecTraceTests : IDisposable
         """;
 }
 
-internal sealed record RunResult(int Code, string Out, string Err);
+internal sealed record RunResult(int Code, string Out, string Err)
+{
+    /// <summary>An unexpected exit shows what the tool wrote, so a failure off this machine carries its cause.</summary>
+    public static void AssertExit(int expected, RunResult result) =>
+        Assert.True(result.Code == expected, $"exit {result.Code}, expected {expected}\nstderr:\n{result.Err}\nstdout:\n{result.Out}");
+}
 
 /// <summary>A throwaway repository: specs, pending list, solution, test projects compiled with Roslyn, git base.</summary>
 internal sealed class FixtureRepo : IDisposable

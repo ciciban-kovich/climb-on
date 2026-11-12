@@ -299,10 +299,10 @@ public sealed record GitBaseline(HashSet<string> Specs, HashSet<string>? Pending
 {
     public static GitBaseline Read(string root, string baseRef)
     {
-        var (code, _) = Git(root, "rev-parse", "--verify", "--quiet", $"{baseRef}^{{commit}}");
+        var (code, _, error) = Git(root, "rev-parse", "--verify", "--quiet", $"{baseRef}^{{commit}}");
         if (code != 0)
         {
-            throw new SpecTraceException($"{baseRef} is not available; fetch it before running check");
+            throw new SpecTraceException($"{baseRef} is not available; fetch it before running check{GitError(error)}");
         }
 
         var specs = Show(root, baseRef, SpecIds.SpecsPath);
@@ -314,17 +314,21 @@ public sealed record GitBaseline(HashSet<string> Specs, HashSet<string>? Pending
 
     private static string? Show(string root, string baseRef, string path)
     {
-        var (exists, _) = Git(root, "cat-file", "-e", $"{baseRef}:{path}");
+        var (exists, _, _) = Git(root, "cat-file", "-e", $"{baseRef}:{path}");
         if (exists != 0)
         {
             return null;
         }
 
-        var (code, output) = Git(root, "show", $"{baseRef}:{path}");
-        return code == 0 ? output : throw new SpecTraceException($"git show {baseRef}:{path} failed");
+        var (code, output, error) = Git(root, "show", $"{baseRef}:{path}");
+        return code == 0 ? output : throw new SpecTraceException($"git show {baseRef}:{path} failed{GitError(error)}");
     }
 
-    private static (int Code, string Output) Git(string root, params string[] args)
+    // Git's own words for a failure, so the cause is in the message rather than lost.
+    private static string GitError(string error) =>
+        string.IsNullOrWhiteSpace(error) ? string.Empty : $": {error.Trim()}";
+
+    private static (int Code, string Output, string Error) Git(string root, params string[] args)
     {
         var start = new ProcessStartInfo("git")
         {
@@ -342,8 +346,7 @@ public sealed record GitBaseline(HashSet<string> Specs, HashSet<string>? Pending
         var stderr = process.StandardError.ReadToEndAsync();
         var output = process.StandardOutput.ReadToEnd();
         process.WaitForExit();
-        _ = stderr.Result;
-        return (process.ExitCode, output);
+        return (process.ExitCode, output, stderr.Result);
     }
 }
 
