@@ -182,7 +182,8 @@ else
         set => profile!.OwnGear = value switch { Yes => true, No => false, _ => null };
     }
 
-    // No profile yet (404) starts an empty one; any other failure is shown.
+    // No profile yet (404) starts an empty one. A stored profile the api refuses (400, with its code) is the
+    // climber's to replace, so an empty one starts with the api's message shown. Any other failure is only shown.
     protected override async Task OnInitializedAsync() =>
         message = await ServerMessage.RunAsync(async () =>
         {
@@ -193,6 +194,11 @@ else
             catch (ErrorBody error) when (error.ResponseStatusCode == 404)
             {
                 profile = New();
+            }
+            catch (ErrorBody error) when (error.ResponseStatusCode == 400)
+            {
+                profile = New();
+                throw;
             }
         }, T, Log);
 

@@ -145,6 +145,40 @@ public sealed class ProfilePageTests : ClientTestContext
         Assert.Empty(MissingTexts);
     }
 
+    // A stored profile today's rules refuse is the climber's to replace: the api's refusal is shown over an empty
+    // form, and saving it puts the replacement.
+    [Fact]
+    public void Refused_stored_profile_offers_an_empty_form_to_replace_it()
+    {
+        Api.Fail(HttpMethod.Get, ProfileRoute, HttpStatusCode.BadRequest, "display_name_invalid", "Server text.")
+            .Answer(HttpMethod.Put, ProfileRoute, HttpStatusCode.OK, Stored());
+        var page = Render<Profile>();
+
+        page.WaitForAssertion(() => Assert.Equal("display_name_invalid", page.Find("[role=alert]").GetAttribute("data-code")));
+        Assert.Equal("Server text.", page.Find("[role=alert]").TextContent);
+        Assert.Null(page.Find("input[autocomplete=nickname]").GetAttribute("value"));
+
+        page.Find("input[autocomplete=nickname]").Change("Kari");
+        page.Find("form").Submit();
+
+        page.WaitForAssertion(() => Assert.NotNull(page.Find(".success")));
+        Assert.Equal("Kari", Api.Single(HttpMethod.Put, ProfileRoute).StringProperty("displayName"));
+        Assert.Empty(page.FindAll("[role=alert]"));
+        Assert.Empty(MissingTexts);
+    }
+
+    // Not logged in, or any refusal other than the profile's own: the message only.
+    [Fact]
+    public void Unauthorized_load_shows_message_and_no_form()
+    {
+        Api.Fail(HttpMethod.Get, ProfileRoute, HttpStatusCode.Unauthorized, "session_required", "Server text.");
+
+        var page = Render<Profile>();
+
+        page.WaitForAssertion(() => Assert.Equal("session_required", page.Find("[role=alert]").GetAttribute("data-code")));
+        Assert.Empty(page.FindAll("form"));
+    }
+
     [Fact]
     public void Load_failure_shows_message_and_no_form()
     {
