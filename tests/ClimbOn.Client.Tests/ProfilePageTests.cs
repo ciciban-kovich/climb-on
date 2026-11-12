@@ -84,6 +84,35 @@ public sealed class ProfilePageTests : ClientTestContext
         Assert.Empty(MissingTexts);
     }
 
+    // Removing an entry is how a climber answers a refusal such as S61's windows_overlap: the removed entry is not
+    // sent, and the others are.
+    [Fact]
+    public void Removed_discipline_and_window_are_not_sent()
+    {
+        Api.Answer(HttpMethod.Get, ProfileRoute, HttpStatusCode.OK, Stored())
+            .Answer(HttpMethod.Put, ProfileRoute, HttpStatusCode.OK, Stored());
+        var page = Render<Profile>();
+        page.WaitForAssertion(() => Assert.NotNull(page.Find("form")));
+
+        page.Find("button.add-discipline").Click();
+        page.FindAll(".discipline-entry select")[1].Change("bouldering");
+        page.Find("button.add-window").Click();
+        EnterWindow(page, 1, "monday", "10", "14");
+        page.FindAll(".discipline-entry button.remove")[0].Click();
+        page.FindAll(".window-entry button.remove")[0].Click();
+        Assert.Single(page.FindAll(".discipline-entry"));
+        Assert.Single(page.FindAll(".window-entry"));
+        page.Find("form").Submit();
+
+        page.WaitForAssertion(() => Assert.NotNull(page.Find(".success")));
+        var request = Api.Single(HttpMethod.Put, ProfileRoute).Json;
+        var discipline = Assert.Single(request.GetProperty("disciplines").EnumerateArray());
+        Assert.Equal("bouldering", discipline.GetProperty("discipline").GetString());
+        var window = Assert.Single(request.GetProperty("windows").EnumerateArray());
+        Assert.Equal("monday", window.GetProperty("day").GetString());
+        Assert.Equal(10, window.GetProperty("start").GetInt32());
+    }
+
     // No profile yet (404): an empty form, sent empty; every required value is the api's to ask for.
     [Fact]
     public void New_profile_is_sent_as_entered()
