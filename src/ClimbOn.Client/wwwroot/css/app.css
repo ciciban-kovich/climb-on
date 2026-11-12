@@ -4,6 +4,7 @@
     --accent: #1f5f8b;
     --error: #a4161a;
     --success: #1b5e20;
+    --border: #c8c8c8;
 }
 
 html, body {
@@ -77,7 +78,7 @@ fieldset {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    border: 1px solid #c8c8c8;
+    border: 1px solid var(--border);
     border-radius: 0.25rem;
 }
 
@@ -94,7 +95,7 @@ ol.cards {
 }
 
 .card {
-    border: 1px solid #c8c8c8;
+    border: 1px solid var(--border);
     border-radius: 0.5rem;
     padding: 0 1rem;
 }
