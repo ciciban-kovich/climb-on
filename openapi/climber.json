@@ -1934,7 +1934,6 @@
           "ownGear",
           "postcode",
           "maxTravelKm",
-          "homeGyms",
           "windows"
         ],
         "type": "object",
@@ -2002,6 +2001,15 @@
             ],
             "format": "int32"
           },
+          "windows": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/WindowRequest"
+            }
+          },
           "homeGyms": {
             "type": [
               "null",
@@ -2010,15 +2018,6 @@
             "items": {
               "type": "string",
               "format": "uuid"
-            }
-          },
-          "windows": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "$ref": "#/components/schemas/WindowRequest"
             }
           }
         }
