@@ -130,16 +130,16 @@ public sealed class SuggestionsPageTests : ClientTestContext
         bool ownGear = true,
         string discipline = "lead",
         string venue = "indoor") => new
-    {
-        accountId = Guid.NewGuid(),
-        displayName,
-        sex,
-        disciplines = new[] { new { discipline, venues = new[] { venue }, grades = new { lowest = "6a", highest = "7a+" } } },
-        certification = "brattkort-led",
-        certificationLabel = "self-declared",
-        ownGear,
-        homeGyms = new[] { new { name = "Klatreverket", active = true }, new { name = "Old gym", active = false } },
-        overlap = new[] { new { day = "monday", start = 18, end = 24 } },
-        distance,
-    };
+        {
+            accountId = Guid.NewGuid(),
+            displayName,
+            sex,
+            disciplines = new[] { new { discipline, venues = new[] { venue }, grades = new { lowest = "6a", highest = "7a+" } } },
+            certification = "brattkort-led",
+            certificationLabel = "self-declared",
+            ownGear,
+            homeGyms = new[] { new { name = "Klatreverket", active = true }, new { name = "Old gym", active = false } },
+            overlap = new[] { new { day = "monday", start = 18, end = 24 } },
+            distance,
+        };
 }
