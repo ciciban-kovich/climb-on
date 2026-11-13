@@ -227,7 +227,10 @@ public sealed class ProfilePageTests : ClientTestContext
         page.Find("form").Submit();
 
         page.WaitForAssertion(() => Assert.NotNull(page.Find(".success")));
-        Assert.Equal("Kari", Api.Single(HttpMethod.Put, ProfileRoute).StringProperty("displayName"));
+        var request = Api.Single(HttpMethod.Put, ProfileRoute);
+        Assert.Equal("Kari", request.StringProperty("displayName"));
+        // Left out, so the api keeps the stored home gyms this page could not read (S21).
+        Assert.Equal(JsonValueKind.Null, Kind(request.Json, "homeGyms"));
         Assert.Empty(page.FindAll("[role=alert]"));
         Assert.Empty(MissingTexts);
     }

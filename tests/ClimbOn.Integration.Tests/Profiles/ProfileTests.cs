@@ -538,6 +538,39 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(request.HomeGyms, (await saved.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
     }
 
+    // A replacement for a refused stored profile (which the climber cannot read back) that leaves home gyms out
+    // keeps the stored ones, a deactivated one included (S21); an empty list clears them.
+    [Fact]
+    [Trait("SpecPartial", "S3")]
+    [Trait("SpecPartial", "S21")]
+    public async Task Home_gyms_left_out_keep_the_stored_ones()
+    {
+        var (account, token) = await RegisterAndLogInAsync();
+        using (var created = await PutAsync(token, Factory.Data.Profile(account)))
+        {
+            Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        }
+
+        await ExecuteAsync(
+            "INSERT INTO home_gyms (account_id, gym_id, position) SELECT account_id, @gym, 1 FROM profiles",
+            ("gym", FixtureGyms.Inactive.Id));
+        await ExecuteAsync("UPDATE profiles SET display_name = @name", ("name", string.Empty));
+
+        using (var kept = await PutAsync(token, Factory.Data.Profile(account) with { HomeGyms = null }))
+        {
+            Assert.Equal(HttpStatusCode.OK, kept.StatusCode);
+            Assert.Equal(
+                [FixtureGyms.Active[0].Id, FixtureGyms.Inactive.Id],
+                (await kept.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
+        }
+
+        using var cleared = await PutAsync(token, Factory.Data.Profile(account) with { HomeGyms = [] });
+        using var read = await GetAsync(token);
+
+        Assert.Equal(HttpStatusCode.OK, cleared.StatusCode);
+        Assert.Empty((await read.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
+    }
+
     public static TheoryData<string, string> InvalidFields => new()
     {
         { "display-name-empty", Profile.DisplayNameInvalidCode },

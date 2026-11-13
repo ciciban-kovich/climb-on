@@ -183,7 +183,8 @@ else
     }
 
     // No profile yet (404) starts an empty one. A stored profile the api refuses (400, with its code) is the
-    // climber's to replace, so an empty one starts with the api's message shown. Any other failure is only shown.
+    // climber's to replace, so an empty one starts with the api's message shown; its home gyms are left out, which
+    // keeps the stored ones. Any other failure is only shown.
     protected override async Task OnInitializedAsync() =>
         message = await ServerMessage.RunAsync(async () =>
         {
@@ -198,6 +199,7 @@ else
             catch (ErrorBody error) when (error.ResponseStatusCode == 400)
             {
                 profile = New();
+                profile.HomeGyms = null;
                 throw;
             }
         }, T, Log);
