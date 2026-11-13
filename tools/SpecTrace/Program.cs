@@ -443,7 +443,7 @@ public static class TraitReader
 
     private static void ReadAssembly(string assemblyPath, TraitRefs refs)
     {
-        using var context = new MetadataLoadContext(new PathAssemblyResolver(ResolverPaths(assemblyPath)));
+        using var context = new MetadataLoadContext(new PathAssemblyResolver(ResolverPaths(RuntimeEnvironment.GetRuntimeDirectory(), assemblyPath)));
         var assembly = context.LoadFromAssemblyPath(assemblyPath);
         foreach (var type in assembly.GetTypes())
         {
@@ -534,19 +534,28 @@ public static class TraitReader
         }
     }
 
-    private static IEnumerable<string> ResolverPaths(string assemblyPath)
+    /// <summary>
+    /// The running runtime's directory, then for each other shared framework its newest directory of the same major
+    /// version, then the assembly's own directory; each file name once, first found wins, so no assembly name reaches
+    /// MetadataLoadContext twice.
+    /// </summary>
+    public static IReadOnlyList<string> ResolverPaths(string runtimeDir, string assemblyPath)
     {
-        var runtimeDir = RuntimeEnvironment.GetRuntimeDirectory();
+        runtimeDir = Path.TrimEndingDirectorySeparator(runtimeDir);
         var frameworkDirs = new List<string> { runtimeDir };
-        var sharedDir = Path.GetDirectoryName(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(runtimeDir)));
-        if (sharedDir is not null && Directory.Exists(sharedDir))
+        var runtimeFramework = Path.GetDirectoryName(runtimeDir);
+        var sharedDir = Path.GetDirectoryName(runtimeFramework);
+        var major = FolderVersion(runtimeDir)?.Major;
+        if (major is not null && sharedDir is not null && Directory.Exists(sharedDir))
         {
-            foreach (var framework in Directory.GetDirectories(sharedDir))
+            foreach (var framework in Directory.GetDirectories(sharedDir).Where(f => f != runtimeFramework))
             {
                 var newest = Directory.GetDirectories(framework)
-                    .OrderByDescending(d => Version.TryParse(Path.GetFileName(d), out var v) ? v : new Version())
-                    .FirstOrDefault();
-                if (newest is not null && !frameworkDirs.Contains(newest))
+                    .Select(d => (Dir: d, Version: FolderVersion(d)))
+                    .Where(d => d.Version?.Major == major)
+                    .MaxBy(d => d.Version)
+                    .Dir;
+                if (newest is not null)
                 {
                     frameworkDirs.Add(newest);
                 }
@@ -554,8 +563,15 @@ public static class TraitReader
         }
 
         var localDir = Path.GetDirectoryName(assemblyPath)!;
-        return frameworkDirs.Append(localDir).SelectMany(d => Directory.GetFiles(d, "*.dll"));
+        return frameworkDirs.Append(localDir)
+            .SelectMany(d => Directory.GetFiles(d, "*.dll"))
+            .DistinctBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
+
+    // A framework directory's version, with any pre-release suffix ("11.0.0-preview.1") dropped.
+    private static Version? FolderVersion(string dir) =>
+        Version.TryParse(Path.GetFileName(dir).Split('-')[0], out var version) ? version : null;
 }
 
 public sealed record TestProject(string Directory, string Name, string AssemblyName)

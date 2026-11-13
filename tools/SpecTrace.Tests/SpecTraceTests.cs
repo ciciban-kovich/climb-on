@@ -552,6 +552,41 @@ public sealed class SpecTraceTests : IDisposable
         RunResult.AssertExit(ExitCode.Error, _repo.Run("check"));
     }
 
+    // A newer major version of the runtime installed beside the running one (a runner image that adds .NET 11 while
+    // the tool runs on 10) must not reach the resolver: two different mscorlib.dll files make MetadataLoadContext
+    // refuse the second. Each framework contributes its directory of the running major version, and each file name
+    // appears once, the running runtime's copy first.
+    [Fact]
+    public void Resolver_paths_take_the_running_major_version_and_each_file_name_once()
+    {
+        var shared = Path.Combine(_repo.Root, "dotnet", "shared");
+        string Dll(params string[] parts)
+        {
+            var path = Path.Combine([shared, .. parts]);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllBytes(path, []);
+            return path;
+        }
+
+        var runtime = Dll("Microsoft.NETCore.App", "10.0.15", "mscorlib.dll");
+        Dll("Microsoft.NETCore.App", "11.0.0", "mscorlib.dll");
+        var aspNet = Dll("Microsoft.AspNetCore.App", "10.0.15", "Microsoft.AspNetCore.dll");
+        Dll("Microsoft.AspNetCore.App", "10.0.2", "Microsoft.AspNetCore.dll");
+        Dll("Microsoft.AspNetCore.App", "11.0.0", "Microsoft.AspNetCore.dll");
+        var bin = Path.Combine(_repo.Root, "bin");
+        Directory.CreateDirectory(bin);
+        var assembly = Path.Combine(bin, "Fx.Tests.dll");
+        File.WriteAllBytes(assembly, []);
+        File.WriteAllBytes(Path.Combine(bin, "mscorlib.dll"), []);
+
+        var paths = TraitReader.ResolverPaths(
+            Path.Combine(shared, "Microsoft.NETCore.App", "10.0.15") + Path.DirectorySeparatorChar, assembly);
+
+        Assert.Equal(
+            new[] { runtime, aspNet, assembly }.Order(StringComparer.Ordinal),
+            paths.Order(StringComparer.Ordinal));
+    }
+
     private static string TestClass(string members, string name = "Tests") => $$"""
         using Xunit;
         namespace Fx;
