@@ -553,8 +553,9 @@ public static class TraitReader
                 var newest = Directory.GetDirectories(framework)
                     .Select(d => (Dir: d, Version: FolderVersion(d)))
                     .Where(d => d.Version?.Major == major)
-                    .MaxBy(d => d.Version)
-                    .Dir;
+                    .OrderByDescending(d => d.Version)
+                    .Select(d => d.Dir)
+                    .FirstOrDefault();
                 if (newest is not null)
                 {
                     frameworkDirs.Add(newest);

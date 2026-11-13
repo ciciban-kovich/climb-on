@@ -587,6 +587,29 @@ public sealed class SpecTraceTests : IDisposable
             paths.Order(StringComparer.Ordinal));
     }
 
+    [Fact]
+    public void Resolver_paths_skip_a_framework_with_no_directory_of_the_running_major()
+    {
+        var shared = Path.Combine(_repo.Root, "dotnet", "shared");
+        var runtime = Path.Combine(shared, "Microsoft.NETCore.App", "10.0.15", "mscorlib.dll");
+        Directory.CreateDirectory(Path.GetDirectoryName(runtime)!);
+        File.WriteAllBytes(runtime, []);
+        var older = Path.Combine(shared, "Microsoft.WindowsDesktop.App", "8.0.17");
+        Directory.CreateDirectory(older);
+        File.WriteAllBytes(Path.Combine(older, "WindowsBase.dll"), []);
+        Directory.CreateDirectory(Path.Combine(shared, "Microsoft.AspNetCore.App"));
+        var bin = Path.Combine(_repo.Root, "bin");
+        Directory.CreateDirectory(bin);
+        var assembly = Path.Combine(bin, "Fx.Tests.dll");
+        File.WriteAllBytes(assembly, []);
+
+        var paths = TraitReader.ResolverPaths(Path.GetDirectoryName(runtime)!, assembly);
+
+        Assert.Equal(
+            new[] { runtime, assembly }.Order(StringComparer.Ordinal),
+            paths.Order(StringComparer.Ordinal));
+    }
+
     private static string TestClass(string members, string name = "Tests") => $$"""
         using Xunit;
         namespace Fx;
