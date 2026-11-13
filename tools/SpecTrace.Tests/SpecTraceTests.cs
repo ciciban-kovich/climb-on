@@ -222,6 +222,20 @@ public sealed class SpecTraceTests : IDisposable
         Assert.Matches(@"origin/main is not available; fetch it before running check: \S", result.Err);
     }
 
+    // The same for a base file git finds but cannot read: git show's own words follow the message.
+    [Fact]
+    public void Check_adds_gits_own_error_when_a_base_file_cannot_be_read()
+    {
+        _repo.Base(Specs, LiveIds);
+        _repo.Pending(LiveIds);
+        _repo.CorruptBaseFile("docs/specs.md");
+
+        var result = _repo.Run("check");
+
+        RunResult.AssertExit(ExitCode.Error, result);
+        Assert.Matches(@"git show origin/main:docs/specs.md failed: \S", result.Err);
+    }
+
     [Fact]
     public void Check_exits_2_when_the_pending_list_is_missing()
     {
@@ -624,6 +638,18 @@ internal sealed class FixtureRepo : IDisposable
         System.IO.File.Delete(Path.Combine(Root, "docs", "spec-pending.txt"));
     }
 
+    /// <summary>
+    /// Overwrites the loose object of a file committed by Base with garbage: git still finds the object (cat-file -e
+    /// passes) but cannot read it, so git show fails and says why.
+    /// </summary>
+    public void CorruptBaseFile(string path)
+    {
+        var blob = Git("rev-parse", $"origin/main:{path}").Trim();
+        var file = Path.Combine(Root, ".git", "objects", blob[..2], blob[2..]);
+        System.IO.File.SetAttributes(file, FileAttributes.Normal);
+        System.IO.File.WriteAllText(file, "garbage");
+    }
+
     public void TestProject(string name, string source, bool listed = true, string folder = "tests", bool compile = true)
     {
         var relative = $"{folder}/{name}/{name}.csproj";
@@ -721,7 +747,7 @@ internal sealed class FixtureRepo : IDisposable
             .Select(p => (MetadataReference)MetadataReference.CreateFromFile(p))
             .ToList());
 
-    private void Git(params string[] args)
+    private string Git(params string[] args)
     {
         var start = new ProcessStartInfo("git")
         {
@@ -739,8 +765,9 @@ internal sealed class FixtureRepo : IDisposable
 
         using var process = Process.Start(start)!;
         var stderr = process.StandardError.ReadToEndAsync();
-        process.StandardOutput.ReadToEnd();
+        var output = process.StandardOutput.ReadToEnd();
         process.WaitForExit();
         Assert.True(process.ExitCode == 0, $"git {string.Join(' ', args)}: {stderr.Result}");
+        return output;
     }
 }
