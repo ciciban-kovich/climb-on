@@ -2018,7 +2018,8 @@
             "items": {
               "type": "string",
               "format": "uuid"
-            }
+            },
+            "description": "A PUT that leaves homeGyms out keeps the stored list; an explicit [] clears it."
           }
         }
       },
