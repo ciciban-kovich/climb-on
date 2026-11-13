@@ -18,7 +18,7 @@ public sealed class SaveProfile(IProfileStore profiles, PostcodeValidator postco
     {
         // As stored, so that a profile today's rules refuse can still be replaced.
         var stored = (await profiles.FindStoredAsync([accountId], cancellationToken)).GetValueOrDefault(accountId);
-        // Home gyms left out keep the stored list, inactive ones included (S21), so a replacement for a stored
+        // Home gyms left out or null keep the stored list, inactive ones included (S21), so a replacement for a stored
         // profile the climber cannot read back does not lose them. An empty list clears it.
         var profile = Profile.Create(draft.HomeGyms is null && stored is not null ? draft with { HomeGyms = stored.HomeGyms } : draft);
 

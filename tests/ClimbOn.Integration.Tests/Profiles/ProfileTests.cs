@@ -539,12 +539,12 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         Assert.Equal(request.HomeGyms, (await saved.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
     }
 
-    // A replacement for a refused stored profile (which the climber cannot read back) that leaves home gyms out
-    // keeps the stored ones, a deactivated one included (S21); an empty list clears them.
+    // A replacement for a refused stored profile (which the climber cannot read back) that sends home gyms as
+    // null keeps the stored ones, a deactivated one included (S21); an empty list clears them.
     [Fact]
     [Trait("SpecPartial", "S3")]
     [Trait("SpecPartial", "S21")]
-    public async Task Home_gyms_left_out_keep_the_stored_ones()
+    public async Task Home_gyms_sent_as_null_keep_the_stored_ones()
     {
         var (account, token) = await RegisterAndLogInAsync();
         using (var created = await PutAsync(token, Factory.Data.Profile(account)))

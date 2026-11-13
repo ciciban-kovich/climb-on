@@ -23,7 +23,7 @@ public sealed record ProfileRequest(
     string? Postcode,
     int? MaxTravelKm,
     IReadOnlyList<WindowRequest?>? Windows,
-    [property: Description("A PUT that leaves homeGyms out keeps the stored list; an explicit [] clears it.")]
+    [property: Description("A PUT that leaves homeGyms out or sends null keeps the stored list; an explicit [] clears it.")]
     IReadOnlyList<Guid>? HomeGyms = null);
 
 // Venues listed in one entry share its grade ranges.
