@@ -4,7 +4,7 @@ using ClimbOn.Domain.Profiles;
 
 namespace ClimbOn.Application.Profiles;
 
-// S3: a climber creates their profile or replaces it. Home gyms left out of a replacement keep the stored list;
+// S3: a climber creates their profile or replaces it. Home gyms left out of a replacement or null keep the stored list;
 // an explicit empty list clears it.
 public sealed class SaveProfile(IProfileStore profiles, PostcodeValidator postcodes)
 {
