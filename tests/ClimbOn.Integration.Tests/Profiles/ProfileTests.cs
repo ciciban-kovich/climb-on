@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using ClimbOn.Api.Climber;
 using ClimbOn.Api.Errors;
 using ClimbOn.Api.Middleware;
@@ -568,6 +569,24 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
         using var read = await GetAsync(token);
 
         Assert.Equal(HttpStatusCode.OK, cleared.StatusCode);
+        Assert.Empty((await read.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
+    }
+
+    // A first profile with no stored list to keep: home gyms left out of the body make an empty list.
+    [Fact]
+    [Trait("SpecPartial", "S3")]
+    public async Task First_profile_with_home_gyms_left_out_has_none()
+    {
+        var (account, token) = await RegisterAndLogInAsync();
+        var body = JsonSerializer.SerializeToNode(Factory.Data.Profile(account), JsonSerializerOptions.Web)!.AsObject();
+        Assert.True(body.Remove("homeGyms"));
+
+        using var created = await SendAsync(
+            new HttpRequestMessage(HttpMethod.Put, Route) { Content = JsonContent.Create(body) }, token);
+        using var read = await GetAsync(token);
+
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        Assert.Empty((await created.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
         Assert.Empty((await read.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
     }
 
