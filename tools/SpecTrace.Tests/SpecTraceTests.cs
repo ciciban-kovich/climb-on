@@ -195,23 +195,11 @@ public sealed class SpecTraceTests : IDisposable
         Assert.Contains("tests reference IDs that are not live in docs/specs.md: S3", result.Out);
     }
 
-    [Fact]
-    public void Check_exits_2_when_origin_main_is_unavailable()
-    {
-        _repo.Specs(Specs);
-        _repo.Pending(LiveIds);
-
-        var result = _repo.Run("check");
-
-        RunResult.AssertExit(ExitCode.Error, result);
-        Assert.Contains("origin/main is not available", result.Err);
-    }
-
     // Git's own words for a failure it explains (here: no repository at all) follow the message, so a failure that
     // only happens elsewhere, such as on a CI runner, names its cause. The wording is git's, so only its presence is
     // asserted.
     [Fact]
-    public void Check_adds_gits_own_error_to_the_message()
+    public void Check_exits_2_with_gits_own_error_when_origin_main_is_unavailable()
     {
         _repo.Specs(Specs);
         _repo.Pending(LiveIds);
