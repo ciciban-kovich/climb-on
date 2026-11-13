@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using ClimbOn.Api.Climber;
 using ClimbOn.Api.Errors;
 using ClimbOn.Api.Middleware;
@@ -536,6 +537,57 @@ public sealed class ProfileTests(ApiFactory factory) : IntegrationTest(factory)
 
         Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
         Assert.Equal(request.HomeGyms, (await saved.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
+    }
+
+    // A replacement for a refused stored profile (which the climber cannot read back) that sends home gyms as
+    // null keeps the stored ones, a deactivated one included (S21); an empty list clears them.
+    [Fact]
+    [Trait("SpecPartial", "S3")]
+    [Trait("SpecPartial", "S21")]
+    public async Task Home_gyms_sent_as_null_keep_the_stored_ones()
+    {
+        var (account, token) = await RegisterAndLogInAsync();
+        using (var created = await PutAsync(token, Factory.Data.Profile(account)))
+        {
+            Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        }
+
+        await ExecuteAsync(
+            "INSERT INTO home_gyms (account_id, gym_id, position) SELECT account_id, @gym, 1 FROM profiles",
+            ("gym", FixtureGyms.Inactive.Id));
+        await ExecuteAsync("UPDATE profiles SET display_name = @name", ("name", string.Empty));
+
+        using (var kept = await PutAsync(token, Factory.Data.Profile(account) with { HomeGyms = null }))
+        {
+            Assert.Equal(HttpStatusCode.OK, kept.StatusCode);
+            Assert.Equal(
+                [FixtureGyms.Active[0].Id, FixtureGyms.Inactive.Id],
+                (await kept.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
+        }
+
+        using var cleared = await PutAsync(token, Factory.Data.Profile(account) with { HomeGyms = [] });
+        using var read = await GetAsync(token);
+
+        Assert.Equal(HttpStatusCode.OK, cleared.StatusCode);
+        Assert.Empty((await read.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
+    }
+
+    // A first profile with no stored list to keep: home gyms left out of the body make an empty list.
+    [Fact]
+    [Trait("SpecPartial", "S3")]
+    public async Task First_profile_with_home_gyms_left_out_has_none()
+    {
+        var (account, token) = await RegisterAndLogInAsync();
+        var body = JsonSerializer.SerializeToNode(Factory.Data.Profile(account), JsonSerializerOptions.Web)!.AsObject();
+        Assert.True(body.Remove("homeGyms"));
+
+        using var created = await SendAsync(
+            new HttpRequestMessage(HttpMethod.Put, Route) { Content = JsonContent.Create(body) }, token);
+        using var read = await GetAsync(token);
+
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        Assert.Empty((await created.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
+        Assert.Empty((await read.Content.ReadFromJsonAsync<ProfileResponse>(Ct))!.HomeGyms);
     }
 
     public static TheoryData<string, string> InvalidFields => new()

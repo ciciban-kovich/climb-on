@@ -84,4 +84,193 @@
   <data name="error_network" xml:space="preserve">
     <value>Fikk ikke kontakt med Climb On. Sjekk tilkoblingen og prøv igjen.</value>
   </data>
+  <data name="nav_profile" xml:space="preserve">
+    <value>Profil</value>
+  </data>
+  <data name="nav_suggestions" xml:space="preserve">
+    <value>Forslag</value>
+  </data>
+  <data name="loading" xml:space="preserve">
+    <value>Laster inn …</value>
+  </data>
+  <data name="choose" xml:space="preserve">
+    <value>Velg</value>
+  </data>
+  <data name="value_yes" xml:space="preserve">
+    <value>Ja</value>
+  </data>
+  <data name="value_no" xml:space="preserve">
+    <value>Nei</value>
+  </data>
+  <data name="sex_female" xml:space="preserve">
+    <value>Kvinne</value>
+  </data>
+  <data name="sex_male" xml:space="preserve">
+    <value>Mann</value>
+  </data>
+  <data name="sex_other" xml:space="preserve">
+    <value>Annet</value>
+  </data>
+  <data name="rope_scale_norwegian" xml:space="preserve">
+    <value>Norsk</value>
+  </data>
+  <data name="rope_scale_french" xml:space="preserve">
+    <value>Fransk</value>
+  </data>
+  <data name="discipline_bouldering" xml:space="preserve">
+    <value>Buldring</value>
+  </data>
+  <data name="discipline_top-rope" xml:space="preserve">
+    <value>Topptau</value>
+  </data>
+  <data name="discipline_lead" xml:space="preserve">
+    <value>Led</value>
+  </data>
+  <data name="discipline_multipitch" xml:space="preserve">
+    <value>Flertaulengde</value>
+  </data>
+  <data name="discipline_ice" xml:space="preserve">
+    <value>Is</value>
+  </data>
+  <data name="venue_indoor" xml:space="preserve">
+    <value>Inne</value>
+  </data>
+  <data name="venue_outdoor" xml:space="preserve">
+    <value>Ute</value>
+  </data>
+  <data name="certification_none" xml:space="preserve">
+    <value>Ingen</value>
+  </data>
+  <data name="certification_brattkort-topptau" xml:space="preserve">
+    <value>Brattkort topptau</value>
+  </data>
+  <data name="certification_brattkort-led" xml:space="preserve">
+    <value>Brattkort led</value>
+  </data>
+  <data name="day_monday" xml:space="preserve">
+    <value>Mandag</value>
+  </data>
+  <data name="day_tuesday" xml:space="preserve">
+    <value>Tirsdag</value>
+  </data>
+  <data name="day_wednesday" xml:space="preserve">
+    <value>Onsdag</value>
+  </data>
+  <data name="day_thursday" xml:space="preserve">
+    <value>Torsdag</value>
+  </data>
+  <data name="day_friday" xml:space="preserve">
+    <value>Fredag</value>
+  </data>
+  <data name="day_saturday" xml:space="preserve">
+    <value>Lørdag</value>
+  </data>
+  <data name="day_sunday" xml:space="preserve">
+    <value>Søndag</value>
+  </data>
+  <data name="card_sex" xml:space="preserve">
+    <value>Kjønn</value>
+  </data>
+  <data name="card_distance" xml:space="preserve">
+    <value>Avstand</value>
+  </data>
+  <data name="card_disciplines" xml:space="preserve">
+    <value>Klatring</value>
+  </data>
+  <data name="card_certification" xml:space="preserve">
+    <value>Sikringskort</value>
+  </data>
+  <data name="card_own_gear" xml:space="preserve">
+    <value>Eget utstyr</value>
+  </data>
+  <data name="card_home_gyms" xml:space="preserve">
+    <value>Hjemmehaller</value>
+  </data>
+  <data name="card_gym_inactive" xml:space="preserve">
+    <value>ikke lenger tilgjengelig</value>
+  </data>
+  <data name="card_overlap" xml:space="preserve">
+    <value>Tider dere begge kan</value>
+  </data>
+  <data name="suggestions_title" xml:space="preserve">
+    <value>Foreslåtte partnere</value>
+  </data>
+  <data name="suggestions_empty" xml:space="preserve">
+    <value>Ingen klatrere passer med profilen din akkurat nå.</value>
+  </data>
+  <data name="profile_title" xml:space="preserve">
+    <value>Profilen din</value>
+  </data>
+  <data name="profile_display_name_label" xml:space="preserve">
+    <value>Visningsnavn</value>
+  </data>
+  <data name="profile_sex_label" xml:space="preserve">
+    <value>Ditt kjønn</value>
+  </data>
+  <data name="profile_accepted_sexes_label" xml:space="preserve">
+    <value>Partnere du godtar</value>
+  </data>
+  <data name="profile_rope_scale_label" xml:space="preserve">
+    <value>Graderingsskala for tauklatring</value>
+  </data>
+  <data name="profile_disciplines_label" xml:space="preserve">
+    <value>Disipliner og grader</value>
+  </data>
+  <data name="profile_discipline_label" xml:space="preserve">
+    <value>Disiplin</value>
+  </data>
+  <data name="profile_own_lowest_label" xml:space="preserve">
+    <value>Din laveste grad</value>
+  </data>
+  <data name="profile_own_highest_label" xml:space="preserve">
+    <value>Din høyeste grad</value>
+  </data>
+  <data name="profile_partner_lowest_label" xml:space="preserve">
+    <value>Partnerens laveste grad</value>
+  </data>
+  <data name="profile_partner_highest_label" xml:space="preserve">
+    <value>Partnerens høyeste grad</value>
+  </data>
+  <data name="profile_add_discipline_button" xml:space="preserve">
+    <value>Legg til disiplin</value>
+  </data>
+  <data name="profile_remove_discipline_button" xml:space="preserve">
+    <value>Fjern disiplin</value>
+  </data>
+  <data name="profile_certification_label" xml:space="preserve">
+    <value>Sikringskort</value>
+  </data>
+  <data name="profile_own_gear_label" xml:space="preserve">
+    <value>Har du eget utstyr?</value>
+  </data>
+  <data name="profile_postcode_label" xml:space="preserve">
+    <value>Postnummer</value>
+  </data>
+  <data name="profile_max_travel_km_label" xml:space="preserve">
+    <value>Lengste reiseavstand (km)</value>
+  </data>
+  <data name="profile_windows_label" xml:space="preserve">
+    <value>Når du kan klatre</value>
+  </data>
+  <data name="profile_window_day_label" xml:space="preserve">
+    <value>Dag</value>
+  </data>
+  <data name="profile_window_start_label" xml:space="preserve">
+    <value>Fra time</value>
+  </data>
+  <data name="profile_window_end_label" xml:space="preserve">
+    <value>Til time</value>
+  </data>
+  <data name="profile_add_window_button" xml:space="preserve">
+    <value>Legg til tidspunkt</value>
+  </data>
+  <data name="profile_remove_window_button" xml:space="preserve">
+    <value>Fjern tidspunkt</value>
+  </data>
+  <data name="profile_save_button" xml:space="preserve">
+    <value>Lagre profil</value>
+  </data>
+  <data name="profile_done" xml:space="preserve">
+    <value>Profilen din er lagret.</value>
+  </data>
 </root>

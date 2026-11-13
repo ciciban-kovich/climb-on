@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using ClimbOn.Api.Errors;
 using ClimbOn.Api.Middleware;
 using ClimbOn.Application.Profiles;
@@ -9,7 +10,8 @@ namespace ClimbOn.Api.Climber;
 // Values are lower-case names with hyphens: sexes female, male, other; rope scales norwegian, french;
 // disciplines bouldering, top-rope, lead, multipitch, ice; venues indoor, outdoor; certifications none,
 // brattkort-topptau, brattkort-led; days monday to sunday. Grade scales as in S13.1 and S13.2; window hours
-// as in S61.
+// as in S61. HomeGyms comes last because its default value is what keeps it out of the schema's required list;
+// its Description is the rule as the OpenAPI document states it.
 public sealed record ProfileRequest(
     string? DisplayName,
     string? Sex,
@@ -20,8 +22,9 @@ public sealed record ProfileRequest(
     bool? OwnGear,
     string? Postcode,
     int? MaxTravelKm,
-    IReadOnlyList<Guid>? HomeGyms,
-    IReadOnlyList<WindowRequest?>? Windows);
+    IReadOnlyList<WindowRequest?>? Windows,
+    [property: Description("A PUT that leaves homeGyms out or sends null keeps the stored list; an explicit [] clears it.")]
+    IReadOnlyList<Guid>? HomeGyms = null);
 
 // Venues listed in one entry share its grade ranges.
 public sealed record DisciplineEntryRequest(

@@ -299,10 +299,10 @@ public sealed record GitBaseline(HashSet<string> Specs, HashSet<string>? Pending
 {
     public static GitBaseline Read(string root, string baseRef)
     {
-        var (code, _) = Git(root, "rev-parse", "--verify", "--quiet", $"{baseRef}^{{commit}}");
+        var (code, _, error) = Git(root, "rev-parse", "--verify", "--quiet", $"{baseRef}^{{commit}}");
         if (code != 0)
         {
-            throw new SpecTraceException($"{baseRef} is not available; fetch it before running check");
+            throw new SpecTraceException($"{baseRef} is not available; fetch it before running check{GitError(error)}");
         }
 
         var specs = Show(root, baseRef, SpecIds.SpecsPath);
@@ -314,17 +314,21 @@ public sealed record GitBaseline(HashSet<string> Specs, HashSet<string>? Pending
 
     private static string? Show(string root, string baseRef, string path)
     {
-        var (exists, _) = Git(root, "cat-file", "-e", $"{baseRef}:{path}");
+        var (exists, _, _) = Git(root, "cat-file", "-e", $"{baseRef}:{path}");
         if (exists != 0)
         {
             return null;
         }
 
-        var (code, output) = Git(root, "show", $"{baseRef}:{path}");
-        return code == 0 ? output : throw new SpecTraceException($"git show {baseRef}:{path} failed");
+        var (code, output, error) = Git(root, "show", $"{baseRef}:{path}");
+        return code == 0 ? output : throw new SpecTraceException($"git show {baseRef}:{path} failed{GitError(error)}");
     }
 
-    private static (int Code, string Output) Git(string root, params string[] args)
+    /// <summary>Git's own words for a failure, so the cause is in the message rather than lost.</summary>
+    private static string GitError(string error) =>
+        string.IsNullOrWhiteSpace(error) ? string.Empty : $": {error.Trim()}";
+
+    private static (int Code, string Output, string Error) Git(string root, params string[] args)
     {
         var start = new ProcessStartInfo("git")
         {
@@ -342,8 +346,7 @@ public sealed record GitBaseline(HashSet<string> Specs, HashSet<string>? Pending
         var stderr = process.StandardError.ReadToEndAsync();
         var output = process.StandardOutput.ReadToEnd();
         process.WaitForExit();
-        _ = stderr.Result;
-        return (process.ExitCode, output);
+        return (process.ExitCode, output, stderr.Result);
     }
 }
 
@@ -440,7 +443,7 @@ public static class TraitReader
 
     private static void ReadAssembly(string assemblyPath, TraitRefs refs)
     {
-        using var context = new MetadataLoadContext(new PathAssemblyResolver(ResolverPaths(assemblyPath)));
+        using var context = new MetadataLoadContext(new PathAssemblyResolver(ResolverPaths(RuntimeEnvironment.GetRuntimeDirectory(), assemblyPath)));
         var assembly = context.LoadFromAssemblyPath(assemblyPath);
         foreach (var type in assembly.GetTypes())
         {
@@ -531,19 +534,29 @@ public static class TraitReader
         }
     }
 
-    private static IEnumerable<string> ResolverPaths(string assemblyPath)
+    /// <summary>
+    /// The running runtime's directory, then for each other shared framework its newest directory of the same major
+    /// version, then the assembly's own directory; each file name once, first found wins, so no assembly name reaches
+    /// MetadataLoadContext twice.
+    /// </summary>
+    public static IReadOnlyList<string> ResolverPaths(string runtimeDir, string assemblyPath)
     {
-        var runtimeDir = RuntimeEnvironment.GetRuntimeDirectory();
+        runtimeDir = Path.TrimEndingDirectorySeparator(runtimeDir);
         var frameworkDirs = new List<string> { runtimeDir };
-        var sharedDir = Path.GetDirectoryName(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(runtimeDir)));
-        if (sharedDir is not null && Directory.Exists(sharedDir))
+        var runtimeFramework = Path.GetDirectoryName(runtimeDir);
+        var sharedDir = Path.GetDirectoryName(runtimeFramework);
+        var major = FolderVersion(runtimeDir)?.Major;
+        if (major is not null && sharedDir is not null && Directory.Exists(sharedDir))
         {
-            foreach (var framework in Directory.GetDirectories(sharedDir))
+            foreach (var framework in Directory.GetDirectories(sharedDir).Where(f => f != runtimeFramework))
             {
                 var newest = Directory.GetDirectories(framework)
-                    .OrderByDescending(d => Version.TryParse(Path.GetFileName(d), out var v) ? v : new Version())
+                    .Select(d => (Dir: d, Version: FolderVersion(d)))
+                    .Where(d => d.Version?.Major == major)
+                    .OrderByDescending(d => d.Version)
+                    .Select(d => d.Dir)
                     .FirstOrDefault();
-                if (newest is not null && !frameworkDirs.Contains(newest))
+                if (newest is not null)
                 {
                     frameworkDirs.Add(newest);
                 }
@@ -551,8 +564,15 @@ public static class TraitReader
         }
 
         var localDir = Path.GetDirectoryName(assemblyPath)!;
-        return frameworkDirs.Append(localDir).SelectMany(d => Directory.GetFiles(d, "*.dll"));
+        return frameworkDirs.Append(localDir)
+            .SelectMany(d => Directory.GetFiles(d, "*.dll"))
+            .DistinctBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
+
+    // A framework directory's version, with any pre-release suffix ("11.0.0-preview.1") dropped.
+    private static Version? FolderVersion(string dir) =>
+        Version.TryParse(Path.GetFileName(dir).Split('-')[0], out var version) ? version : null;
 }
 
 public sealed record TestProject(string Directory, string Name, string AssemblyName)

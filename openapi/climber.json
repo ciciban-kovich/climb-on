@@ -1934,7 +1934,6 @@
           "ownGear",
           "postcode",
           "maxTravelKm",
-          "homeGyms",
           "windows"
         ],
         "type": "object",
@@ -2002,16 +2001,6 @@
             ],
             "format": "int32"
           },
-          "homeGyms": {
-            "type": [
-              "null",
-              "array"
-            ],
-            "items": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
           "windows": {
             "type": [
               "null",
@@ -2020,6 +2009,17 @@
             "items": {
               "$ref": "#/components/schemas/WindowRequest"
             }
+          },
+          "homeGyms": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "A PUT that leaves homeGyms out or sends null keeps the stored list; an explicit [] clears it."
           }
         }
       },

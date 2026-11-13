@@ -1,0 +1,64 @@
+@inject IStringLocalizer<UiTexts> T
+
+@* Another climber as the api describes them (S51, S54): every value arrives ready to show, grades already in the
+   viewer's scale and the distance as its text. *@
+<article class="card" aria-labelledby="@HeadingId">
+    <h2 id="@HeadingId">@Card.DisplayName</h2>
+    <dl>
+        <dt>@T["card_sex"]</dt>
+        <dd>@T[ValueText.Sex(Card.Sex)]</dd>
+        <dt>@T["card_distance"]</dt>
+        <dd class="distance">@Card.Distance</dd>
+        <dt>@T["card_disciplines"]</dt>
+        <dd>
+            <ul class="disciplines">
+                @foreach (var entry in Card.Disciplines ?? [])
+                {
+                    <li>
+                        @T[ValueText.Discipline(entry.Discipline)]
+                        (@string.Join(", ", (entry.Venues ?? []).Select(venue => T[ValueText.Venue(venue)].Value))):
+                        @entry.Grades?.Lowest–@entry.Grades?.Highest
+                    </li>
+                }
+            </ul>
+        </dd>
+        <dt>@T["card_certification"]</dt>
+        <dd class="certification">@T[ValueText.Certification(Card.Certification)] (@Card.CertificationLabel)</dd>
+        <dt>@T["card_own_gear"]</dt>
+        <dd>@T[Card.OwnGear == true ? "value_yes" : "value_no"]</dd>
+        @if (Card.HomeGyms is { Count: > 0 } gyms)
+        {
+            <dt>@T["card_home_gyms"]</dt>
+            <dd>
+                <ul class="gyms">
+                    @foreach (var gym in gyms)
+                    {
+                        <li class="@(gym.Active == true ? null : "inactive")">
+                            @gym.Name
+                            @if (gym.Active != true)
+                            {
+                                <span>(@T["card_gym_inactive"])</span>
+                            }
+                        </li>
+                    }
+                </ul>
+            </dd>
+        }
+        <dt>@T["card_overlap"]</dt>
+        <dd>
+            <ul class="overlap">
+                @foreach (var window in Card.Overlap ?? [])
+                {
+                    <li>@T[ValueText.Day(window.Day)] @ValueText.Hour(window.Start)–@ValueText.Hour(window.End)</li>
+                }
+            </ul>
+        </dd>
+    </dl>
+</article>
+
+@code {
+    [Parameter, EditorRequired]
+    public ClimberCardResponse Card { get; set; } = default!;
+
+    private string HeadingId => $"card-{Card.AccountId}";
+}

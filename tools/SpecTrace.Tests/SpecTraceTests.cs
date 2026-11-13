@@ -49,7 +49,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
         Assert.Contains("PASS", result.Out);
     }
 
@@ -62,7 +62,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("C17): S4", result.Out);
     }
 
@@ -75,7 +75,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("C17): S2.1", result.Out);
     }
 
@@ -88,7 +88,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("have a Spec test", result.Out);
         Assert.Contains("(C68): S2", result.Out);
     }
@@ -102,7 +102,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
         Assert.Contains("IDs with only SpecPartial tests: S2", result.Out);
     }
 
@@ -115,7 +115,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("C17): S1", result.Out);
     }
 
@@ -131,7 +131,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
         Assert.Contains("IDs with only SpecPartial tests: S2.1, S4", result.Out);
     }
 
@@ -143,7 +143,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("not new in docs/specs.md since origin/main (C68): S1", result.Out);
     }
 
@@ -156,7 +156,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
     }
 
     [Fact]
@@ -167,7 +167,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("not live in docs/specs.md: S3, S9", result.Out);
     }
 
@@ -191,20 +191,37 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("tests reference IDs that are not live in docs/specs.md: S3", result.Out);
     }
 
+    // Git's own words for a failure it explains (here: no repository at all) follow the message, so a failure that
+    // only happens elsewhere, such as on a CI runner, names its cause. The wording is git's, so only its presence is
+    // asserted.
     [Fact]
-    public void Check_exits_2_when_origin_main_is_unavailable()
+    public void Check_exits_2_with_gits_own_error_when_origin_main_is_unavailable()
     {
         _repo.Specs(Specs);
         _repo.Pending(LiveIds);
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Error, result.Code);
-        Assert.Contains("origin/main is not available", result.Err);
+        RunResult.AssertExit(ExitCode.Error, result);
+        Assert.Matches(@"origin/main is not available; fetch it before running check: \S", result.Err);
+    }
+
+    // The same for a base file git finds but cannot read: git show's own words follow the message.
+    [Fact]
+    public void Check_adds_gits_own_error_when_a_base_file_cannot_be_read()
+    {
+        _repo.Base(Specs, LiveIds);
+        _repo.Pending(LiveIds);
+        _repo.CorruptBaseFile("docs/specs.md");
+
+        var result = _repo.Run("check");
+
+        RunResult.AssertExit(ExitCode.Error, result);
+        Assert.Matches(@"git show origin/main:docs/specs.md failed: \S", result.Err);
     }
 
     [Fact]
@@ -214,7 +231,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Error, result.Code);
+        RunResult.AssertExit(ExitCode.Error, result);
         Assert.Contains("docs/spec-pending.txt not found", result.Err);
     }
 
@@ -226,7 +243,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("check");
 
-        Assert.Equal(ExitCode.Error, result.Code);
+        RunResult.AssertExit(ExitCode.Error, result);
     }
 
     // --- require ---
@@ -241,7 +258,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "S2.1");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
     }
 
     [Fact]
@@ -252,7 +269,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "S1", "S2");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("FAIL S2", result.Out);
         Assert.DoesNotContain("FAIL S1", result.Out);
     }
@@ -266,7 +283,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "--whole", "S1");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
     }
 
     [Fact]
@@ -278,7 +295,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "--whole", "S1");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("FAIL S1: no Spec test", result.Out);
     }
 
@@ -291,7 +308,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "--whole", "S1");
 
-        Assert.Equal(ExitCode.RuleFailure, result.Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, result);
         Assert.Contains("still listed", result.Out);
     }
 
@@ -308,8 +325,8 @@ public sealed class SpecTraceTests : IDisposable
         var plain = _repo.Run("require", "S1", id);
         var whole = _repo.Run("require", "--whole", id);
 
-        Assert.Equal(ExitCode.Error, plain.Code);
-        Assert.Equal(ExitCode.Error, whole.Code);
+        RunResult.AssertExit(ExitCode.Error, plain);
+        RunResult.AssertExit(ExitCode.Error, whole);
         Assert.Equal(0, _repo.Builds);
     }
 
@@ -330,7 +347,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run(args);
 
-        Assert.Equal(ExitCode.Error, result.Code);
+        RunResult.AssertExit(ExitCode.Error, result);
         Assert.Contains("usage:", result.Err);
     }
 
@@ -339,7 +356,7 @@ public sealed class SpecTraceTests : IDisposable
     {
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""));
 
-        Assert.Equal(ExitCode.Error, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.Error, _repo.Run("require", "S1"));
     }
 
     // --- which traits count ---
@@ -360,7 +377,7 @@ public sealed class SpecTraceTests : IDisposable
             {{testAttribute}} [Trait("Spec", "S1")] public void T({{(testAttribute.Contains("InlineData") ? "int x" : "")}}) { }
             """));
 
-        Assert.Equal(ExitCode.RuleFailure, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, _repo.Run("require", "S1"));
     }
 
     [Theory]
@@ -375,7 +392,7 @@ public sealed class SpecTraceTests : IDisposable
             {{testAttribute}} [Trait("Spec", "S1")] public void T({{(testAttribute.Contains("InlineData") ? "int x" : "")}}) { }
             """));
 
-        Assert.Equal(ExitCode.Pass, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.Pass, _repo.Run("require", "S1"));
     }
 
     [Fact]
@@ -393,7 +410,7 @@ public sealed class SpecTraceTests : IDisposable
             }
             """);
 
-        Assert.Equal(ExitCode.Pass, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.Pass, _repo.Run("require", "S1"));
     }
 
     [Fact]
@@ -411,7 +428,7 @@ public sealed class SpecTraceTests : IDisposable
             }
             """);
 
-        Assert.Equal(ExitCode.RuleFailure, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, _repo.Run("require", "S1"));
     }
 
     [Fact]
@@ -421,8 +438,8 @@ public sealed class SpecTraceTests : IDisposable
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S2")] public void T() { }"""));
         _repo.File("tests/Stray.cs", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""));
 
-        Assert.Equal(ExitCode.RuleFailure, _repo.Run("require", "S1").Code);
-        Assert.Equal(ExitCode.Pass, _repo.Run("require", "S2").Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, _repo.Run("require", "S1"));
+        RunResult.AssertExit(ExitCode.Pass, _repo.Run("require", "S2"));
     }
 
     [Fact]
@@ -432,7 +449,7 @@ public sealed class SpecTraceTests : IDisposable
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S2")] public void T() { }"""));
         _repo.TestProject("Unlisted", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""), listed: false);
 
-        Assert.Equal(ExitCode.RuleFailure, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, _repo.Run("require", "S1"));
     }
 
     [Fact]
@@ -442,7 +459,7 @@ public sealed class SpecTraceTests : IDisposable
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S2")] public void T() { }"""));
         _repo.TestProject("Tool", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""), folder: "tools");
 
-        Assert.Equal(ExitCode.RuleFailure, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.RuleFailure, _repo.Run("require", "S1"));
     }
 
     // --- missing or stale assemblies ---
@@ -455,7 +472,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "S1");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
         Assert.Equal(1, _repo.Builds);
     }
 
@@ -469,7 +486,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "S1");
 
-        Assert.Equal(ExitCode.Pass, result.Code);
+        RunResult.AssertExit(ExitCode.Pass, result);
         Assert.Equal(1, _repo.Builds);
     }
 
@@ -480,7 +497,7 @@ public sealed class SpecTraceTests : IDisposable
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""));
         _repo.Touch("tests/A/A.csproj", DateTime.UtcNow.AddMinutes(5));
 
-        Assert.Equal(ExitCode.Pass, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.Pass, _repo.Run("require", "S1"));
         Assert.Equal(1, _repo.Builds);
     }
 
@@ -490,7 +507,7 @@ public sealed class SpecTraceTests : IDisposable
         _repo.Specs(Specs);
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""));
 
-        Assert.Equal(ExitCode.Pass, _repo.Run("require", "S1").Code);
+        RunResult.AssertExit(ExitCode.Pass, _repo.Run("require", "S1"));
         Assert.Equal(0, _repo.Builds);
     }
 
@@ -508,7 +525,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "--no-build", "S1");
 
-        Assert.Equal(ExitCode.Error, result.Code);
+        RunResult.AssertExit(ExitCode.Error, result);
         Assert.Equal(0, _repo.Builds);
     }
 
@@ -521,7 +538,7 @@ public sealed class SpecTraceTests : IDisposable
 
         var result = _repo.Run("require", "S1");
 
-        Assert.Equal(ExitCode.Error, result.Code);
+        RunResult.AssertExit(ExitCode.Error, result);
         Assert.Equal(1, _repo.Builds);
     }
 
@@ -532,7 +549,113 @@ public sealed class SpecTraceTests : IDisposable
         _repo.TestProject("A", TestClass("""[Fact, Trait("Spec", "S1")] public void T() { }"""), compile: false);
         _repo.BuildExitCode = 1;
 
-        Assert.Equal(ExitCode.Error, _repo.Run("check").Code);
+        RunResult.AssertExit(ExitCode.Error, _repo.Run("check"));
+    }
+
+    // A newer major version of the runtime installed beside the running one (a runner image that adds .NET 11 while
+    // the tool runs on 10) must not reach the resolver: two different mscorlib.dll files make MetadataLoadContext
+    // refuse the second. Each framework contributes its directory of the running major version, and each file name
+    // appears once, the running runtime's copy first.
+    [Fact]
+    public void Resolver_paths_take_the_running_major_version_and_each_file_name_once()
+    {
+        var shared = Path.Combine(_repo.Root, "dotnet", "shared");
+        string Dll(params string[] parts)
+        {
+            var path = Path.Combine([shared, .. parts]);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllBytes(path, []);
+            return path;
+        }
+
+        var runtime = Dll("Microsoft.NETCore.App", "10.0.15", "mscorlib.dll");
+        Dll("Microsoft.NETCore.App", "11.0.0", "mscorlib.dll");
+        var aspNet = Dll("Microsoft.AspNetCore.App", "10.0.15", "Microsoft.AspNetCore.dll");
+        Dll("Microsoft.AspNetCore.App", "10.0.2", "Microsoft.AspNetCore.dll");
+        Dll("Microsoft.AspNetCore.App", "11.0.0", "Microsoft.AspNetCore.dll");
+        var bin = Path.Combine(_repo.Root, "bin");
+        Directory.CreateDirectory(bin);
+        var assembly = Path.Combine(bin, "Fx.Tests.dll");
+        File.WriteAllBytes(assembly, []);
+        File.WriteAllBytes(Path.Combine(bin, "mscorlib.dll"), []);
+
+        var paths = TraitReader.ResolverPaths(
+            Path.Combine(shared, "Microsoft.NETCore.App", "10.0.15") + Path.DirectorySeparatorChar, assembly);
+
+        Assert.Equal(
+            new[] { runtime, aspNet, assembly }.Order(StringComparer.Ordinal),
+            paths.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Resolver_paths_skip_a_framework_with_no_directory_of_the_running_major()
+    {
+        var shared = Path.Combine(_repo.Root, "dotnet", "shared");
+        var runtime = Path.Combine(shared, "Microsoft.NETCore.App", "10.0.15", "mscorlib.dll");
+        Directory.CreateDirectory(Path.GetDirectoryName(runtime)!);
+        File.WriteAllBytes(runtime, []);
+        var older = Path.Combine(shared, "Microsoft.WindowsDesktop.App", "8.0.17");
+        Directory.CreateDirectory(older);
+        File.WriteAllBytes(Path.Combine(older, "WindowsBase.dll"), []);
+        Directory.CreateDirectory(Path.Combine(shared, "Microsoft.AspNetCore.App"));
+        var bin = Path.Combine(_repo.Root, "bin");
+        Directory.CreateDirectory(bin);
+        var assembly = Path.Combine(bin, "Fx.Tests.dll");
+        File.WriteAllBytes(assembly, []);
+
+        var paths = TraitReader.ResolverPaths(Path.GetDirectoryName(runtime)!, assembly);
+
+        Assert.Equal(
+            new[] { runtime, assembly }.Order(StringComparer.Ordinal),
+            paths.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Resolver_paths_take_no_other_directory_of_the_running_framework()
+    {
+        var shared = Path.Combine(_repo.Root, "dotnet", "shared");
+        var runtimeDir = Path.Combine(shared, "Microsoft.NETCore.App", "10.0.15");
+        var runtime = Path.Combine(runtimeDir, "mscorlib.dll");
+        Directory.CreateDirectory(runtimeDir);
+        File.WriteAllBytes(runtime, []);
+        var newer = Path.Combine(shared, "Microsoft.NETCore.App", "10.0.16");
+        Directory.CreateDirectory(newer);
+        File.WriteAllBytes(Path.Combine(newer, "mscorlib.dll"), []);
+        File.WriteAllBytes(Path.Combine(newer, "System.Only.In.Newer.dll"), []);
+        var bin = Path.Combine(_repo.Root, "bin");
+        Directory.CreateDirectory(bin);
+        var assembly = Path.Combine(bin, "Fx.Tests.dll");
+        File.WriteAllBytes(assembly, []);
+
+        var paths = TraitReader.ResolverPaths(runtimeDir, assembly);
+
+        Assert.Equal(
+            new[] { runtime, assembly }.Order(StringComparer.Ordinal),
+            paths.Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Resolver_paths_read_a_pre_release_directory_by_its_version()
+    {
+        var shared = Path.Combine(_repo.Root, "dotnet", "shared");
+        var runtimeDir = Path.Combine(shared, "Microsoft.NETCore.App", "11.0.0-preview.1");
+        var runtime = Path.Combine(runtimeDir, "mscorlib.dll");
+        Directory.CreateDirectory(runtimeDir);
+        File.WriteAllBytes(runtime, []);
+        var aspNetDir = Path.Combine(shared, "Microsoft.AspNetCore.App", "11.0.0-preview.1");
+        var aspNet = Path.Combine(aspNetDir, "Microsoft.AspNetCore.dll");
+        Directory.CreateDirectory(aspNetDir);
+        File.WriteAllBytes(aspNet, []);
+        var bin = Path.Combine(_repo.Root, "bin");
+        Directory.CreateDirectory(bin);
+        var assembly = Path.Combine(bin, "Fx.Tests.dll");
+        File.WriteAllBytes(assembly, []);
+
+        var paths = TraitReader.ResolverPaths(runtimeDir, assembly);
+
+        Assert.Equal(
+            new[] { runtime, aspNet, assembly }.Order(StringComparer.Ordinal),
+            paths.Order(StringComparer.Ordinal));
     }
 
     private static string TestClass(string members, string name = "Tests") => $$"""
@@ -545,7 +668,12 @@ public sealed class SpecTraceTests : IDisposable
         """;
 }
 
-internal sealed record RunResult(int Code, string Out, string Err);
+internal sealed record RunResult(int Code, string Out, string Err)
+{
+    /// <summary>An unexpected exit shows what the tool wrote, so a failure off this machine carries its cause.</summary>
+    public static void AssertExit(int expected, RunResult result) =>
+        Assert.True(result.Code == expected, $"exit {result.Code}, expected {expected}\nstderr:\n{result.Err}\nstdout:\n{result.Out}");
+}
 
 /// <summary>A throwaway repository: specs, pending list, solution, test projects compiled with Roslyn, git base.</summary>
 internal sealed class FixtureRepo : IDisposable
@@ -602,6 +730,18 @@ internal sealed class FixtureRepo : IDisposable
         Git("-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "-m", "base");
         Git("update-ref", "refs/remotes/origin/main", "HEAD");
         System.IO.File.Delete(Path.Combine(Root, "docs", "spec-pending.txt"));
+    }
+
+    /// <summary>
+    /// Overwrites the loose object of a file committed by Base with garbage: git still finds the object (cat-file -e
+    /// passes) but cannot read it, so git show fails and says why.
+    /// </summary>
+    public void CorruptBaseFile(string path)
+    {
+        var blob = Git("rev-parse", $"origin/main:{path}").Trim();
+        var file = Path.Combine(Root, ".git", "objects", blob[..2], blob[2..]);
+        System.IO.File.SetAttributes(file, FileAttributes.Normal);
+        System.IO.File.WriteAllText(file, "garbage");
     }
 
     public void TestProject(string name, string source, bool listed = true, string folder = "tests", bool compile = true)
@@ -701,7 +841,7 @@ internal sealed class FixtureRepo : IDisposable
             .Select(p => (MetadataReference)MetadataReference.CreateFromFile(p))
             .ToList());
 
-    private void Git(params string[] args)
+    private string Git(params string[] args)
     {
         var start = new ProcessStartInfo("git")
         {
@@ -719,8 +859,9 @@ internal sealed class FixtureRepo : IDisposable
 
         using var process = Process.Start(start)!;
         var stderr = process.StandardError.ReadToEndAsync();
-        process.StandardOutput.ReadToEnd();
+        var output = process.StandardOutput.ReadToEnd();
         process.WaitForExit();
         Assert.True(process.ExitCode == 0, $"git {string.Join(' ', args)}: {stderr.Result}");
+        return output;
     }
 }

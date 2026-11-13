@@ -1,0 +1,41 @@
+@page "/suggestions"
+@inject ClimberApiClient Api
+@inject IStringLocalizer<UiTexts> T
+@inject ILogger<Suggestions> Log
+
+<PageTitle>@T["suggestions_title"]</PageTitle>
+
+<h1>@T["suggestions_title"]</h1>
+
+@if (candidates is null)
+{
+    @if (message is null)
+    {
+        <p role="status">@T["loading"]</p>
+    }
+}
+else if (candidates.Count == 0)
+{
+    <p role="status">@T["suggestions_empty"]</p>
+}
+else
+{
+    @* In the order the api sent them (S60). *@
+    <ol class="cards">
+        @foreach (var card in candidates)
+        {
+            <li @key="card.AccountId"><ClimberCard Card="card" /></li>
+        }
+    </ol>
+}
+<MessageView Message="message" />
+
+@code {
+    private List<ClimberCardResponse>? candidates;
+    private ServerMessage? message;
+
+    // An unconfirmed email address is refused by the api (S116); its message says so.
+    protected override async Task OnInitializedAsync() =>
+        message = await ServerMessage.RunAsync(async () =>
+            candidates = (await Api.Api.Climber.Suggestions.GetAsync())?.Candidates ?? [], T, Log);
+}

@@ -46,7 +46,7 @@ namespace ClimbOn.Client.Api.Models
 #else
         public string DisplayName { get; set; }
 #endif
-        /// <summary>The homeGyms property</summary>
+        /// <summary>A PUT that leaves homeGyms out or sends null keeps the stored list; an explicit [] clears it.</summary>
 #if NETSTANDARD2_1_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 #nullable enable
         public List<Guid?>? HomeGyms { get; set; }
